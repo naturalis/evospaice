@@ -34,7 +34,7 @@ and we can calculate:
 - Species C is 0.12 + 0.20 = 0.32 away from Z
 - Species D is 0.15 + 0.20 = 0.35 away from Z
 
-So B is most diverged from the shared ancestor (X) since it has a largest distance.
+So D is most diverged from the shared ancestor (Z) since it has a largest distance.
 
 
 ## α-diversity
