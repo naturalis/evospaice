@@ -32,7 +32,7 @@ We can read from this graph:
 - C + D have a shared ancestor Y
 - A, B, C and D have a shared ancestor Z
 - X is 0.05 away from Z
-- Species A is 0.02 away from x
+- Species A is 0.02 away from X
 and calculate
 - Species A is 0.02 + 0.05 = 0.17 away from the z
 - Species B is 0.03 + 0.05 = 0.18 away from the z
