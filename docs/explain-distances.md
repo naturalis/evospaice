@@ -34,10 +34,10 @@ We can read from this graph:
 - X is 0.05 away from Z
 - Species A is 0.02 away from X
 and calculate
-- Species A is 0.02 + 0.05 = 0.17 away from the z
-- Species B is 0.03 + 0.05 = 0.18 away from the z
-- Species C is 0.12 + 0.20 = 0.42 away from the z
-- Species D is 0.15 + 0.20 = 0.47 away from the z
+- Species A is 0.02 + 0.05 = 0.07 away from Z
+- Species B is 0.03 + 0.05 = 0.08 away from Z
+- Species C is 0.12 + 0.20 = 0.32 away from Z
+- Species D is 0.15 + 0.20 = 0.35 away from Z
 
 So B is most diverged from the shared ancestor (x) since it has a largest distance.
 
