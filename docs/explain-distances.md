@@ -55,7 +55,7 @@ where internal branches are counted once.
 3. Consider sample S3 with only A + D. PD(A + D) = 0.02 + 0.05 + 0.15 + 0.20 = 0.42. _note the addition of the shared path to x and y_
 
 ## β-diversity
-With β-diversity we look at the distance between samples. For this we use the UniFraq calculation (more ways exist, but this is highly used)
+With β-diversity, we look at the distance between samples. For this we use the UniFrac calculation (more ways exist, but this is widely used).
 
 ```
 β-diversity (UniFrac) = unique branch length / total branch length
