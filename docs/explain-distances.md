@@ -43,7 +43,7 @@ So B is most diverged from the shared ancestor (x) since it has a largest distan
 
 
 ## α-diversity
-With α-diversity we look at the diversity in a sample using the PD caluclation. For this we calculate the Faith’s Phylogenetic Diversity (PD)
+With α-diversity, we look at the diversity in a sample using the PD calculation. For this, we calculate Faith’s Phylogenetic Diversity (PD).
 
 ```
 Faith’s Phylogenetic Diversity is the sum of all branch lengths needed to connect the species in the sample
