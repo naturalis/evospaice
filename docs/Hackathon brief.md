@@ -2,9 +2,6 @@
 
 ### A hackathon brief for engineers \- no biology background assumed
 
-|  |
-| :---- |
-
 ## What we're building, in one sentence
 
 Take a large public database of DNA "barcode" sequences, embed each one with a fine-tuned **DNABERT-S/OmniDNA-20M** model, and use those vectors to turn a taxonomy into a **tree with meaningful branch lengths** — a structure that later lets us measure how biodiverse an environmental sample is and how different two samples are, using genetic distance rather than just counting species.
@@ -15,45 +12,31 @@ The deliverable for the week is deliberately narrow: **one tree, for one marker,
 
 *Figure 1\. Fisheye projection of a [phylogenetic tree](https://en.wikipedia.org/wiki/Phylogenetic_tree) produced with [Walrus](https://www.caida.org/catalog/software/walrus/). Phylogenetic trees from DNA barcodes are directed, acyclic graphs where each external vertex (leaf, tip) is a barcode sequence, while the internal vertices (internal nodes) are hypothetical ancestors. Numerous tree-building methods exist that range from very sophisticated and computationally intense for small groups of species to crude methods designed to cope with very large numbers of input sequences. No good methods exist for the scale we target in this hackathon challenge, which is why this is such a moonshot\!*
 
-|  |
-| :---- |
-
 ## Why this is worth doing
 
 Biologists collect an environmental sample (soil, water, a trap full of insects), sequence the DNA in it, identify the sequences against reference databases, and get back a list of species. Today they compare samples by comparing those lists — how many species, how much overlap. That throws away a lot: two samples might share *no* species yet be genetically almost identical, or share many, yet span wildly different branches of life.
 
 The richer measure treats the sample as points on a **tree of genetic relationships** (fig 1\) and asks how much of the tree they cover and where. That needs a tree whose **branch lengths mean something** (genetic divergence), not just a branching diagram. Building that tree, at scale, from a messy real-world reference database, is the hard part — and it's what this hackathon attacks. Placing samples onto the finished tree and computing diversity numbers is downstream and out of scope this week.
 
-|  |
-| :---- |
-
 ## The one idea that makes this tractable
 
 The naive approach — "build a tree from a few million sequences from scratch" — is a classic bioinformatics problem that does **not** scale and would eat the whole week. **We are not doing that.** The key move:
 
 | The taxonomy gives the tree its rough shape. The embeddings resolve the shape within each group and scale every branch. |
-| :---- |
 
 Every record comes pre-labelled with a [**taxonomy**](https://en.wikipedia.org/wiki/Linnaean_taxonomy) (kingdom → phylum → … → genus → species). That hierarchy is already a tree — just a very unresolved, bushy one with no branch lengths. So we don't infer structure from scratch; we **take the taxonomy's topology as given** and use the embeddings only to (2) resolve the bushy parts and (3) put lengths on the branches.
 
 This is the single most important thing to internalise. If you find yourself building a from-scratch phylogenetics engine, stop — you've left the plan.
-
-|  |
-| :---- |
 
 ## The one caveat that makes this *scientifically* interesting
 
 We've already fine-tuned **DNABERT-S** and **OmniDNA-20M** models, and shown they **agree closely with BLAST** for identification. That is genuinely encouraging — but read carefully, because such agreement certifies the wrong property for what we're about to do:
 
 | BLAST-agreement certifies the embedding as an *identifier* (retrieval: "the nearest vector is the right species"). The tree uses distances as a *scaling metric* (magnitudes and additivity across the whole tree). These are different properties. |
-| :---- |
 
 An embedding can be a perfect identifier and still be a distorted metric, because the contrastive objective it was trained with optimises for *separating* species, not for producing calibrated distances. Three specific things an identification benchmark cannot see, all of which our tree depends on — see the **Validate the distance** section, which is a first-class part of the week's work, not optional polish.
 
 The upside: for the *shallow, within-clade* bulk of the tree — exactly the regime the BLAST validation covers — the embedding is probably an excellent distance, plausibly better than a [*k*\-mer](https://en.wikipedia.org/wiki/K-mer) approach. The risk is concentrated at the deep splits and at the very tips. We build on the embedding **and** we measure where it's trustworthy.
-
-|  |
-| :---- |
 
 ## Minimal glossary (the only biology you need)
 
@@ -70,16 +53,10 @@ The upside: for the *shallow, within-clade* bulk of the tree — exactly the reg
 * **Post-order traversal:** process all children before their parent. The backbone of Tracks 2+3 and the reason it scales.  
 * **Branch-length assignment (the "paper"):** the Wei & Koslicki [paper](https://www.biorxiv.org/content/10.1101/2024.07.29.605688v2) solves our step 3 — given a fixed tree shape and distances between leaves, compute the branch lengths (Ax \= y). We reuse their **bottom-up method**.
 
-|  |
-| :---- |
-
 ## The pipeline at a glance
 
 ![][image2]  
 *Figure 2\. Possible decomposition and division of labor for the hackathon into three tracks. Track 1 deals more with organizing the input DNA sequence data: trimming it, dereplicating it, computing embeddings. Tracks 2 and 3 deal with resolving the polytomies in the taxonomy tree and with assigning branch lengths. Two critical structural facts. **Tracks 2 and 3 are a single recursive pass, not two stages.** And **there is no global distance matrix** — Track 1 outputs vectors, and cosine distances are computed lazily inside the traversal, only for the pairs the tree structure actually needs. Materialising an all-pairs matrix (millions²) is the exact wall this design avoids.*
-
-|  |
-| :---- |
 
 ## Track 1 — Ingest & embed
 
@@ -103,9 +80,6 @@ The upside: for the *shallow, within-clade* bulk of the tree — exactly the reg
 
 **Good starting tech:** the fine-tuned model checkpoint \+ Azure GPU for inference; faiss if you want fast nearest-neighbour lookups; standard biopython FASTA parsing for ingest; sourmash to produce the k-mer baseline in parallel.
 
-|  |
-| :---- |
-
 ## Validate the distance *(parallel workstream — do not skip)*
 
 This is a new approach relative to a k-mer pipeline as in the paper, and it is **load-bearing**, because BLAST-agreement doesn't cover it. Someone should own this from day one; it runs alongside Track 2 and **gates how much we trust the deep edges**. Take a clade where a trusted reference tree already exists and check three things the identification benchmark can't:
@@ -115,9 +89,6 @@ This is a new approach relative to a k-mer pipeline as in the paper, and it is *
 3. **Tip-compression.** Species-level contrastive training actively pulls same-species/same-genus members together. Great for ID, potentially bad for us: it can flatten intra-clade distances toward zero and **collapse the terminal branch lengths**, killing resolution exactly at the tips where most of Track 2's work happens. Test: are within-species / within-genus distances preserved or near-zero?
 
 Run the **k-mer baseline through the identical downstream pipeline** as the control. Outcomes are all useful: if the embedding passes, make it the metric and you have a far stronger story than "we rebuilt a 2016 fingerprint." If it fails on additivity or tip-compression, either recalibrate the embedding distance toward additivity, or use embeddings for the shallow resolution and fall back to k-mers / a curated backbone for the deep lengths. The goal is to **find out inside the week**, not assume the transfer.
-
-|  |
-| :---- |
 
 ## Track 2 \+ 3 — Resolve & scale (one post-order pass)
 
@@ -145,15 +116,9 @@ Run the **k-mer baseline through the identical downstream pipeline** as the cont
 
 **Good starting tech:** any NJ implementation (scikit-bio, or a small custom one for the small blocks); scipy for the linear solve; the paper's reference code: [github.com/KoslickiLab/branch-lengths-assignment](http://github.com/KoslickiLab/branch-lengths-assignment) 
 
-|  |
-| :---- |
-
 ## Stretch goal — Score & visualise
 
 If the scaled tree lands with time to spare: compute the diversity readouts (α \= within-sample, β \= between-sample, à la UniFrac / Faith's PD) on a couple of test samples, and render the "tree with a million tips" legibly. Treat this as **demo polish**, not core. Sample placement connects to separate Microsoft work on fast identification and is explicitly downstream; don't build it this week.
-
-|  |
-| :---- |
 
 ## The five ways to end up on the wrong track
 
@@ -164,9 +129,6 @@ If the scaled tree lands with time to spare: compute the diversity readouts (α 
 5. **Feeding a giant polytomy straight into NJ.** No — pre-cluster into √k buckets first.
 
 If none of those five is happening, you're on the plan.
-
-|  |
-| :---- |
 
 ## Definition of done
 
