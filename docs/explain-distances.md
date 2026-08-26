@@ -86,7 +86,7 @@ S1 vs S2 (1.0): completely different—no shared branches.
 # In the light of the hackathon
 In our project need to calculate the numbers for the species based on the embeddings given by our AI model.
 
-Imagine the millions of species we have, this will create enormous possiblilties in sample compositions and thus in a very large multidimensional space if we use embeddings.
+Imagine the millions of species we have; this will create enormous possibilities in sample compositions and thus a very large multidimensional space if we use embeddings.
 
 So we focus in this project on insects since they are well known, lots of sequences with high quality data: 
 - We need build the tree (based on a taxonomic tree)
