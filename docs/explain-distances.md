@@ -38,16 +38,16 @@ So D is most diverged from the shared ancestor (Z) since it has a largest distan
 
 
 ## α-diversity
-With α-diversity, we look at the diversity in a sample using the PD calculation. For this, we calculate Faith’s Phylogenetic Diversity (PD).
+With α-diversity, we look at the diversity in a sample using Faith’s Phylogenetic Diversity (PD) calculation.
 
 ```
 Faith’s Phylogenetic Diversity is the sum of all branch lengths needed to connect the species in the sample
 where internal branches are counted once.
 ```
 
-1. Consider sample S1 with only A + B. PD(A + B) =  0.02 + 0.03 + 0.05 = 0.10. _note the addition of the shared path to x_
-2. Consider sample S2 with only C + D. PD(C + D) =  0.12 + 0.15 + 0.20 = 0.47.  _note the addition of the shared path to y_
-3. Consider sample S3 with only A + D. PD(A + D) = 0.02 + 0.05 + 0.15 + 0.20 = 0.42. _note the addition of the shared path to x and y_
+1. Consider sample S1 with only A + B. PD(A + B) =  0.02 + 0.03 + 0.05 = 0.10. _note the addition of the shared path to X_
+2. Consider sample S2 with only C + D. PD(C + D) =  0.12 + 0.15 + 0.20 = 0.47.  _note the addition of the shared path to Y_
+3. Consider sample S3 with only A + D. PD(A + D) = 0.02 + 0.05 + 0.15 + 0.20 = 0.42. _note the addition of the shared path to X and Y_
 
 ## β-diversity
 With β-diversity, we look at the distance between samples. For this we use the UniFrac calculation (more ways exist, but this is widely used).
