@@ -15,11 +15,11 @@ Now consider this phylogenetic tree:
 ```text
          ┌── Species A (0.02)
  ┌──0.05─┤ (X)
- │       └── Species B (0.03)
+ │       └──── Species B (0.03)
 ─┤ (Z)
- │               ┌── Species C (0.12)
+ │               ┌───── Species C (0.12)
  └──0.20─────────┤ (Y)
-                 └── Species D (0.15)
+                 └──────── Species D (0.15)
 ```
 We can read from this graph:
 - A + B have a shared ancestor X
