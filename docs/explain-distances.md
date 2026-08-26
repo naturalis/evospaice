@@ -1,5 +1,5 @@
 
-## Example
+## Evolutionary divergence
 
 Evolutionary divergence is measured by the branch lengths separating species from their most recent common ancestor.
 
