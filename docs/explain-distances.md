@@ -6,14 +6,14 @@ Evolutionary divergence is measured by the branch lengths separating species fro
 Species A and Species B have a shared ancestor (x):
 ```text
  ┌── Species A
-─┤ (x)
+─┤ (X)
  └── Species B
 ```
 
-Species A has an evolutionary distance of 0.02 to the (x) ancestor. So B is more diverged from the shared ancestor (x) since it has a larger distance.
+Species A has an evolutionary distance of 0.02 to the (X) ancestor. So B is more diverged from the shared ancestor (X) since it has a larger distance.
 ```text
  ┌── Species A (0.02)
-─┤ (x)
+─┤ (X)
  └── Species B (0.03)
 ```
  
@@ -39,7 +39,7 @@ and calculate
 - Species C is 0.12 + 0.20 = 0.32 away from Z
 - Species D is 0.15 + 0.20 = 0.35 away from Z
 
-So B is most diverged from the shared ancestor (x) since it has a largest distance.
+So B is most diverged from the shared ancestor (X) since it has a largest distance.
 
 
 ## α-diversity
