@@ -10,7 +10,7 @@ Species A and Species B have a shared ancestor (x):
  └── Species B
 ```
 
-Species A has a evolutionary distance of 0.02 to the (x) ancestor. So B is more diverged from the shared ancestor (x) since it has a larger distance.
+Species A has an evolutionary distance of 0.02 to the (x) ancestor. So B is more diverged from the shared ancestor (x) since it has a larger distance.
 ```text
  ┌── Species A (0.02)
 ─┤ (x)
