@@ -55,7 +55,7 @@ The upside: for the *shallow, within-clade* bulk of the tree — exactly the reg
 
 ## The pipeline at a glance
 
-![][image2]  
+![](/images/pipeline.png)
 *Figure 2\. Possible decomposition and division of labor for the hackathon into three tracks. Track 1 deals more with organizing the input DNA sequence data: trimming it, dereplicating it, computing embeddings. Tracks 2 and 3 deal with resolving the polytomies in the taxonomy tree and with assigning branch lengths. Two critical structural facts. **Tracks 2 and 3 are a single recursive pass, not two stages.** And **there is no global distance matrix** — Track 1 outputs vectors, and cosine distances are computed lazily inside the traversal, only for the pairs the tree structure actually needs. Materialising an all-pairs matrix (millions²) is the exact wall this design avoids.*
 
 ## Track 1 — Ingest & embed
