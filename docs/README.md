@@ -10,3 +10,4 @@
 
 - [A repo where Naturalis did a prior attempt for COI](https://github.com/naturalis/barcode-constrained-phylogeny). What we learned here is that we can't simply pick one taxonomic level, solve at that level, and then stitch together. It needs to be more recursive.
 - [A repo where compsci students and Naturalis did another prior attempt, for ITS](https://github.com/naturalis/MDDB-phylogeny). What we learned here is that scalable, alignment-free, distance-based approaches are tractable, but need taxonomic guidance to improve quality.
+- [A preprint about assigning branch lengths to fixed tree shapes](https://www.biorxiv.org/content/10.1101/2024.07.29.605688v2). What we can take from this is inspiration for how to get branch lengths on taxonomic backbones from large reference databases. This preprint also has a [repo](https://github.com/KoslickiLab/branch-lengths-assignment).
