@@ -1,0 +1,1 @@
+One post-order walk of the backbone: at each node, resolve the bush with NJ on a small on-demand distance block, assign branch lengths (Wei & Koslicki's bottom-up method), carry one representative up.
