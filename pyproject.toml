@@ -1,0 +1,66 @@
+[project]
+name = "evospaice"
+version = "0.1.0"
+description = "A scaled reference tree from barcode embeddings: taxonomy gives the shape, embeddings resolve and scale it."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"   # upper bound keeps us on Python versions with faiss-cpu wheels
+license = "CC0-1.0"                 # outputs are public domain; adjust if the code should carry a different licence
+authors = [
+    { name = "Naturalis Biodiversity Center x Microsoft FDE" },
+]
+keywords = ["phylogenetics", "biodiversity", "metabarcoding", "embeddings", "bioinformatics"]
+
+# Core runtime dependencies — the pipeline that CONSUMES embeddings.
+# Computing embeddings from a model is a separate concern; see the [embed] extra.
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",         # lsq_linear for the NNLS branch-length solve
+    "biopython>=1.83",     # FASTA parsing, sequence handling, primer/window search
+    "scikit-bio>=0.6",     # Neighbor-Joining (skbio.tree.nj)
+    "dendropy>=4.6",       # tree manipulation and Newick I/O
+    "faiss-cpu>=1.8",      # fast nearest-neighbour lookups over vectors
+    "sourmash>=4.8",       # FracMinHash sketches — the k-mer distance baseline
+]
+
+[project.optional-dependencies]
+# Only needed if you compute embeddings locally rather than consuming precomputed
+# vectors (Track 1, ML/AI experts). Kept optional so the default install stays light and CPU-only.
+embed = [
+    "torch>=2.2",
+    "transformers>=4.40",
+]
+# Optional visualisation helpers (Track 4). iTOL and similar are external tools;
+# these are just for quick local renders.
+viz = [
+    "matplotlib>=3.8",
+    "ete3>=3.1",
+]
+
+[project.scripts]
+# CLI entry point — points at the skeleton's cli stub (src/evospaice/cli.py).
+evospaice = "evospaice.cli:main"
+
+[dependency-groups]
+# Local dev tooling (installed by `uv sync`, not shipped to consumers).
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/evospaice"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
