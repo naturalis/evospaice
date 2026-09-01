@@ -316,6 +316,8 @@ def build_raw_tree(records: Iterator[Dict[str, str]], root_key: TaxonKey,
     wanted = root_key[1].lower()
     seen = kept = off_taxon = no_tip = 0
     for seen, record in enumerate(records, start=1):
+        if seen % 1000000 == 0:
+            LOGGER.info("Read %d records, kept %d", seen, kept)
         value = clean_value(record.get(column))
         if value is None or value.lower() != wanted:
             off_taxon += 1
@@ -329,8 +331,6 @@ def build_raw_tree(records: Iterator[Dict[str, str]], root_key: TaxonKey,
             node = node.child(rank, name)
         node.records += 1
         kept += 1
-        if seen % 1000000 == 0:
-            LOGGER.info("Read %d records, kept %d", seen, kept)
     LOGGER.info("Read %d records: kept %d, skipped %d outside %s:%s, skipped %d without %s",
                 seen, kept, off_taxon, root_key[0], root_key[1], no_tip, tip_rank)
     return root
@@ -399,16 +399,24 @@ def reconcile_taxonomy(internal: Dict[TaxonKey, Counter], root_key: TaxonKey) ->
     be a tree rather than a graph with cycles.
     """
     chains: Dict[TaxonKey, Chain] = {root_key: (root_key,)}
+    patched = conflicted = 0
     for taxon in sorted(internal, key=lambda key: RANK_INDEX[key[0]]):
-        parent = choose_parent(taxon, internal[taxon])
+        votes = internal[taxon]
+        depths = {RANK_INDEX[rank] for rank, _ in votes}
+        if len(depths) > 1:
+            patched += 1
+        if sum(1 for key in votes if RANK_INDEX[key[0]] == max(depths)) > 1:
+            conflicted += 1
+        parent = choose_parent(taxon, votes)
         parent_chain = chains.get(parent)
         if parent_chain is None:
             LOGGER.debug("Parent %s of %s was not reconciled, attaching to root", parent, taxon)
             parent_chain = (root_key,)
         chains[taxon] = parent_chain + (taxon,)
-    depths = Counter(len(chain) for chain in chains.values())
-    LOGGER.debug("Reconciled %d taxa, depth distribution %s",
-                 len(chains), dict(sorted(depths.items())))
+    LOGGER.info("Reconciled %d taxa: %d were recorded at more than one depth, "
+                "%d had rival parents at the same rank", len(internal), patched, conflicted)
+    distribution = Counter(len(chain) for chain in chains.values())
+    LOGGER.debug("Depth distribution %s", dict(sorted(distribution.items())))
     return chains
 
 
@@ -744,7 +752,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not tree.children:
             raise ValueError("Every terminal was dropped, nothing to write")
         summarise_placements(placements)
-        summarise_tree(tree)
+        _, internals = summarise_tree(tree)
+        dissolved = len(chains) - internals
+        if dissolved > 0:
+            LOGGER.info("%d of %d reconciled taxa (%.1f%%) hold no terminal after placement "
+                        "and survive only in tip annotations",
+                        dissolved, len(chains), 100.0 * dissolved / len(chains))
         if args.writer == "dendropy":
             write_tree_dendropy(tree, args.outfile, args.label_style)
         else:
