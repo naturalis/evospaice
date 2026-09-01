@@ -1,3 +1,18 @@
+# Layout note: this project uses a src/ layout with a single top-level package,
+# `evospaice`, and one subpackage per track:
+#
+#   src/evospaice/__init__.py
+#   src/evospaice/cli.py
+#   src/evospaice/ingest/      (tsv2newick.py lives here)
+#   src/evospaice/tree/
+#   src/evospaice/validate/
+#   src/evospaice/viz/
+#   src/evospaice/diversity/
+#
+# Each track directory needs an __init__.py so it imports as evospaice.<track>.
+# (The repo currently has these as flat src/<track>/ dirs; move them under
+#  src/evospaice/ and add __init__.py files so imports and this build agree.)
+
 [project]
 name = "evospaice"
 version = "0.1.0"
@@ -6,7 +21,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"   # upper bound keeps us on Python versions with faiss-cpu wheels
 license = "CC0-1.0"                 # outputs are public domain; adjust if the code should carry a different licence
 authors = [
-    { name = "Naturalis Biodiversity Center x Microsoft FDE" },
+    { name = "Naturalis Biodiversity Center" },
 ]
 keywords = ["phylogenetics", "biodiversity", "metabarcoding", "embeddings", "bioinformatics"]
 
@@ -37,7 +52,6 @@ viz = [
 ]
 
 [project.scripts]
-# CLI entry point — points at the skeleton's cli stub (src/evospaice/cli.py).
 evospaice = "evospaice.cli:main"
 
 [dependency-groups]
@@ -51,6 +65,8 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# src/ layout: map src/evospaice -> the evospaice package in the built wheel.
+# Only this package is shipped, so the data/ tree and docs/ never end up in the wheel.
 [tool.hatch.build.targets.wheel]
 packages = ["src/evospaice"]
 
@@ -60,6 +76,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear
+
+[tool.ruff.lint.isort]
+known-first-party = ["evospaice"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
