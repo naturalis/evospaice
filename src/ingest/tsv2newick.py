@@ -25,7 +25,7 @@ import sys
 import tarfile
 from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
-LOGGER = logging.getLogger("bcdm2tree")
+LOGGER = logging.getLogger("tsv2newick")
 
 # Linnaean rank columns of the BCDM, from most to least inclusive.
 LINNAEAN_RANKS: List[str] = [
