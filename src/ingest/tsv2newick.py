@@ -14,12 +14,16 @@ discarded.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
+import fnmatch
 import gzip
+import io
 import logging
 import os
 import sys
-from typing import Dict, Iterator, List, Optional, Sequence, Tuple
+import tarfile
+from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 LOGGER = logging.getLogger("bcdm2tree")
 
@@ -107,6 +111,11 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help="Location of the Newick output file (default: %(default)s).",
     )
     parser.add_argument(
+        "-m", "--member", default=None,
+        help="Glob naming the TSV member to read when the input is a tar archive "
+             "(default: the first *.tsv or *.txt file in the archive).",
+    )
+    parser.add_argument(
         "-e", "--encoding", default="utf-8",
         help="Character encoding of the input file (default: %(default)s).",
     )
@@ -175,15 +184,67 @@ def resolve_rank_path(top_rank: str, tip_rank: str) -> List[str]:
     return path
 
 
-def open_tsv(location: str, encoding: str):
-    """Open a plain or gzipped BCDM-TSV file as a text stream."""
-    if location.endswith((".gz", ".gzip")):
+def open_tar_member(archive: tarfile.TarFile, pattern: Optional[str]) -> io.BufferedReader:
+    """Return a binary stream over the first archive member that looks like the dump.
+
+    The archive is walked in stream order, so only the members up to the match
+    are decompressed. Without a pattern the first regular file with a TSV or TXT
+    extension is taken, which is how the BOLD data packages are laid out (the
+    dump alongside a datapackage.json and other metadata). A member that is
+    itself gzipped is unwrapped on the fly.
+    """
+    for info in archive:
+        if not info.isfile():
+            continue
+        name = os.path.basename(info.name)
+        if name.startswith("."):
+            continue
+        if pattern is not None:
+            if not fnmatch.fnmatch(info.name, pattern) and not fnmatch.fnmatch(name, pattern):
+                continue
+        elif not name.lower().endswith((".tsv", ".txt", ".tsv.gz", ".txt.gz")):
+            continue
+        LOGGER.info("Reading member %s (%d bytes) from archive", info.name, info.size)
+        handle = archive.extractfile(info)
+        if handle is None:
+            raise ValueError(f"Cannot extract member '{info.name}' from archive")
+        if name.lower().endswith(".gz"):
+            return gzip.GzipFile(fileobj=handle)
+        return handle
+    raise ValueError(
+        "No TSV member found in archive; name one explicitly with --member"
+    )
+
+
+def decoded_lines(binary, encoding: str) -> Iterator[str]:
+    """Yield decoded lines from a binary stream, tolerating bad byte sequences.
+
+    Used for tar members, which are read as a forward-only stream and therefore
+    cannot be wrapped in a TextIOWrapper. The csv module is happy with any
+    iterable of strings.
+    """
+    for line in binary:
+        yield line.decode(encoding, errors="replace")
+
+
+@contextlib.contextmanager
+def open_tsv(location: str, encoding: str, member: Optional[str] = None) -> Iterator[Iterable[str]]:
+    """Yield an iterable of text lines from a BCDM-TSV file, plain, gzipped or in a tarball."""
+    lowered = location.lower()
+    if lowered.endswith((".tar.gz", ".tgz", ".tar.bz2", ".tar.xz", ".tar")):
+        LOGGER.debug("Opening %s as tar archive", location)
+        with tarfile.open(location, mode="r|*") as archive:
+            yield decoded_lines(open_tar_member(archive, member), encoding)
+    elif lowered.endswith((".gz", ".gzip")):
         LOGGER.debug("Opening %s as gzip", location)
-        return gzip.open(location, mode="rt", encoding=encoding, errors="replace", newline="")
-    return open(location, mode="rt", encoding=encoding, errors="replace", newline="")
+        with gzip.open(location, mode="rt", encoding=encoding, errors="replace", newline="") as handle:
+            yield handle
+    else:
+        with open(location, mode="rt", encoding=encoding, errors="replace", newline="") as handle:
+            yield handle
 
 
-def iter_records(handle, required: Sequence[str]) -> Iterator[Dict[str, str]]:
+def iter_records(lines: Iterable[str], required: Sequence[str]) -> Iterator[Dict[str, str]]:
     """Yield the rows of a BCDM-TSV stream as dicts, checking required columns.
 
     Quoting is disabled because BOLD free-text fields (collectors, notes) often
@@ -191,7 +252,7 @@ def iter_records(handle, required: Sequence[str]) -> Iterator[Dict[str, str]]:
     blocks of the file.
     """
     csv.field_size_limit(min(sys.maxsize, 2 ** 31 - 1))
-    reader = csv.DictReader(handle, delimiter="\t", quoting=csv.QUOTE_NONE)
+    reader = csv.DictReader(lines, delimiter="\t", quoting=csv.QUOTE_NONE)
     if reader.fieldnames is None:
         raise ValueError("Input file appears to be empty: no header line found")
     missing = [column for column in required if column not in reader.fieldnames]
@@ -345,9 +406,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         rank_path = resolve_rank_path(top_rank, args.level)
         required = [COLUMN_FOR_RANK[rank] for rank in [top_rank] + rank_path]
         LOGGER.info("Reading %s", args.infile)
-        with open_tsv(args.infile, args.encoding) as handle:
+        with open_tsv(args.infile, args.encoding, args.member) as handle:
             root = build_tree(iter_records(handle, required), top_rank, top_name, rank_path)
-    except (ValueError, OSError) as problem:
+    except (ValueError, OSError, EOFError, tarfile.TarError) as problem:
         LOGGER.error("%s", problem)
         return 1
     if not root.children:
