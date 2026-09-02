@@ -129,6 +129,8 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Lowest taxonomic level, used for the tips (default: %(default)s).")
     parser.add_argument("-o", "--outfile", default="outfile.tre",
                         help="Newick output file (default: %(default)s).")
+    parser.add_argument("-d", "--dissolved", default=None,
+                        help="Optional TSV listing taxa that hold no terminal after placement.")
     parser.add_argument("-s", "--sidecar", default=None,
                         help="Optional TSV holding the unmangled lineages and counts per tip.")
     parser.add_argument("-p", "--placement", default="lca", choices=["lca", "plurality"],
@@ -716,6 +718,44 @@ def write_sidecar(placements: Sequence[dict], location: str, style: str) -> None
     LOGGER.info("Wrote %d terminal lineages to %s", len(placements), location)
 
 
+def dissolved_taxa(root: TaxonNode, chains: Dict[TaxonKey, Chain]) -> List[TaxonKey]:
+    """Return the reconciled taxa that no longer appear anywhere in the tree.
+
+    These are taxa every terminal of which was lifted past them, so their names
+    survive only inside tip annotations. Computed against the instantiated tree
+    rather than against placement targets, since a taxon also stays alive by
+    holding another taxon that holds a terminal.
+    """
+    alive = set()
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        alive.add(node.key)
+        stack.extend(node.children.values())
+    return [key for key in chains if key not in alive]
+
+
+def report_dissolved(taxa: Sequence[TaxonKey], chains: Dict[TaxonKey, Chain],
+                     total: int, location: Optional[str]) -> None:
+    """Log the rank breakdown of dissolved taxa and optionally write them out."""
+    if not taxa:
+        return
+    histogram = Counter(rank for rank, _ in taxa)
+    ordered = sorted(histogram.items(), key=lambda item: RANK_INDEX[item[0]])
+    LOGGER.info("%d of %d reconciled taxa (%.1f%%) hold no terminal after placement "
+                "and survive only in tip annotations: %s", len(taxa), total,
+                100.0 * len(taxa) / max(total, 1),
+                ", ".join(f"{rank}={count}" for rank, count in ordered))
+    if location is None:
+        return
+    with open(location, mode="wt", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(["rank", "name", "lineage"])
+        for key in sorted(taxa, key=lambda item: (RANK_INDEX[item[0]], item[1])):
+            writer.writerow([key[0], key[1], "|".join(name for _, name in chains[key])])
+    LOGGER.info("Wrote %d dissolved taxa to %s", len(taxa), location)
+
+
 def summarise_tree(root: TaxonNode) -> Tuple[int, int]:
     """Return the number of tips and of internal nodes, logging the tally."""
     tips = internals = 0
@@ -752,12 +792,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not tree.children:
             raise ValueError("Every terminal was dropped, nothing to write")
         summarise_placements(placements)
-        _, internals = summarise_tree(tree)
-        dissolved = len(chains) - internals
-        if dissolved > 0:
-            LOGGER.info("%d of %d reconciled taxa (%.1f%%) hold no terminal after placement "
-                        "and survive only in tip annotations",
-                        dissolved, len(chains), 100.0 * dissolved / len(chains))
+        summarise_tree(tree)
+        report_dissolved(dissolved_taxa(tree, chains), chains, len(chains), args.dissolved)
         if args.writer == "dendropy":
             write_tree_dendropy(tree, args.outfile, args.label_style)
         else:
