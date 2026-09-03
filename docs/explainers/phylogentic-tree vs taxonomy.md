@@ -35,5 +35,6 @@ Apparantly the puma's and cheeta's evolved from small cats and are considered to
 See this arcticle on [Cladogram vs Phylogenetic tree](https://difbetween.com/cladogram-vs-phylogenetic-tree.p37637/) for more info.
 
 
-Example of how taxonomy can change. 
+**Example of how taxonomy can change:**
+
 All seaslugs where considered to be in the order Nudibranchia (naked gills) even when they lacked gills. Study was needed and recently (2025) a whole group seaslugs was moved from suborder Doridina up to a new order Doridida. It didn't change phylograms for these beautifull slugs, but the taxonomy changed.
