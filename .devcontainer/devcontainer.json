@@ -1,0 +1,37 @@
+{
+  "name": "AI Sequence Identification",
+  "dockerComposeFile": [
+    "docker-compose.yml",
+    "docker-compose.local.yml"
+  ],
+  "service": "app",
+  "workspaceFolder": "/workspaces/ai-sequence-identification",
+  "initializeCommand": "bash .devcontainer/configure-gpu-compose.sh",
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-azure-github-copilot",
+        "github.vscode-github-actions",
+        "bierner.markdown-mermaid",
+        "bpruber.vscode-mermaid-syntax-highlight",
+        "hashicorp.terraform",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "marp-team.marp-vscode"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh"
+}
