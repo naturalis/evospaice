@@ -3,7 +3,7 @@
 """Select one BCDM record per BIN within a target taxon.
 
 The selector favors records that span the chosen primer window, then breaks
-ties by distance to the target amplicon length and ambiguity content. What
+ties by closeness to the target amplicon length and ambiguity content. What
 counts as "best" evidence depends on the primer set (see classify_coverage):
 - Primer sets with both a forward and a reverse primer (folmer, zeale) rank a
   genuine "both primers found" match above a forward-only/reverse-only match,
@@ -11,6 +11,24 @@ counts as "best" evidence depends on the primer set (see classify_coverage):
 - Forward-only primer sets (leray, elbrecht_bf2) have no reverse boundary by
   design, so a forward match cropped to the end of the read — exactly as
   extract_primer_regions.py does it — is already the best possible evidence.
+- No primer match at all ("none") is always the lowest tier and its "window"
+  is the *entire* raw sequence, since there is no primer-defined boundary. So
+  the usual "closest to target length" tie-break would be meaningless there
+  (a length is not evidence of the right region) — for "none" candidates the
+  tie-break instead prefers the *longer* sequence (more information, more
+  likely to actually contain the target region even without a clean primer
+  hit), then fewer ambiguities.
+- Primer search tries an exact IUPAC match first, then falls back to a
+  mismatch-tolerant seed-and-extend search (--max-primer-mismatches) so a
+  single sequencing error/SNP in the primer site doesn't sink a record all
+  the way to "none". An exact match still outranks a mismatched one within
+  the same coverage tier.
+
+Quality gates (--min-sequence-length, --max-ambiguity-fraction) are opt-in
+hard rejections applied before a candidate can win its BIN; unlike the
+primer-window scoring above, which only deprioritizes a poor candidate, these
+can make a BIN disappear entirely from the output if every one of its records
+fails the gate. Off by default so existing behaviour is unchanged.
 
 Input
 -----
@@ -41,24 +59,32 @@ LOGGER = logging.getLogger("filter_bcdm_bin_representatives")
 # Placeholder strings BOLD (and its exporters) use for a missing value.
 NULL_VALUES = frozenset(["", "none", "null", "na", "n/a", "nan", "unknown", "-"])
 
-# IUPAC degenerate base codes, mapped to the regex character class they match.
-IUPAC_MAP = {
-    "A": "A",
-    "C": "C",
-    "G": "G",
-    "T": "T",
-    "R": "[AG]",
-    "Y": "[CT]",
-    "S": "[GC]",
-    "W": "[AT]",
-    "K": "[GT]",
-    "M": "[AC]",
-    "B": "[CGT]",
-    "D": "[AGT]",
-    "H": "[ACT]",
-    "V": "[ACG]",
-    "N": "[ACGT]",
-    "I": "[ACGT]",
+# IUPAC degenerate base codes, mapped to the literal bases they stand for.
+# Used both to build the regex character class for exact search and, base by
+# base, to count mismatches for the fuzzy fallback search.
+IUPAC_BASES: Dict[str, frozenset[str]] = {
+    "A": frozenset("A"),
+    "C": frozenset("C"),
+    "G": frozenset("G"),
+    "T": frozenset("T"),
+    "R": frozenset("AG"),
+    "Y": frozenset("CT"),
+    "S": frozenset("GC"),
+    "W": frozenset("AT"),
+    "K": frozenset("GT"),
+    "M": frozenset("AC"),
+    "B": frozenset("CGT"),
+    "D": frozenset("AGT"),
+    "H": frozenset("ACT"),
+    "V": frozenset("ACG"),
+    "N": frozenset("ACGT"),
+    "I": frozenset("ACGT"),
+}
+
+# Regex character class per IUPAC code, derived from IUPAC_BASES.
+IUPAC_MAP: Dict[str, str] = {
+    base: (next(iter(letters)) if len(letters) == 1 else "[" + "".join(sorted(letters)) + "]")
+    for base, letters in IUPAC_BASES.items()
 }
 
 # BCDM Linnaean rank columns, most to least inclusive. Used both to validate
@@ -87,9 +113,6 @@ class PrimerSet:
 
 
 PRIMER_SETS: Dict[str, PrimerSet] = {
-    # No reverse primer: BOLD COI-5P records rarely retain the jgHCO2198
-    # template site intact, so (as in extract_primer_regions.py) we crop from
-    # the forward primer to the end of the read and rank by plausible length.
     "leray": PrimerSet(
         name="leray",
         description="Leray/jgLCO1490 forward primer, cropped to end of read, ~313 bp COI mini-barcode.",
@@ -126,13 +149,20 @@ class SelectionMetrics:
     """Per-sequence facts used to rank candidates within a BIN."""
 
     primer_support: str
+    primer_mismatches: int
     coverage_rank: int
     window_start: int
     window_end: int
     window_length: int
     ambiguity_count: int
     ambiguity_fraction: float
-    distance_to_target: int
+    # Second tie-break key (lower is better). For a primer-anchored window
+    # (both/forward_only/reverse_only) this is distance to the target length —
+    # a real quality signal, since the window boundary is primer-evidenced.
+    # For "none" (no primer evidence at all, window = whole sequence) it is
+    # -window_length instead, so the *longer* sequence wins rather than
+    # whichever raw length coincidentally sits closest to the target.
+    tiebreak_length: int
 
 
 @dataclass
@@ -148,7 +178,8 @@ class Candidate:
         """Sort key for picking the best candidate in a BIN (lower is better)."""
         return (
             self.metrics.coverage_rank,
-            self.metrics.distance_to_target,
+            self.metrics.primer_mismatches,
+            self.metrics.tiebreak_length,
             self.metrics.ambiguity_fraction,
             self.metrics.ambiguity_count,
             -self.metrics.window_length,
@@ -247,28 +278,128 @@ def detect_columns(fieldnames: Iterable[str]) -> dict[str, str]:
     }
 
 
-def compile_primer_patterns(primer_set: PrimerSet) -> tuple[re.Pattern[str], Optional[re.Pattern[str]]]:
+@dataclass(frozen=True)
+class PrimerMatch:
+    """One located primer occurrence."""
+
+    start: int
+    end: int
+    mismatches: int
+
+
+@dataclass(frozen=True)
+class FuzzyPrimer:
+    """A primer's per-position allowed bases plus precomputed exact-seed patterns.
+
+    Search uses seed-and-extend: split the primer into (max_mismatches + 1)
+    contiguous chunks and exact-search each with a fast compiled regex. By the
+    pigeonhole principle, any alignment with at most `max_mismatches`
+    mismatches must have at least one mismatch-free chunk, so every valid
+    alignment is found via one of the chunk hits; each candidate anchor is
+    then verified base-by-base (cheap, since there are few candidates).
+    """
+
+    base_sets: tuple[frozenset[str], ...]
+    length: int
+    max_mismatches: int
+    seed_patterns: tuple[re.Pattern[str], ...]
+    seed_offsets: tuple[int, ...]
+
+
+def compile_fuzzy_primer(primer: str, max_mismatches: int) -> FuzzyPrimer:
+    """Precompute the seed patterns and base sets used for mismatch-tolerant search."""
+    base_sets = tuple(IUPAC_BASES.get(base, frozenset(base)) for base in primer.upper())
+    length = len(base_sets)
+    n_chunks = max_mismatches + 1
+    chunk_len = max(1, length // n_chunks)
+    seed_patterns: list[re.Pattern[str]] = []
+    seed_offsets: list[int] = []
+    offset = 0
+    for i in range(n_chunks):
+        if offset >= length:
+            break
+        end = length if i == n_chunks - 1 else min(length, offset + chunk_len)
+        chunk = primer[offset:end]
+        seed_patterns.append(re.compile(iupac_to_regex(chunk), re.IGNORECASE))
+        seed_offsets.append(offset)
+        offset = end
+    return FuzzyPrimer(base_sets, length, max_mismatches, tuple(seed_patterns), tuple(seed_offsets))
+
+
+def _count_mismatches(
+    sequence: str, anchor: int, base_sets: tuple[frozenset[str], ...], limit: int
+) -> Optional[int]:
+    """Mismatches between sequence[anchor:anchor+len(base_sets)] and base_sets, or None if out of bounds/over limit."""
+    length = len(base_sets)
+    if anchor < 0 or anchor + length > len(sequence):
+        return None
+    mismatches = 0
+    for i in range(length):
+        if sequence[anchor + i].upper() not in base_sets[i]:
+            mismatches += 1
+            if mismatches > limit:
+                return None
+    return mismatches
+
+
+def fuzzy_search(sequence: str, primer: FuzzyPrimer, pos: int = 0) -> Optional[PrimerMatch]:
+    """Leftmost mismatch-tolerant occurrence of `primer` in `sequence` at/after `pos`."""
+    candidate_anchors: set[int] = set()
+    for pattern, seed_offset in zip(primer.seed_patterns, primer.seed_offsets):
+        for hit in pattern.finditer(sequence, pos):
+            candidate_anchors.add(hit.start() - seed_offset)
+
+    best: Optional[PrimerMatch] = None
+    for anchor in sorted(a for a in candidate_anchors if a >= pos):
+        mismatches = _count_mismatches(sequence, anchor, primer.base_sets, primer.max_mismatches)
+        if mismatches is not None:
+            best = PrimerMatch(start=anchor, end=anchor + primer.length, mismatches=mismatches)
+            break  # anchors are sorted ascending, so the first valid one is leftmost
+    return best
+
+
+@dataclass(frozen=True)
+class CompiledPrimer:
+    """An exact-match regex plus an optional mismatch-tolerant fallback for one primer."""
+
+    exact: re.Pattern[str]
+    fuzzy: Optional[FuzzyPrimer]
+
+
+def find_primer(compiled: CompiledPrimer, sequence: str, pos: int = 0) -> Optional[PrimerMatch]:
+    """Find `compiled`'s primer at/after `pos`: exact match first, fuzzy fallback if that fails.
+
+    An exact hit anywhere in the sequence is preferred over a fuzzy hit even
+    if the fuzzy hit would start earlier — exact primer evidence outranks an
+    approximate one (mirrored in Candidate.score_tuple's mismatch tie-break).
+    """
+    exact = compiled.exact.search(sequence, pos)
+    if exact is not None:
+        return PrimerMatch(start=exact.start(), end=exact.end(), mismatches=0)
+    if compiled.fuzzy is None:
+        return None
+    return fuzzy_search(sequence, compiled.fuzzy, pos)
+
+
+def compile_primer_patterns(
+    primer_set: PrimerSet, max_mismatches: int = 0
+) -> tuple[CompiledPrimer, Optional[CompiledPrimer]]:
     """Build the forward-strand search patterns for a primer set."""
-    fwd = re.compile(iupac_to_regex(primer_set.forward), re.IGNORECASE)
+
+    def compile_one(primer: str) -> CompiledPrimer:
+        exact = re.compile(iupac_to_regex(primer), re.IGNORECASE)
+        fuzzy = compile_fuzzy_primer(primer, max_mismatches) if max_mismatches > 0 else None
+        return CompiledPrimer(exact=exact, fuzzy=fuzzy)
+
+    fwd = compile_one(primer_set.forward)
     if not primer_set.reverse:
         return fwd, None
-    rev_rc = reverse_complement(primer_set.reverse)
-    rev = re.compile(iupac_to_regex(rev_rc), re.IGNORECASE)
+    rev = compile_one(reverse_complement(primer_set.reverse))
     return fwd, rev
 
 
 def classify_coverage(primer_support: str, window_length: int, primer_set: PrimerSet) -> int:
-    """Rank how much a match supports a plausible amplicon (lower is better).
-
-    The best achievable evidence depends on whether the primer set defines a
-    reverse primer at all:
-    - Reverse defined (e.g. folmer, zeale): only a genuine "both" match confirms
-      the fragment's true boundaries, so it outranks forward_only/reverse_only,
-      which merely guess where the missing boundary would have been.
-    - No reverse defined (e.g. leray, elbrecht_bf2): forward_only cropped to the
-      end of the read *is* the intended window (as in extract_primer_regions.py),
-      so it is the best possible evidence for that primer set.
-    """
+    """Rank how much a match supports a plausible amplicon (lower is better)."""
     plausible = primer_set.min_length <= window_length <= primer_set.max_length
     if primer_set.reverse:
         if primer_support == "both" and plausible:
@@ -287,51 +418,59 @@ def classify_coverage(primer_support: str, window_length: int, primer_set: Prime
 
 def assess_sequence(
     sequence: str,
-    fwd_pattern: re.Pattern[str],
-    rev_pattern: Optional[re.Pattern[str]],
+    fwd_primer: CompiledPrimer,
+    rev_primer: Optional[CompiledPrimer],
     primer_set: PrimerSet,
 ) -> tuple[str, SelectionMetrics]:
     """Locate the primer window in a sequence and score it for BIN-representative ranking."""
-    fwd_match = fwd_pattern.search(sequence)
+    fwd_match = find_primer(fwd_primer, sequence)
     rev_match = None
-    if rev_pattern is not None:
+    if rev_primer is not None:
         if fwd_match is not None:
-            rev_match = rev_pattern.search(sequence, pos=fwd_match.end())
+            rev_match = find_primer(rev_primer, sequence, pos=fwd_match.end)
         if rev_match is None:
-            rev_match = rev_pattern.search(sequence)
+            rev_match = find_primer(rev_primer, sequence)
 
-    if fwd_match is not None and rev_match is not None and rev_match.start() > fwd_match.end():
-        window_start = fwd_match.end()
-        window_end = rev_match.start()
+    if fwd_match is not None and rev_match is not None and rev_match.start > fwd_match.end:
+        window_start = fwd_match.end
+        window_end = rev_match.start
         primer_support = "both"
+        primer_mismatches = fwd_match.mismatches + rev_match.mismatches
     elif fwd_match is not None:
-        window_start = fwd_match.end()
+        window_start = fwd_match.end
         window_end = len(sequence)
         primer_support = "forward_only"
+        primer_mismatches = fwd_match.mismatches
     elif rev_match is not None:
         window_start = 0
-        window_end = rev_match.start()
+        window_end = rev_match.start
         primer_support = "reverse_only"
+        primer_mismatches = rev_match.mismatches
     else:
         window_start = 0
         window_end = len(sequence)
         primer_support = "none"
+        primer_mismatches = 0
 
     window_sequence = sequence[window_start:window_end]
     window_length = len(window_sequence)
     ambiguity_count = sum(1 for base in window_sequence if base not in {"A", "C", "G", "T"})
     ambiguity_fraction = ambiguity_count / window_length if window_length else 1.0
     coverage_rank = classify_coverage(primer_support, window_length, primer_set)
+    tiebreak_length = (
+        -window_length if primer_support == "none" else abs(window_length - primer_set.target_length)
+    )
 
     metrics = SelectionMetrics(
         primer_support=primer_support,
+        primer_mismatches=primer_mismatches,
         coverage_rank=coverage_rank,
         window_start=window_start,
         window_end=window_end,
         window_length=window_length,
         ambiguity_count=ambiguity_count,
         ambiguity_fraction=ambiguity_fraction,
-        distance_to_target=abs(window_length - primer_set.target_length),
+        tiebreak_length=tiebreak_length,
     )
     return window_sequence, metrics
 
@@ -367,10 +506,13 @@ def write_tsv(
     rows: list[Candidate],
     fieldnames: list[str],
     sequence_column: str,
+    primer_set_name: str,
 ) -> None:
     """Write selected rows as TSV, with the sequence column replaced by the cropped window."""
     extra_fields = [
+        "evospaice_primer_set",
         "evospaice_primer_support",
+        "evospaice_primer_mismatches",
         "evospaice_window_start",
         "evospaice_window_end",
         "evospaice_window_length",
@@ -387,7 +529,9 @@ def write_tsv(
         for cand in rows:
             out_row = dict(cand.row)
             out_row[sequence_column] = cand.output_sequence
+            out_row["evospaice_primer_set"] = primer_set_name
             out_row["evospaice_primer_support"] = cand.metrics.primer_support
+            out_row["evospaice_primer_mismatches"] = str(cand.metrics.primer_mismatches)
             out_row["evospaice_window_start"] = str(cand.metrics.window_start)
             out_row["evospaice_window_end"] = str(cand.metrics.window_end)
             out_row["evospaice_window_length"] = str(cand.metrics.window_length)
@@ -429,6 +573,7 @@ def generate_report(
     taxon_name: str,
     marker_filter: str,
     primer_set: PrimerSet,
+    max_primer_mismatches: int,
     crop_window: Optional[tuple[int, int]],
     total_rows: int,
     taxon_rows: int,
@@ -440,6 +585,9 @@ def generate_report(
     top_n: int,
 ) -> str:
     """Build the human-readable text report summarizing one run of the filter."""
+    def pct(part: int, whole: int) -> str:
+        return f"{100.0 * part / whole:.1f}%" if whole else "n/a"
+
     lines: list[str] = []
     lines.append("evospaice BCDM BIN-representative filter report")
     lines.append("=" * 48)
@@ -452,26 +600,42 @@ def generate_report(
         f"Target length:    {primer_set.target_length} bp "
         f"(spanning range {primer_set.min_length}-{primer_set.max_length} bp)"
     )
+    lines.append(f"Max mismatches:   {max_primer_mismatches} (per primer, 0 = exact match only)")
     if crop_window is not None:
         lines.append(f"Crop window:      {crop_window[0]}:{crop_window[1]}")
     lines.append("")
 
     lines.append("Row counts")
     lines.append("-" * 48)
-    lines.append(f"Total rows read:              {total_rows}")
-    lines.append(f"Rows after taxon/marker filter: {taxon_rows}")
-    lines.append(f"Distinct BINs after filter:   {bins_seen}")
-    lines.append(f"Selected BIN representatives: {len(chosen)}")
+    lines.append(f"Total rows read:                {total_rows}")
+    lines.append(
+        f"Rows after taxon/marker filter: {taxon_rows} ({pct(taxon_rows, total_rows)} of total)"
+    )
+    lines.append(f"Distinct BINs after filter:     {bins_seen}")
+    lines.append(
+        f"Selected BIN representatives:   {len(chosen)} ({pct(len(chosen), bins_seen)} of BINs)"
+    )
     for reason, count in sorted(drop_counts.items()):
-        lines.append(f"  dropped ({reason}): {count}")
+        lines.append(f"  dropped ({reason}): {count} ({pct(count, taxon_rows)} of filtered)")
     lines.append("")
 
     support_counts = Counter(cand.metrics.primer_support for cand in chosen)
     lines.append("Primer support among selected representatives")
     lines.append("-" * 48)
     for support in ("both", "forward_only", "reverse_only", "none"):
-        lines.append(f"  {support}: {support_counts.get(support, 0)}")
+        count = support_counts.get(support, 0)
+        lines.append(f"  {support}: {count} ({pct(count, len(chosen))})")
     lines.append("")
+
+    matched = [cand for cand in chosen if cand.metrics.primer_support != "none"]
+    if matched and max_primer_mismatches > 0:
+        exact = sum(1 for cand in matched if cand.metrics.primer_mismatches == 0)
+        fuzzy = len(matched) - exact
+        lines.append("Exact vs. mismatch-tolerant matches (of matched representatives)")
+        lines.append("-" * 48)
+        lines.append(f"  exact (0 mismatches): {exact} ({pct(exact, len(matched))})")
+        lines.append(f"  fuzzy (>0 mismatches): {fuzzy} ({pct(fuzzy, len(matched))})")
+        lines.append("")
 
     if chosen:
         lengths = [cand.metrics.window_length for cand in chosen]
@@ -492,7 +656,7 @@ def generate_report(
         lines.append(f"Top {top_n} '{child_rank}' values among filtered rows")
         lines.append("-" * 48)
         for name, count in child_rank_counts.most_common(top_n):
-            lines.append(f"  {name}: {count}")
+            lines.append(f"  {name}: {count} ({pct(count, taxon_rows)} of filtered)")
         lines.append("")
 
     return "\n".join(lines) + "\n"
@@ -503,40 +667,32 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="Input BCDM TSV file")
     parser.add_argument("--output", type=Path, required=True, help="Output path (.tsv or .fasta)")
-    parser.add_argument(
-        "--taxon",
-        default="phylum:Arthropoda",
-        help="Higher-taxon filter as 'rank:name'",
-    )
-    parser.add_argument(
-        "--marker-filter",
-        default="COI-5P",
-        help="Optional marker_code filter (empty string disables)",
-    )
-    parser.add_argument(
-        "--output-format",
-        choices=["tsv", "fasta"],
-        default="tsv",
-    )
-    parser.add_argument(
-        "--primer-set",
-        choices=list(PRIMER_SETS),
-        default="leray",
-    )
+    parser.add_argument("--taxon", default="phylum:Arthropoda")
+    parser.add_argument("--marker-filter", default="COI-5P")
+    parser.add_argument("--output-format", choices=["tsv", "fasta"], default="tsv")
+    parser.add_argument("--primer-set", choices=list(PRIMER_SETS), default="leray")
     parser.add_argument("--forward-primer", default=None)
     parser.add_argument("--reverse-primer", default=None)
     parser.add_argument("--target-length", type=int, default=None)
     parser.add_argument("--min-length", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=None)
+    parser.add_argument(
+        "--max-primer-mismatches",
+        type=int,
+        default=2,
+        help=(
+            "Max mismatches allowed per primer beyond an exact IUPAC match "
+            "(seed-and-extend fallback). 0 = exact match only (old behaviour). "
+            "Default 2 (~as forgiving as one SNP for a ~25bp primer)."
+        ),
+    )
     parser.add_argument("--crop-window", default="")
+    parser.add_argument("--min-sequence-length", type=int, default=0)
+    parser.add_argument("--max-ambiguity-fraction", type=float, default=1.0)
     parser.add_argument("--report", type=Path, default=None)
     parser.add_argument("--report-top-n", type=int, default=15)
     parser.add_argument("--encoding", default="utf-8")
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-    )
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return parser
 
 
@@ -567,7 +723,9 @@ def main() -> None:
     child_rank = child_rank_of(taxon_rank)
     crop_window = parse_crop_window(args.crop_window) if args.crop_window else None
     primer_set = resolve_primer_set(args)
-    fwd_pattern, rev_pattern = compile_primer_patterns(primer_set)
+    if args.max_primer_mismatches < 0:
+        raise ValueError("--max-primer-mismatches must be >= 0")
+    fwd_pattern, rev_pattern = compile_primer_patterns(primer_set, args.max_primer_mismatches)
 
     selected_by_bin: dict[str, Candidate] = {}
     bins_seen: set[str] = set()
@@ -617,7 +775,16 @@ def main() -> None:
             drop_counts["empty_after_clean"] += 1
             continue
 
+        if args.min_sequence_length and len(cleaned_seq) < args.min_sequence_length:
+            drop_counts["below_min_sequence_length"] += 1
+            continue
+
         primer_window, metrics = assess_sequence(cleaned_seq, fwd_pattern, rev_pattern, primer_set)
+
+        if metrics.ambiguity_fraction > args.max_ambiguity_fraction:
+            drop_counts["too_ambiguous"] += 1
+            continue
+
         output_seq = apply_crop(primer_window, crop_window)
         if not output_seq:
             drop_counts["empty_after_crop"] += 1
@@ -636,7 +803,7 @@ def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.output_format == "tsv":
-        write_tsv(args.output, chosen, fieldnames or [], columns["sequence"])
+        write_tsv(args.output, chosen, fieldnames or [], columns["sequence"], primer_set.name)
     else:
         write_fasta(args.output, chosen, columns["processid"], columns["marker"], columns["bin"])
 
@@ -649,6 +816,7 @@ def main() -> None:
         taxon_name=taxon_name,
         marker_filter=args.marker_filter,
         primer_set=primer_set,
+        max_primer_mismatches=args.max_primer_mismatches,
         crop_window=crop_window,
         total_rows=total_rows,
         taxon_rows=taxon_rows,
