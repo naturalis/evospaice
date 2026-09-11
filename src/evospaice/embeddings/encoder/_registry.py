@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from encoder._base import SequenceEncoder
+from evospaice.embeddings.encoder._base import SequenceEncoder
 
 REGISTRY: dict[str, type] = {}
 

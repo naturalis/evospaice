@@ -6,7 +6,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
-from encoder._registry import register
+from evospaice.embeddings.encoder._registry import register
 
 if TYPE_CHECKING:
     import numpy as np

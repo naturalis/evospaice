@@ -42,7 +42,10 @@ dependencies = [
 # vectors (Track 1, ML/AI experts). Kept optional so the default install stays light and CPU-only.
 embed = [
     "torch>=2.2",
-    "transformers>=4.40",
+    "transformers>=4.40,<5.0",
+    "ai2-olmo",
+    "einops",
+    "azureml-mlflow",
 ]
 # Optional visualisation helpers (Track 4). iTOL and similar are external tools;
 # these are just for quick local renders.

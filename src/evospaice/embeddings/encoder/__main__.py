@@ -30,15 +30,15 @@ from pathlib import Path
 
 import numpy as np
 
-from encoder._fasta import parse_fasta
-from encoder._logging import AMLLogger
-from encoder._omnidna import DEFAULT_MODEL
-from encoder._registry import REGISTRY, create_encoder
+from evospaice.embeddings.encoder._fasta import parse_fasta
+from evospaice.embeddings.encoder._logging import AMLLogger
+from evospaice.embeddings.encoder._omnidna import DEFAULT_MODEL
+from evospaice.embeddings.encoder._registry import REGISTRY, create_encoder
 
 # Import adapters so they register themselves.
-import encoder._omnidna  # noqa: F401
-import encoder._mamba  # noqa: F401
-import encoder._dnabert  # noqa: F401
+import evospaice.embeddings.encoder._omnidna  # noqa: F401
+import evospaice.embeddings.encoder._mamba  # noqa: F401
+import evospaice.embeddings.encoder._dnabert  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

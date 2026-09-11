@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from encoder._registry import register
+from evospaice.embeddings.encoder._registry import register
 
 if TYPE_CHECKING:
     import torch
