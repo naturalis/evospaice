@@ -38,8 +38,13 @@ def parse_fasta(path: Path) -> tuple[list[str], list[str], dict[str, list[str]]]
                 f.seek(0)
                 next(reader)
             
-            # Initialize metadata lists for all columns except the sequence column
-            meta_cols = [h for h in headers if h != seq_col]
+            # Extract only essential taxonomy/identification columns to prevent massive file bloat
+            essential_keywords = {'phylum', 'class', 'order', 'family', 'genus', 'species', 'bin_uri', 'taxon'}
+            meta_cols = []
+            for h in headers:
+                if h != seq_col and any(k in h.lower() for k in essential_keywords):
+                    meta_cols.append(h)
+
             for col in meta_cols:
                 metadata[col] = []
 

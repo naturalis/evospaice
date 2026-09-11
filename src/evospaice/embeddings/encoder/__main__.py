@@ -97,7 +97,7 @@ def _merge_shards(shards: list[Path], output_path: Path) -> tuple[np.ndarray, np
     for k in (meta_keys or []):
         save_kwargs[k] = np.concatenate(all_meta[k])
         
-    np.savez(output_path, **save_kwargs)
+    np.savez_compressed(output_path, **save_kwargs)
     return ids, embeddings
 
 
@@ -175,7 +175,7 @@ def encode_fasta(
             save_kwargs = {"ids": np.array(chunk_ids), "embeddings": chunk_embeddings}
             for k, v in chunk_meta.items():
                 save_kwargs[k] = np.array(v)
-            np.savez(shard_path, **save_kwargs)
+            np.savez_compressed(shard_path, **save_kwargs)
             all_shard_paths.append(shard_path)
             shard_idx += 1
 
@@ -192,7 +192,7 @@ def encode_fasta(
         save_kwargs = {"ids": ids_array, "embeddings": embeddings}
         for k, v in metadata.items():
             save_kwargs[k] = np.array(v)
-        np.savez(final_path, **save_kwargs)
+        np.savez_compressed(final_path, **save_kwargs)
 
     elapsed = time.perf_counter() - t0
     throughput = len(remaining_seqs) / elapsed if elapsed > 0 else 0
