@@ -53,4 +53,4 @@ environment:
   build:
     path: ../../../../.devcontainer/
 
-compute: azureml:gpu-NC24ADS-a100-lowpri-2nd
+compute: azureml:gpu-NC24ADS-a100-lowpri

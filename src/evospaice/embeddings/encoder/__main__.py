@@ -73,14 +73,31 @@ def _count_checkpointed_sequences(shards: list[Path]) -> int:
 def _merge_shards(shards: list[Path], output_path: Path) -> tuple[np.ndarray, np.ndarray]:
     all_ids: list[np.ndarray] = []
     all_emb: list[np.ndarray] = []
+    meta_keys = None
+    all_meta: dict[str, list[np.ndarray]] = {}
+    
     for s in shards:
         data = np.load(s, allow_pickle=True)
         all_ids.append(data["ids"])
         all_emb.append(data["embeddings"])
+        
+        if meta_keys is None:
+            meta_keys = [k for k in data.keys() if k not in ("ids", "embeddings")]
+            for k in meta_keys:
+                all_meta[k] = []
+        for k in meta_keys:
+            all_meta[k].append(data[k])
+            
         data.close()
+        
     ids = np.concatenate(all_ids)
     embeddings = np.vstack(all_emb)
-    np.savez(output_path, ids=ids, embeddings=embeddings)
+    
+    save_kwargs = {"ids": ids, "embeddings": embeddings}
+    for k in (meta_keys or []):
+        save_kwargs[k] = np.concatenate(all_meta[k])
+        
+    np.savez(output_path, **save_kwargs)
     return ids, embeddings
 
 
@@ -98,7 +115,7 @@ def encode_fasta(
     under ``output_dir/.checkpoints_<stem>/``.  On restart, already-encoded
     sequences are skipped automatically.
     """
-    ids, seqs = parse_fasta(fasta_path)
+    ids, seqs, metadata = parse_fasta(fasta_path)
     logger.info("Loaded %d sequences from %s", len(ids), fasta_path)
 
     if not seqs:
@@ -140,6 +157,7 @@ def encode_fasta(
 
     remaining_ids = ids[skip:]
     remaining_seqs = seqs[skip:]
+    remaining_metadata = {k: v[skip:] for k, v in metadata.items()}
 
     t0 = time.perf_counter()
 
@@ -149,11 +167,15 @@ def encode_fasta(
             chunk_end = min(chunk_start + checkpoint_every, len(remaining_seqs))
             chunk_seqs = remaining_seqs[chunk_start:chunk_end]
             chunk_ids = remaining_ids[chunk_start:chunk_end]
+            chunk_meta = {k: v[chunk_start:chunk_end] for k, v in remaining_metadata.items()}
 
             chunk_embeddings = encoder.encode(chunk_seqs, batch_size=batch_size)
 
             shard_path = ckpt_dir / f"shard_{shard_idx:05d}.npz"
-            np.savez(shard_path, ids=np.array(chunk_ids), embeddings=chunk_embeddings)
+            save_kwargs = {"ids": np.array(chunk_ids), "embeddings": chunk_embeddings}
+            for k, v in chunk_meta.items():
+                save_kwargs[k] = np.array(v)
+            np.savez(shard_path, **save_kwargs)
             all_shard_paths.append(shard_path)
             shard_idx += 1
 
@@ -167,7 +189,10 @@ def encode_fasta(
     else:
         embeddings = encoder.encode(remaining_seqs, batch_size=batch_size)
         ids_array = np.array(ids)
-        np.savez(final_path, ids=ids_array, embeddings=embeddings)
+        save_kwargs = {"ids": ids_array, "embeddings": embeddings}
+        for k, v in metadata.items():
+            save_kwargs[k] = np.array(v)
+        np.savez(final_path, **save_kwargs)
 
     elapsed = time.perf_counter() - t0
     throughput = len(remaining_seqs) / elapsed if elapsed > 0 else 0

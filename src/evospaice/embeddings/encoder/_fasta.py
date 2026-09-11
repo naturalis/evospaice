@@ -6,10 +6,15 @@ import csv
 from pathlib import Path
 
 
-def parse_fasta(path: Path) -> tuple[list[str], list[str]]:
-    """Return (ids, sequences) from a FASTA or TSV file."""
+def parse_fasta(path: Path) -> tuple[list[str], list[str], dict[str, list[str]]]:
+    """Return (ids, sequences, metadata) from a FASTA or TSV file.
+    
+    metadata is a dictionary mapping column names to lists of values,
+    useful for storing taxonomy in TSV files.
+    """
     ids: list[str] = []
     seqs: list[str] = []
+    metadata: dict[str, list[str]] = {}
     
     if path.suffix.lower() in ('.tsv', '.csv', '.txt'):
         delimiter = ',' if path.suffix.lower() == '.csv' else '\t'
@@ -33,12 +38,19 @@ def parse_fasta(path: Path) -> tuple[list[str], list[str]]:
                 f.seek(0)
                 next(reader)
             
+            # Initialize metadata lists for all columns except the sequence column
+            meta_cols = [h for h in headers if h != seq_col]
+            for col in meta_cols:
+                metadata[col] = []
+
             for row in reader:
                 seq = row.get(seq_col, '')
                 if seq:
                     ids.append(row.get(id_col, 'unknown_id'))
                     seqs.append(seq.replace('-', ''))
-        return ids, seqs
+                    for col in meta_cols:
+                        metadata[col].append(row.get(col, ''))
+        return ids, seqs, metadata
 
     # Standard FASTA parsing
     current_seq_parts: list[str] = []
@@ -57,4 +69,4 @@ def parse_fasta(path: Path) -> tuple[list[str], list[str]]:
         if current_seq_parts:
             seqs.append("".join(current_seq_parts))
 
-    return ids, seqs
+    return ids, seqs, metadata
