@@ -43,7 +43,6 @@ dependencies = [
 embed = [
     "torch>=2.2",
     "transformers>=4.40,<5.0",
-    "ai2-olmo",
     "einops",
     "azureml-mlflow",
 ]

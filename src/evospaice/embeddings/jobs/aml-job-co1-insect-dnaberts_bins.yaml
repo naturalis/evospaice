@@ -23,7 +23,8 @@ experiment_name: co1_insect_query_encoding_dnaberts_bins
 
 command: |-
   sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential && \
-  pip install -e .[embed] && \
+  pip install einops && \
+  pip install --no-deps . && \
   if [ -d "${{inputs.fasta_path}}" ]; then FASTA_FILE=$(find "${{inputs.fasta_path}}" -type f | head -n 1); else FASTA_FILE="${{inputs.fasta_path}}"; fi && \
   OUTPUTS_DIR="${{outputs.embeddings}}" python -m evospaice.embeddings.encoder \
     --fasta "$FASTA_FILE" \
