@@ -30,7 +30,7 @@ command: |-
     --fasta "$FASTA_FILE" \
     --family dnabert-s \
     --model "${{inputs.model_name}}" \
-    --batch-size ${{inputs.batch_size}}
+    --batch-size ${{inputs.batch_size}} \
     --min-len 500 \
     --max-len 660
 
