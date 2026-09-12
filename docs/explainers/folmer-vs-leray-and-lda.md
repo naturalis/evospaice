@@ -32,6 +32,9 @@ By applying LDA prior to (or instead of) UMAP, we explicitly teach the transform
 
 When we compare the optimal transformations (LDA) of both regions, the differences in information content become apparent, not just for Omni-DNA, but also for DNABERT-S:
 
+### Omni-DNA on Leray
+![UMAP: Lepidoptera Leray (Omni-DNA)](../../images/umap_lepidoptera_leray_omni.png)
+
 ### Omni-DNA on Leray (LDA)
 ![UMAP: Lepidoptera Leray with LDA (Omni-DNA)](../../images/umap_lepidoptera_leray_omni_lda.png)
 
