@@ -108,6 +108,8 @@ def encode_fasta(
     batch_size: int,
     checkpoint_every: int = 0,
     model_prefix: str = "",
+    min_len: int = 0,
+    max_len: int = 0,
 ) -> tuple[np.ndarray, np.ndarray] | None:
     """Encode a single FASTA file. Returns (ids_array, embeddings) or None.
 
@@ -117,6 +119,27 @@ def encode_fasta(
     """
     ids, seqs, metadata = parse_fasta(fasta_path)
     logger.info("Loaded %d sequences from %s", len(ids), fasta_path)
+
+    if min_len > 0 or max_len > 0:
+        filtered_ids = []
+        filtered_seqs = []
+        filtered_metadata = {k: [] for k in metadata.keys()}
+        
+        actual_max = max_len if max_len > 0 else float('inf')
+        
+        for i in range(len(seqs)):
+            slen = len(seqs[i])
+            if slen >= min_len and slen <= actual_max:
+                filtered_ids.append(ids[i])
+                filtered_seqs.append(seqs[i])
+                for k in metadata:
+                    filtered_metadata[k].append(metadata[k][i])
+                    
+        logger.info("Filtered sequences from %d to %d (min_len=%d, max_len=%d)",
+                    len(seqs), len(filtered_seqs), min_len, max_len)
+        ids = filtered_ids
+        seqs = filtered_seqs
+        metadata = filtered_metadata
 
     if not seqs:
         logger.warning("No sequences found in %s, skipping", fasta_path)
@@ -223,6 +246,8 @@ def main() -> None:
     parser.add_argument("--fasta", type=Path, required=True, help="Path to a FASTA file")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="HuggingFace model name")
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--min-len", type=int, default=0, help="Minimum sequence length to keep")
+    parser.add_argument("--max-len", type=int, default=0, help="Maximum sequence length to keep")
     parser.add_argument(
         "--checkpoint-every",
         type=int,
@@ -279,6 +304,8 @@ def main() -> None:
         args.fasta, output_dir, encoder, args.batch_size,
         checkpoint_every=args.checkpoint_every,
         model_prefix=model_prefix,
+        min_len=args.min_len,
+        max_len=args.max_len,
     )
     if result is None:
         logger.error("No sequences encoded")

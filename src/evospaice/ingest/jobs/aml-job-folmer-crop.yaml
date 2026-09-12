@@ -1,0 +1,45 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+experiment_name: bcdm_folmer_crop
+
+command: |-
+  sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential tar && \
+  pip install --no-deps . && \
+  mkdir -p data_temp && \
+  echo "Extracting TAR.GZ archive..." && \
+  tar -xzf "${{inputs.bcdm_tar_gz}}" -C data_temp && \
+  TSV_FILE=$(find data_temp -name "*.tsv" -type f | head -n 1) && \
+  echo "Found TSV file: $TSV_FILE" && \
+  python src/evospaice/ingest/filter_bcdm_bin_representatives.py \
+    --input "$TSV_FILE" \
+    --primer-set folmer \
+    --output "${{outputs.cropped_tsv}}/BOLD_Public.30-Jun-2026_arthropoda_folmer.tsv" \
+    --taxon "phylum:Arthropoda" && \
+  python src/evospaice/ingest/filter_bcdm_bin_representatives.py \
+    --input "$TSV_FILE" \
+    --primer-set folmer \
+    --output "${{outputs.cropped_tsv}}/BOLD_Public.30-Jun-2026_lepidoptera_folmer.tsv" \
+    --taxon "order:Lepidoptera"
+
+inputs:
+  bcdm_tar_gz:
+    type: uri_file
+    # Use azureml datastore path for automatic authentication
+    path: azureml://datastores/workspaceblobstore/paths/BINs/BOLD_Public.30-Jun-2026.tar.gz
+    mode: download
+
+outputs:
+  cropped_tsv:
+    type: uri_folder
+    # Output path in Azure blob store
+    path: azureml://datastores/workspaceblobstore/paths/BINs/cropped_folmer
+    mode: rw_mount
+
+code: ../../../../
+
+environment:
+  build:
+    path: ../../../../.devcontainer/
+
+# Assuming CPU is enough for this preprocessing task, we can use a basic compute
+compute: azureml:gpu-NC24ADS-a100-lowpri-2nd
