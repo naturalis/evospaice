@@ -38,6 +38,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Runtime adapter used by Azure Container Apps Jobs. The core tree algorithms
+# remain independent of Azure SDKs and can run locally without this extra.
+azure = [
+    "azure-identity>=1.17",
+    "azure-storage-blob>=12.22",
+]
 # Only needed if you compute embeddings locally rather than consuming precomputed
 # vectors (Track 1, ML/AI experts). Kept optional so the default install stays light and CPU-only.
 embed = [

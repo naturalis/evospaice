@@ -1,0 +1,5 @@
+{
+  "version": "mock-v1",
+  "resolve_ranks": ["genus"],
+  "scale_ranks": ["*"]
+}

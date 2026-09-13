@@ -32,6 +32,12 @@ beyond that; the scope is a given, not something to discover.
   is the spec (and the test oracle) for Faith's PD and UniFrac.
 - **Want to start coding?** Set up the [environment](#environment--setup), then
   find your [track](#the-tracks) and its open issues on the project board.
+- **Planning delivery?** Use the [solution architecture and workstream backlog](docs/solution-architecture.md)
+  for component boundaries, artifact contracts, dependencies, acceptance gates,
+  and task IDs.
+- **Deploying the tree builder?** See the [Azure Container Apps Jobs tree architecture](docs/azure-container-apps-tree-architecture.md)
+  for the recommended services, job design, security, monitoring, and cost controls.
+  The runnable MVP infrastructure and container contract are in [infra/README.md](infra/README.md).
 
 ---
 

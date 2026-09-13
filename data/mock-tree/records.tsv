@@ -1,0 +1,7 @@
+leaf_id	record_id	bin_uri	kingdom	phylum	class	order	family	subfamily	tribe	genus	species	subspecies
+BOLD:MOCK001	REC-001	BOLD:MOCK001	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
+BOLD:MOCK002	REC-002	BOLD:MOCK002	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
+BOLD:MOCK003	REC-003	BOLD:MOCK003	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
+BOLD:MOCK004	REC-004	BOLD:MOCK004	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
+BOLD:MOCK005	REC-005	BOLD:MOCK005	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus		
+BOLD:MOCK006	REC-006	BOLD:MOCK006	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus		
