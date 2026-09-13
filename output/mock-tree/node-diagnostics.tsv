@@ -1,0 +1,39 @@
+node_id	rank	child_count	topology_method	length_method	representative_method	fit_error	clamped_lengths	distance_matrix_size	note
+taxonomy:e5fbc79a74f09217fb08	genus	4	neighbor_joining	nnls	centroid	3.2526418915627903e-06	0	16	
+taxonomy:ce55df764bc422a27d93	tribe	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:1f29eea8a2eb7b56090d	subfamily	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:93fab0db39216eca1291	genus	4	neighbor_joining	nnls	centroid	1.6810555930791883e-05	0	16	
+taxonomy:f7cad2106815b422ec95	genus	4	neighbor_joining	nnls	centroid	5.205230987201504e-05	0	16	
+taxonomy:608466a2d570f3f512f0	genus	4	neighbor_joining	nnls	centroid	5.109288927734623e-05	0	16	
+taxonomy:60aafd92f29328ea035c	genus	4	neighbor_joining	nnls	centroid	3.975345523942662e-05	0	16	
+taxonomy:71df85f0d1800e2c7ee4	family	5	preserved	nnls	centroid	0.02202744486550199	0	25	policy_preserved
+taxonomy:aead5942503ae63bfb34	genus	4	neighbor_joining	nnls	centroid	0.00014065848053080335	0	16	
+taxonomy:493e96c7349906826e32	genus	4	neighbor_joining	nnls	centroid	7.767683720952922e-06	0	16	
+taxonomy:0f9221d830426b25c938	genus	4	neighbor_joining	nnls	centroid	7.218999876220014e-05	0	16	
+taxonomy:4d36bf0af376584661a7	genus	4	neighbor_joining	nnls	centroid	2.92615500292006e-05	0	16	
+taxonomy:21f8909ccb5709d9d3e4	genus	4	neighbor_joining	nnls	centroid	3.10318066608237e-05	0	16	
+taxonomy:49ff8163dbec5a25b3c1	family	5	preserved	nnls	centroid	0.016732323242223446	0	25	policy_preserved
+taxonomy:0733743bba50efcdfbca	genus	4	neighbor_joining	nnls	centroid	2.522873125069135e-05	0	16	
+taxonomy:9286719443466a79e9a8	genus	4	neighbor_joining	nnls	centroid	2.3523262847521666e-07	0	16	
+taxonomy:2c44f68bba52c75ee62b	genus	4	neighbor_joining	nnls	centroid	9.183041762911907e-05	0	16	
+taxonomy:712e756ce22e40d2ee62	genus	4	neighbor_joining	nnls	centroid	5.959564092071001e-05	0	16	
+taxonomy:d0f2b1f30343d80db1d9	genus	4	neighbor_joining	nnls	centroid	3.049637847564511e-05	0	16	
+taxonomy:94b7c8cc5faeaeaab096	family	5	preserved	nnls	centroid	0.020342796465511608	0	25	policy_preserved
+taxonomy:abfe94acd0706dcd90e9	order	3	preserved	nnls	medoid	9.064933036736789e-17	0	9	policy_preserved
+taxonomy:f0afb211e9e6bb2b2950	genus	4	neighbor_joining	nnls	centroid	8.782769424370717e-05	0	16	
+taxonomy:fcf1c8865bfca29b0a80	genus	4	neighbor_joining	nnls	centroid	1.7032117141972906e-05	0	16	
+taxonomy:4b6b5bf56516b416c34f	genus	4	neighbor_joining	nnls	centroid	3.916093788236969e-05	0	16	
+taxonomy:f1261066551f41c4374a	genus	4	neighbor_joining	nnls	centroid	2.6349941224084947e-05	0	16	
+taxonomy:412006756251a12d08c2	genus	4	neighbor_joining	nnls	centroid	3.3639960753522418e-06	0	16	
+taxonomy:f92c8c581e9a1c0a61bb	family	5	preserved	nnls	centroid	0.026995847879985543	0	25	policy_preserved
+taxonomy:7cf1c4a32e52af2d0828	genus	4	neighbor_joining	nnls	centroid	6.137660253415357e-05	0	16	
+taxonomy:20ff7b4113f8b2fb3b0e	genus	4	neighbor_joining	nnls	centroid	9.446547854885485e-06	0	16	
+taxonomy:d0e6359fea01b0383bbb	genus	4	neighbor_joining	nnls	centroid	1.6808018152432456e-06	0	16	
+taxonomy:31d7f6dcab8e746f165d	genus	4	neighbor_joining	nnls	centroid	0.00019853815915278053	0	16	
+taxonomy:ac7f3220b54bfe66e1ee	genus	4	neighbor_joining	nnls	centroid	2.5972004369102666e-05	0	16	
+taxonomy:f4dec9c07113d51a16cb	family	5	preserved	nnls	centroid	0.030267413933695777	0	25	policy_preserved
+taxonomy:b6c16b8c75c710f27b57	order	2	preserved	two_child_split	centroid	0.0	0	4	
+taxonomy:07c6561637a2118f5659	class	2	preserved	two_child_split	centroid	0.0	0	4	
+taxonomy:167081d550fb29827318	phylum	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:d91ff72324b9d3c5931a	kingdom	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:root	root	1	preserved	fallback	centroid	0.0	0	1	

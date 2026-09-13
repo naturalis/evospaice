@@ -4,7 +4,6 @@ from pathlib import Path
 
 from evospaice.tree.cloud import CloudRunConfig, run_cloud_tree
 
-
 REPOSITORY_ROOT = Path(__file__).parents[1]
 MOCK_DATA = REPOSITORY_ROOT / "data" / "mock-tree"
 
@@ -46,7 +45,7 @@ def test_cloud_adapter_stages_and_publishes_an_idempotent_run() -> None:
     first = run_cloud_tree(store, run)
     second = run_cloud_tree(store, run)
 
-    assert first.leaf_count == second.leaf_count == 6
+    assert first.leaf_count == second.leaf_count == 100
     assert "runs/mock/output/scaled-tree.nwk" in store.objects
     assert "runs/mock/output/tree-manifest.json" in store.objects
     assert "runs/mock/output/checkpoints/complete.json" in store.objects

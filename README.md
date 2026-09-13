@@ -102,17 +102,25 @@ Dependencies are pinned with [**uv**](https://docs.astral.sh/uv/) via
 environment.
 
 ```bash
-# one-time
-uv sync
+# Install the tree pipeline, Azure adapter, visualisation tools, and dev tooling.
+uv sync --locked --extra azure --extra viz
 
 # run anything in the environment
 uv run python -m evospaice.<module>
 uv run pytest            # the toy end-to-end smoke test should stay green
 ```
 
-Or open the repo in **GitHub Codespaces** (or VS Code Dev Containers) and the
-`.devcontainer/` config builds the environment for you — recommended so nobody
-loses the first morning to a broken install.
+To compute embeddings locally as well, add the larger, optional model stack:
+
+```bash
+uv sync --locked --extra azure --extra viz --extra embed
+```
+
+Or open the repo in **GitHub Codespaces** (or use **Dev Containers: Reopen in
+Container** in VS Code). The `.devcontainer/` configuration supplies Python
+3.12, uv, Azure CLI with Bicep, Docker access, and the recommended editor
+extensions, then installs the locked Azure, visualisation, and dev dependencies
+automatically.
 
 **Core dependencies:** `numpy`, `scipy`, `biopython`, `scikit-bio` (Neighbor-
 Joining), `dendropy` (tree I/O / Newick), `faiss-cpu` (nearest-neighbour lookups),

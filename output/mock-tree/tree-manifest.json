@@ -1,0 +1,34 @@
+{
+  "config": {
+    "centroid_drift_limit": 0.35,
+    "fallback_branch_length": 0.0,
+    "max_nj_children": 256,
+    "metric": "cosine",
+    "random_seed": 42,
+    "representative": "centroid-medoid"
+  },
+  "counts": {
+    "leaves": 100,
+    "nodes": 188,
+    "processed_internal_nodes": 38
+  },
+  "distance_scope": {
+    "global_matrix_created": false,
+    "largest_local_child_count": 5,
+    "largest_local_matrix_elements": 25
+  },
+  "inputs": {
+    "embedding-index.tsv": "2c07fd0ba52d21a2ded1b55a9c2d2dd5d2c84fdecdeccdd1c91db1e78f52b38c",
+    "embeddings.tsv": "95c96c38e681500c3c9b929a45d4d6ef113dc373a630900e1a3ce9c4e69a9bee",
+    "records.tsv": "87681c5cdf5359590e491532b012b1c68bb2c35f102ccdf296f7067aa9d00594",
+    "trust-policy.json": "3d0468734b1e3c0cb83e4db04135c7aaf62ba1b8597d2fdcf61680ae38957dbb"
+  },
+  "outputs": {
+    "excluded-records.tsv": "089ac529e4797c142e7e392ff9ab46217fd661e403a954d334d8835ccd2b45af",
+    "node-diagnostics.tsv": "f7cc7eb115fdac29e20079a7d334c8af532aa7adb6418e778adbedabe5ed1198",
+    "scaled-tree.nwk": "02962b7e38af04ee1931afc25f66730207582bde365c97e0a77ae3181517ce18"
+  },
+  "policy_version": "mock-v1",
+  "schema_version": 1,
+  "status": "complete"
+}

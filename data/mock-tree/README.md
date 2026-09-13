@@ -1,11 +1,13 @@
 # Mock tree-building inputs
 
-This deterministic six-tip dataset exercises the post-embedding tree builder
-without requiring the BOLD export or DNABERT-S embeddings.
+This deterministic 100-tip dataset exercises the post-embedding tree builder
+without requiring the BOLD export or running Omni-DNA-20M inference.
 
-- `records.tsv` links each mock BIN tip to one source record and taxonomy path.
+- `records.tsv` links each of 100 mock BIN tips to one source record and taxonomy path.
 - `embedding-index.tsv` links record IDs to vector rows.
-- `embeddings.tsv` is a human-readable stand-in for production `embeddings.npy`.
+- `embeddings.tsv` contains deterministic, dense 256-dimensional mock vectors,
+  matching Omni-DNA-20M's `d_model`. They preserve taxonomy-like cosine
+  clustering but are synthetic and are not model-generated embeddings.
 - `trust-policy.json` permits local NJ resolution at genus nodes and branch
   scaling at every rank.
 
@@ -21,5 +23,6 @@ python -m evospaice.cli tree `
   --output-dir output/mock-tree
 ```
 
-Production input should use a two-dimensional `float32` NumPy `.npy` file.
-The TSV vector adapter exists so the small fixture remains reviewable in Git.
+Production input should use model-generated vectors in a two-dimensional
+`float32` NumPy `.npy` file. The TSV vector adapter keeps this fixture directly
+inspectable in Git.

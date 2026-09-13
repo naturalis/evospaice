@@ -1,7 +1,101 @@
-leaf_id	record_id	bin_uri	kingdom	phylum	class	order	family	subfamily	tribe	genus	species	subspecies
-BOLD:MOCK001	REC-001	BOLD:MOCK001	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
-BOLD:MOCK002	REC-002	BOLD:MOCK002	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
-BOLD:MOCK003	REC-003	BOLD:MOCK003	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
-BOLD:MOCK004	REC-004	BOLD:MOCK004	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa		
-BOLD:MOCK005	REC-005	BOLD:MOCK005	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus		
-BOLD:MOCK006	REC-006	BOLD:MOCK006	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus		
+leaf_id	record_id	bin_uri	kingdom	phylum	class	order	family	subfamily	tribe	genus
+BOLD:MOCK001	REC-001	BOLD:MOCK001	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa
+BOLD:MOCK002	REC-002	BOLD:MOCK002	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa
+BOLD:MOCK003	REC-003	BOLD:MOCK003	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa
+BOLD:MOCK004	REC-004	BOLD:MOCK004	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa
+BOLD:MOCK005	REC-005	BOLD:MOCK005	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus
+BOLD:MOCK006	REC-006	BOLD:MOCK006	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus
+BOLD:MOCK007	REC-007	BOLD:MOCK007	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus
+BOLD:MOCK008	REC-008	BOLD:MOCK008	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			Carabus
+BOLD:MOCK009	REC-009	BOLD:MOCK009	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus01
+BOLD:MOCK010	REC-010	BOLD:MOCK010	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus01
+BOLD:MOCK011	REC-011	BOLD:MOCK011	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus01
+BOLD:MOCK012	REC-012	BOLD:MOCK012	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus01
+BOLD:MOCK013	REC-013	BOLD:MOCK013	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus02
+BOLD:MOCK014	REC-014	BOLD:MOCK014	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus02
+BOLD:MOCK015	REC-015	BOLD:MOCK015	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus02
+BOLD:MOCK016	REC-016	BOLD:MOCK016	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus02
+BOLD:MOCK017	REC-017	BOLD:MOCK017	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus03
+BOLD:MOCK018	REC-018	BOLD:MOCK018	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus03
+BOLD:MOCK019	REC-019	BOLD:MOCK019	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus03
+BOLD:MOCK020	REC-020	BOLD:MOCK020	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus03
+BOLD:MOCK021	REC-021	BOLD:MOCK021	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus04
+BOLD:MOCK022	REC-022	BOLD:MOCK022	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus04
+BOLD:MOCK023	REC-023	BOLD:MOCK023	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus04
+BOLD:MOCK024	REC-024	BOLD:MOCK024	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae			MockGenus04
+BOLD:MOCK025	REC-025	BOLD:MOCK025	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus05
+BOLD:MOCK026	REC-026	BOLD:MOCK026	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus05
+BOLD:MOCK027	REC-027	BOLD:MOCK027	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus05
+BOLD:MOCK028	REC-028	BOLD:MOCK028	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus05
+BOLD:MOCK029	REC-029	BOLD:MOCK029	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus06
+BOLD:MOCK030	REC-030	BOLD:MOCK030	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus06
+BOLD:MOCK031	REC-031	BOLD:MOCK031	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus06
+BOLD:MOCK032	REC-032	BOLD:MOCK032	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus06
+BOLD:MOCK033	REC-033	BOLD:MOCK033	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus07
+BOLD:MOCK034	REC-034	BOLD:MOCK034	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus07
+BOLD:MOCK035	REC-035	BOLD:MOCK035	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus07
+BOLD:MOCK036	REC-036	BOLD:MOCK036	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus07
+BOLD:MOCK037	REC-037	BOLD:MOCK037	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus08
+BOLD:MOCK038	REC-038	BOLD:MOCK038	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus08
+BOLD:MOCK039	REC-039	BOLD:MOCK039	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus08
+BOLD:MOCK040	REC-040	BOLD:MOCK040	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus08
+BOLD:MOCK041	REC-041	BOLD:MOCK041	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus09
+BOLD:MOCK042	REC-042	BOLD:MOCK042	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus09
+BOLD:MOCK043	REC-043	BOLD:MOCK043	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus09
+BOLD:MOCK044	REC-044	BOLD:MOCK044	Animalia	Arthropoda	Insecta	Lepidoptera	Papilionidae			MockGenus09
+BOLD:MOCK045	REC-045	BOLD:MOCK045	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus10
+BOLD:MOCK046	REC-046	BOLD:MOCK046	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus10
+BOLD:MOCK047	REC-047	BOLD:MOCK047	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus10
+BOLD:MOCK048	REC-048	BOLD:MOCK048	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus10
+BOLD:MOCK049	REC-049	BOLD:MOCK049	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus11
+BOLD:MOCK050	REC-050	BOLD:MOCK050	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus11
+BOLD:MOCK051	REC-051	BOLD:MOCK051	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus11
+BOLD:MOCK052	REC-052	BOLD:MOCK052	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus11
+BOLD:MOCK053	REC-053	BOLD:MOCK053	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus12
+BOLD:MOCK054	REC-054	BOLD:MOCK054	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus12
+BOLD:MOCK055	REC-055	BOLD:MOCK055	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus12
+BOLD:MOCK056	REC-056	BOLD:MOCK056	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus12
+BOLD:MOCK057	REC-057	BOLD:MOCK057	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus13
+BOLD:MOCK058	REC-058	BOLD:MOCK058	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus13
+BOLD:MOCK059	REC-059	BOLD:MOCK059	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus13
+BOLD:MOCK060	REC-060	BOLD:MOCK060	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus13
+BOLD:MOCK061	REC-061	BOLD:MOCK061	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus14
+BOLD:MOCK062	REC-062	BOLD:MOCK062	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus14
+BOLD:MOCK063	REC-063	BOLD:MOCK063	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus14
+BOLD:MOCK064	REC-064	BOLD:MOCK064	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae			MockGenus14
+BOLD:MOCK065	REC-065	BOLD:MOCK065	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus15
+BOLD:MOCK066	REC-066	BOLD:MOCK066	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus15
+BOLD:MOCK067	REC-067	BOLD:MOCK067	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus15
+BOLD:MOCK068	REC-068	BOLD:MOCK068	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus15
+BOLD:MOCK069	REC-069	BOLD:MOCK069	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus16
+BOLD:MOCK070	REC-070	BOLD:MOCK070	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus16
+BOLD:MOCK071	REC-071	BOLD:MOCK071	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus16
+BOLD:MOCK072	REC-072	BOLD:MOCK072	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus16
+BOLD:MOCK073	REC-073	BOLD:MOCK073	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus17
+BOLD:MOCK074	REC-074	BOLD:MOCK074	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus17
+BOLD:MOCK075	REC-075	BOLD:MOCK075	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus17
+BOLD:MOCK076	REC-076	BOLD:MOCK076	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus17
+BOLD:MOCK077	REC-077	BOLD:MOCK077	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus18
+BOLD:MOCK078	REC-078	BOLD:MOCK078	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus18
+BOLD:MOCK079	REC-079	BOLD:MOCK079	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus18
+BOLD:MOCK080	REC-080	BOLD:MOCK080	Animalia	Arthropoda	Insecta	Coleoptera	Carabidae			MockGenus18
+BOLD:MOCK081	REC-081	BOLD:MOCK081	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus19
+BOLD:MOCK082	REC-082	BOLD:MOCK082	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus19
+BOLD:MOCK083	REC-083	BOLD:MOCK083	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus19
+BOLD:MOCK084	REC-084	BOLD:MOCK084	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus19
+BOLD:MOCK085	REC-085	BOLD:MOCK085	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus20
+BOLD:MOCK086	REC-086	BOLD:MOCK086	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus20
+BOLD:MOCK087	REC-087	BOLD:MOCK087	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus20
+BOLD:MOCK088	REC-088	BOLD:MOCK088	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus20
+BOLD:MOCK089	REC-089	BOLD:MOCK089	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus21
+BOLD:MOCK090	REC-090	BOLD:MOCK090	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus21
+BOLD:MOCK091	REC-091	BOLD:MOCK091	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus21
+BOLD:MOCK092	REC-092	BOLD:MOCK092	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus21
+BOLD:MOCK093	REC-093	BOLD:MOCK093	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus22
+BOLD:MOCK094	REC-094	BOLD:MOCK094	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus22
+BOLD:MOCK095	REC-095	BOLD:MOCK095	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus22
+BOLD:MOCK096	REC-096	BOLD:MOCK096	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus22
+BOLD:MOCK097	REC-097	BOLD:MOCK097	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus23
+BOLD:MOCK098	REC-098	BOLD:MOCK098	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus23
+BOLD:MOCK099	REC-099	BOLD:MOCK099	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus23
+BOLD:MOCK100	REC-100	BOLD:MOCK100	Animalia	Arthropoda	Insecta	Coleoptera	Scarabaeidae			MockGenus23
