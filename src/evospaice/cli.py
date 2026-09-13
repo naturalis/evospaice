@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Optional, Sequence
 
 from evospaice.tree import InputPaths, TreeBuildConfig, build_tree
 
@@ -40,6 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
         track_parser = subparsers.add_parser(name, help=help_text)
         if name == "tree":
             _configure_tree_parser(track_parser)
+        elif name == "viz":
+            _configure_viz_parser(track_parser)
     return parser
 
 
@@ -58,6 +60,14 @@ def _configure_tree_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--centroid-drift-limit", type=float, default=0.35)
     parser.add_argument("--fallback-branch-length", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=42)
+
+
+def _configure_viz_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--tree", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--title", default="Evospaice phylogenetic reference tree")
+    parser.add_argument("--show-branch-lengths", action="store_true")
+    parser.add_argument("--show-internal-labels", action="store_true")
 
 
 def _run_tree(args: argparse.Namespace) -> int:
@@ -110,7 +120,21 @@ def _run_tree(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def _run_viz(args: argparse.Namespace) -> int:
+    from evospaice.viz import render_tree
+
+    output_path = render_tree(
+        args.tree,
+        args.output,
+        title=args.title,
+        show_branch_lengths=args.show_branch_lengths,
+        show_internal_labels=args.show_internal_labels,
+    )
+    print(output_path)
+    return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     """Parse arguments and dispatch to a track. Returns a process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -119,6 +143,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.track == "tree":
         return _run_tree(args)
+    if args.track == "viz":
+        return _run_viz(args)
     print(f"evospaice {args.track}: not implemented yet", file=sys.stderr)
     return 2
 
