@@ -59,3 +59,48 @@ output "datastore_names" {
   description = "All AML datastore names created in this workspace"
   value       = keys(azapi_resource.datastores)
 }
+
+output "class_filter_function_app_name" {
+  description = "Function App that filters FASTA records by taxonomic class"
+  value       = azurerm_function_app_flex_consumption.class_filter.name
+}
+
+output "class_filter_trigger_container_name" {
+  description = "Blob container monitored for class-filter trigger files"
+  value       = azurerm_storage_container.class_filter_triggers.name
+}
+
+output "class_filter_output_container_name" {
+  description = "Blob container containing class-filtered FASTA files"
+  value       = azurerm_storage_container.class_filter_output.name
+}
+
+output "class_filter_servicebus_queue_name" {
+  description = "Service Bus queue receiving class-filter trigger events"
+  value       = azurerm_servicebus_queue.class_filter.name
+}
+
+output "embedding_submitter_function_app_name" {
+  description = "Function App that submits Omni-DNA jobs to Azure Machine Learning"
+  value       = azurerm_function_app_flex_consumption.embedding_submitter.name
+}
+
+output "embedding_results_container_name" {
+  description = "Blob container containing versioned FAISS embedding bundles"
+  value       = azurerm_storage_container.embedding_results.name
+}
+
+output "embedding_results_datastore_name" {
+  description = "Azure ML datastore containing versioned FAISS embedding bundles"
+  value       = azapi_resource.embedding_results_datastore.name
+}
+
+output "filtered_sequences_datastore_name" {
+  description = "Azure ML datastore containing class-filtered FASTA inputs"
+  value       = azapi_resource.filtered_sequences_datastore.name
+}
+
+output "embedding_servicebus_queue_name" {
+  description = "Service Bus queue receiving filtered FASTA creation events"
+  value       = azurerm_servicebus_queue.embedding.name
+}

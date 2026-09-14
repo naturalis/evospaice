@@ -146,6 +146,52 @@ variable "ml_workspace_sku_name" {
   default     = "Basic"
 }
 
+variable "embedding_compute_name" {
+  description = "Existing Azure ML A100 compute cluster used for Omni-DNA embedding jobs"
+  type        = string
+  default     = "gpu-NC24ADS-a100-dedicated"
+}
+
+variable "embedding_environment_name" {
+  description = "Existing Azure ML environment known to support Omni-DNA A100 inference"
+  type        = string
+  default     = "CliV2AnonymousEnvironment"
+}
+
+variable "embedding_environment_version" {
+  description = "Version of the existing Azure ML Omni-DNA environment"
+  type        = string
+  default     = "6fe03960371c7f20a326998f37ea4cf7804e1d0c5c3326e8f5c905c0849c2e79"
+}
+
+variable "omni_dna_model_id" {
+  description = "Hugging Face model identifier for Omni-DNA embedding inference"
+  type        = string
+  default     = "zehui127/Omni-DNA-20M"
+}
+
+variable "embedding_batch_size" {
+  description = "Number of FASTA records embedded per A100 inference batch"
+  type        = number
+  default     = 256
+
+  validation {
+    condition     = var.embedding_batch_size >= 1 && var.embedding_batch_size <= 2048
+    error_message = "embedding_batch_size must be between 1 and 2048."
+  }
+}
+
+variable "embedding_max_length" {
+  description = "Maximum tokenizer length used by the proven Omni-DNA encoder"
+  type        = number
+  default     = 1024
+
+  validation {
+    condition     = var.embedding_max_length >= 1 && var.embedding_max_length <= 1024
+    error_message = "embedding_max_length must be between 1 and 1024."
+  }
+}
+
 variable "storage_blob_soft_delete_retention_days" {
   description = "Number of days to retain soft-deleted blobs on storage accounts managed by this stack (1-365)."
   type        = number

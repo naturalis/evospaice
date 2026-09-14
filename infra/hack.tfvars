@@ -44,6 +44,14 @@ aml_compute_clusters = {
     max_instances            = 2
     scale_down_idle_duration = "PT10M"
   }
+  gpu_a100_dedicated = {
+    name                     = "gpu-NC24ADS-a100-dedicated"
+    vm_size                  = "STANDARD_NC24ADS_A100_V4"
+    vm_priority              = "Dedicated"
+    min_instances            = 0
+    max_instances            = 1
+    scale_down_idle_duration = "PT10M"
+  }
 }
 
 projectdata_storage_accounts = [
