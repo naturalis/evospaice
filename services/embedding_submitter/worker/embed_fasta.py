@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 from collections.abc import Iterator
 from contextlib import nullcontext
 from datetime import UTC, datetime
@@ -187,7 +188,8 @@ def embed_fasta(
         raise ValueError("Source FASTA contains no records")
 
     index_path = output_dir / "index.faiss"
-    faiss.write_index(index, str(index_path))
+    temporary_index_path = output_dir / ".index.faiss.tmp"
+    faiss.write_index(index, str(temporary_index_path))
     manifest = {
         "schema_version": 1,
         "created_at": datetime.now(UTC).isoformat(),
@@ -209,7 +211,7 @@ def embed_fasta(
             "dimension": index.d,
             "record_count": record_count,
             "file": index_path.name,
-            "sha256": _sha256(index_path),
+            "sha256": _sha256(temporary_index_path),
         },
         "metadata": {
             "format": "parquet",
@@ -219,6 +221,7 @@ def embed_fasta(
         },
     }
     (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    os.replace(temporary_index_path, index_path)
     LOGGER.info("Wrote %d embeddings to %s", record_count, output_dir)
 
 

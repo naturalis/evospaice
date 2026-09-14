@@ -52,6 +52,14 @@ aml_compute_clusters = {
     max_instances            = 1
     scale_down_idle_duration = "PT10M"
   }
+  cpu_species_split_dedicated = {
+    name                     = "cpu-species-split-dedicated"
+    vm_size                  = "STANDARD_D16DS_V5"
+    vm_priority              = "Dedicated"
+    min_instances            = 0
+    max_instances            = 8
+    scale_down_idle_duration = "PT10M"
+  }
 }
 
 projectdata_storage_accounts = [

@@ -104,3 +104,23 @@ output "embedding_servicebus_queue_name" {
   description = "Service Bus queue receiving filtered FASTA creation events"
   value       = azurerm_servicebus_queue.embedding.name
 }
+
+output "species_splitter_function_app_name" {
+  description = "Function App that submits per-species FAISS splitting jobs"
+  value       = azurerm_function_app_flex_consumption.species_splitter.name
+}
+
+output "species_results_container_name" {
+  description = "Blob container containing per-species FAISS bundles"
+  value       = azurerm_storage_container.species_results.name
+}
+
+output "species_results_datastore_name" {
+  description = "Azure ML datastore containing per-species FAISS bundles"
+  value       = azapi_resource.species_results_datastore.name
+}
+
+output "species_splitter_servicebus_queue_name" {
+  description = "Service Bus queue receiving completed embedding bundle events"
+  value       = azurerm_servicebus_queue.species_splitter.name
+}

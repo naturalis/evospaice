@@ -152,6 +152,23 @@ variable "embedding_compute_name" {
   default     = "gpu-NC24ADS-a100-dedicated"
 }
 
+variable "species_splitter_compute_name" {
+  description = "Existing Azure ML CPU compute cluster used to split embeddings by species"
+  type        = string
+  default     = "cpu-species-split-dedicated"
+}
+
+variable "species_splitter_shard_count" {
+  description = "Number of parallel species-splitting AML jobs"
+  type        = number
+  default     = 8
+
+  validation {
+    condition     = var.species_splitter_shard_count >= 1 && var.species_splitter_shard_count <= 16
+    error_message = "species_splitter_shard_count must be between 1 and 16."
+  }
+}
+
 variable "embedding_environment_name" {
   description = "Existing Azure ML environment known to support Omni-DNA A100 inference"
   type        = string
