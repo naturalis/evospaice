@@ -1,0 +1,33 @@
+{
+  "config": {
+    "centroid_drift_limit": 0.35,
+    "fallback_branch_length": 0.0,
+    "max_nj_children": 256,
+    "metric": "cosine",
+    "random_seed": 42,
+    "representative": "centroid-medoid"
+  },
+  "counts": {
+    "leaves": 2,
+    "partitions": 2
+  },
+  "outputs": {
+    "checkpoints/complete.json": "ad9e6ca964920835c43277f6c7b3a109088cb3eb31ad7a8d2d91c81e6b1085f7",
+    "excluded-records.tsv": "089ac529e4797c142e7e392ff9ab46217fd661e403a954d334d8835ccd2b45af",
+    "node-diagnostics.tsv": "5d957a0842467375c586ee2ac05b411ddfc79f45a9af85285b0d065355a8f420",
+    "root-representative.npy": "4f4246c8e6796409dddd8631a090e5fa50e54bc0a65c64b1d216504742597c19",
+    "scaled-tree.nwk": "20eddc9b41ebb88a5b05a3a6422be713baee60c96ee2747433230d10f7860bc0",
+    "validation-report.json": "fabe5e63d5b6c01b6aa7c6646bf89c91a9f894e88d98e70e809f5fd32f7dc3c8"
+  },
+  "partition_manifest": "runs/smoke-20260914-001/prepare/partition-manifest.json",
+  "partition_manifests": {
+    "p-40eba99b6bace2f45515": "ef81dddac472e35429881d89a990cee2f1d72af92869884fcdd10ef9a075e45c",
+    "p-597d811e5ca464e8814d": "0210456832515f7af7f6501f075b0f792495ec1506c50414ed923af557fe34da"
+  },
+  "schema_version": 1,
+  "source": {
+    "etag": "0x8df1257d2b7e782",
+    "prefix": "reference/embedding-exports/embedding-smoke/0x8df1257d2b7e782"
+  },
+  "status": "complete"
+}

@@ -1,5 +1,9 @@
 # Container Apps Jobs MVP
 
+> This directory's root template is the small four-file MVP. For the
+> 6.98-million-record FAISS/Parquet workflow and the isolated
+> `rg-evoispace-tree-lp` deployment, use the [full-scale infrastructure](full-scale/README.md).
+
 The template provisions the manually triggered tree-building path described in
 the [Container Apps Jobs architecture](../docs/azure-container-apps-tree-architecture.md):
 

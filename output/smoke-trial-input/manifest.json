@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-14T12:01:53.688624+00:00",
+  "source": {
+    "blob_url": "https://mlstaiseqhacke1lkzk.blob.core.windows.net/filtered-sequences/smoke/embedding-smoke.fasta",
+    "etag": "0x8df1257d2b7e782",
+    "size_bytes": 307
+  },
+  "model": {
+    "id": "zehui127/Omni-DNA-20M",
+    "revision": "3b64e6a5ed6c8f72bad76823ce728b3045243026",
+    "max_length": 1024,
+    "pooling": "attention_masked_mean_final_hidden_state"
+  },
+  "index": {
+    "type": "IndexIDMap2(IndexFlatIP)",
+    "metric": "cosine_similarity",
+    "normalized": true,
+    "dimension": 256,
+    "record_count": 2,
+    "file": "index.faiss",
+    "sha256": "8b80d6afd4f9a17d3e303614fa78853031aa54c55b4cbf4411f6ed479f526ceb"
+  },
+  "metadata": {
+    "format": "parquet",
+    "file": "records.parquet",
+    "sha256": "9bbaac0e8055e9caeb62e51abe16126a6a9a996f0a009f78d0b212d800c2bcc7",
+    "id_column": "faiss_id"
+  }
+}

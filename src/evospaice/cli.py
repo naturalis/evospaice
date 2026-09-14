@@ -20,6 +20,9 @@ except PackageNotFoundError:  # running from a source checkout that isn't instal
 TRACKS: dict[str, str] = {
     "ingest": "Trim to primer window, dereplicate within taxon, embed records.",
     "tree": "Resolve the backbone bottom-up (NJ) and assign branch lengths.",
+    "tree-prepare": "Validate a large embedding export and create bounded partitions.",
+    "tree-worker": "Build one queued taxonomy partition.",
+    "tree-finalize": "Reduce completed partitions and publish the final tree.",
     "validate": "Check embedding distances are a faithful metric, not just a good ID.",
     "viz": "Render the scaled tree.",
     "diversity": "Alpha/beta phylogenetic diversity and curation outliers.",
@@ -40,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
         track_parser = subparsers.add_parser(name, help=help_text)
         if name == "tree":
             _configure_tree_parser(track_parser)
+        elif name == "tree-prepare":
+            _configure_prepare_parser(track_parser)
+        elif name == "tree-worker":
+            _configure_worker_parser(track_parser)
+        elif name == "tree-finalize":
+            _configure_finalize_parser(track_parser)
         elif name == "viz":
             _configure_viz_parser(track_parser)
     return parser
@@ -56,6 +65,45 @@ def _configure_tree_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--input-prefix")
     parser.add_argument("--output-prefix")
     parser.add_argument("--cloud-embeddings-name", default="embeddings.npy")
+    _configure_tree_algorithm(parser)
+
+
+def _configure_prepare_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--source-storage-account-url", required=True)
+    parser.add_argument("--source-container", required=True)
+    parser.add_argument("--source-prefix", required=True)
+    parser.add_argument("--work-storage-account-url", required=True)
+    parser.add_argument("--work-queue-account-url", required=True)
+    parser.add_argument("--work-container", required=True)
+    parser.add_argument("--work-queue", required=True)
+    parser.add_argument("--poison-queue", required=True)
+    parser.add_argument("--run-prefix", required=True)
+    parser.add_argument("--bin-mapping-object", required=True)
+    parser.add_argument("--trust-policy-object", required=True)
+    parser.add_argument("--partition-rank", default="family")
+    parser.add_argument("--max-partition-records", type=int, default=50_000)
+
+
+def _configure_worker_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--work-storage-account-url", required=True)
+    parser.add_argument("--work-queue-account-url", required=True)
+    parser.add_argument("--work-container", required=True)
+    parser.add_argument("--work-queue", required=True)
+    parser.add_argument("--poison-queue", required=True)
+    parser.add_argument("--visibility-timeout", type=int, default=21_600)
+    parser.add_argument("--max-dequeue-count", type=int, default=3)
+    _configure_tree_algorithm(parser)
+
+
+def _configure_finalize_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--work-storage-account-url", required=True)
+    parser.add_argument("--work-container", required=True)
+    parser.add_argument("--run-prefix", required=True)
+    parser.add_argument("--output-prefix", required=True)
+    _configure_tree_algorithm(parser)
+
+
+def _configure_tree_algorithm(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-nj-children", type=int, default=256)
     parser.add_argument("--centroid-drift-limit", type=float, default=0.35)
     parser.add_argument("--fallback-branch-length", type=float, default=0.0)
@@ -71,12 +119,7 @@ def _configure_viz_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def _run_tree(args: argparse.Namespace) -> int:
-    config = TreeBuildConfig(
-        max_nj_children=args.max_nj_children,
-        centroid_drift_limit=args.centroid_drift_limit,
-        fallback_branch_length=args.fallback_branch_length,
-        random_seed=args.seed,
-    )
+    config = _tree_config(args)
     cloud_values = (
         args.storage_account_url,
         args.container,
@@ -91,7 +134,7 @@ def _run_tree(args: argparse.Namespace) -> int:
             )
         from evospaice.tree.cloud import BlobObjectStore, CloudRunConfig, run_cloud_tree
 
-        result = run_cloud_tree(
+        run_cloud_tree(
             BlobObjectStore(args.storage_account_url, args.container),
             CloudRunConfig(
                 input_prefix=args.input_prefix,
@@ -120,6 +163,75 @@ def _run_tree(args: argparse.Namespace) -> int:
     return 0
 
 
+def _tree_config(args: argparse.Namespace) -> TreeBuildConfig:
+    return TreeBuildConfig(
+        max_nj_children=args.max_nj_children,
+        centroid_drift_limit=args.centroid_drift_limit,
+        fallback_branch_length=args.fallback_branch_length,
+        random_seed=args.seed,
+    )
+
+
+def _run_prepare(args: argparse.Namespace) -> int:
+    from evospaice.tree.cloud import AzureQueueWorkQueue, BlobObjectStore
+    from evospaice.tree.full_scale_prepare import PrepareConfig, prepare_partitions
+
+    work_store = BlobObjectStore(args.work_storage_account_url, args.work_container)
+    manifest = prepare_partitions(
+        BlobObjectStore(args.source_storage_account_url, args.source_container),
+        work_store,
+        AzureQueueWorkQueue(
+            args.work_queue_account_url,
+            args.work_queue,
+            args.poison_queue,
+        ),
+        PrepareConfig(
+            source_prefix=args.source_prefix,
+            run_prefix=args.run_prefix,
+            bin_mapping_object=args.bin_mapping_object,
+            trust_policy_object=args.trust_policy_object,
+            partition_rank=args.partition_rank,
+            max_partition_records=args.max_partition_records,
+        ),
+    )
+    print(
+        f"{args.work_container}/{manifest.run_prefix}/prepare/partition-manifest.json"
+    )
+    return 0
+
+
+def _run_worker(args: argparse.Namespace) -> int:
+    from evospaice.tree.cloud import AzureQueueWorkQueue, BlobObjectStore
+    from evospaice.tree.full_scale_worker import WorkerConfig, run_partition_worker
+
+    partition_id = run_partition_worker(
+        BlobObjectStore(args.work_storage_account_url, args.work_container),
+        AzureQueueWorkQueue(
+            args.work_queue_account_url,
+            args.work_queue,
+            args.poison_queue,
+            visibility_timeout=args.visibility_timeout,
+        ),
+        WorkerConfig(max_dequeue_count=args.max_dequeue_count),
+        _tree_config(args),
+    )
+    print(partition_id or "no-work")
+    return 0
+
+
+def _run_finalize(args: argparse.Namespace) -> int:
+    from evospaice.tree.cloud import BlobObjectStore
+    from evospaice.tree.full_scale_finalize import FinalizeConfig, finalize_partitions
+
+    result = finalize_partitions(
+        BlobObjectStore(args.work_storage_account_url, args.work_container),
+        FinalizeConfig(run_prefix=args.run_prefix, output_prefix=args.output_prefix),
+        _tree_config(args),
+    )
+    print(f"{args.work_container}/{result.output_prefix}/tree-manifest.json")
+    return 0
+
+
 def _run_viz(args: argparse.Namespace) -> int:
     from evospaice.viz import render_tree
 
@@ -143,6 +255,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.track == "tree":
         return _run_tree(args)
+    if args.track == "tree-prepare":
+        return _run_prepare(args)
+    if args.track == "tree-worker":
+        return _run_worker(args)
+    if args.track == "tree-finalize":
+        return _run_finalize(args)
     if args.track == "viz":
         return _run_viz(args)
     print(f"evospaice {args.track}: not implemented yet", file=sys.stderr)

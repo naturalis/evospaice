@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from .full_scale import QueueLease
 from .models import BuildResult, InputPaths, TreeBuildConfig
 from .pipeline import build_tree
 
@@ -52,6 +54,62 @@ class BlobObjectStore:
             raise RuntimeError(f"refusing to overwrite different artifact: {object_name}")
         with source.open("rb") as handle:
             blob.upload_blob(handle, overwrite=False, metadata={"sha256": digest})
+
+
+class AzureQueueWorkQueue:
+    """Lease partition messages using managed identity and isolate exhausted work."""
+
+    def __init__(
+        self,
+        account_url: str,
+        queue_name: str,
+        poison_queue_name: str,
+        visibility_timeout: int = 21_600,
+    ) -> None:
+        try:
+            from azure.identity import DefaultAzureCredential
+            from azure.storage.queue import QueueServiceClient
+        except ImportError as error:
+            raise RuntimeError(
+                "Azure queue execution requires the 'azure' optional dependency group"
+            ) from error
+        service = QueueServiceClient(account_url, credential=DefaultAzureCredential())
+        self._queue = service.get_queue_client(queue_name)
+        self._poison_queue = service.get_queue_client(poison_queue_name)
+        self._visibility_timeout = visibility_timeout
+
+    def send(self, content: str) -> None:
+        self._queue.send_message(content)
+
+    def receive(self) -> QueueLease | None:
+        messages = self._queue.receive_messages(
+            messages_per_page=1,
+            visibility_timeout=self._visibility_timeout,
+        )
+        message = next(iter(messages), None)
+        if message is None:
+            return None
+        return QueueLease(
+            content=str(message.content),
+            message_id=str(message.id),
+            pop_receipt=str(message.pop_receipt),
+            dequeue_count=int(message.dequeue_count or 1),
+        )
+
+    def delete(self, lease: QueueLease) -> None:
+        self._queue.delete_message(lease.message_id, lease.pop_receipt)
+
+    def move_to_poison(self, lease: QueueLease, reason: str) -> None:
+        payload = json.dumps(
+            {
+                "content": lease.content,
+                "dequeue_count": lease.dequeue_count,
+                "error": reason[:2048],
+            },
+            sort_keys=True,
+        )
+        self._poison_queue.send_message(payload)
+        self.delete(lease)
 
 
 @dataclass(frozen=True)

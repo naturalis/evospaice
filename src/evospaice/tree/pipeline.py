@@ -69,12 +69,27 @@ class TreeBuilder:
 
             child_ids = list(node.child_ids)
             child_vectors = representatives.get_many(child_ids)
-            local_distances = self._distance_provider.pairwise(child_vectors)
-            topology, note = self._choose_topology(node, child_ids, local_distances, policy, config)
-            if policy.should_scale(node):
-                length_result = self._branch_solver.solve(topology, child_ids, local_distances)
+            if len(child_ids) > config.max_nj_children:
+                topology = star_topology(child_ids)
+                note = "fanout_limit"
+                length_result = apply_fallback_lengths(
+                    topology, config.fallback_branch_length
+                )
+                distance_matrix_size = 0
             else:
-                length_result = apply_fallback_lengths(topology, config.fallback_branch_length)
+                local_distances = self._distance_provider.pairwise(child_vectors)
+                topology, note = self._choose_topology(
+                    node, child_ids, local_distances, policy
+                )
+                if policy.should_scale(node):
+                    length_result = self._branch_solver.solve(
+                        topology, child_ids, local_distances
+                    )
+                else:
+                    length_result = apply_fallback_lengths(
+                        topology, config.fallback_branch_length
+                    )
+                distance_matrix_size = int(local_distances.size)
             self._graft(graph, node_id, length_result.topology.root)
 
             representative = self._representative_selector.select(child_vectors)
@@ -89,13 +104,20 @@ class TreeBuilder:
                     representative_method=representative.method,
                     fit_error=length_result.fit_error,
                     clamped_lengths=length_result.clamped_lengths,
-                    distance_matrix_size=int(local_distances.size),
+                    distance_matrix_size=distance_matrix_size,
                     note=note,
                 )
             )
 
+        root_representative = representatives.get_many([graph.root_id])[0]
         return self._artifact_writer.write(
-            graph, loaded.records, diagnostics, paths, config, policy
+            graph,
+            loaded.records,
+            diagnostics,
+            paths,
+            config,
+            policy,
+            root_representative,
         )
 
     def _choose_topology(
@@ -104,14 +126,11 @@ class TreeBuilder:
         child_ids: list[str],
         distances: NDArray[np.float64],
         policy: TrustPolicy,
-        config: TreeBuildConfig,
     ):
         if len(child_ids) < 3:
             return star_topology(child_ids), ""
         if not policy.should_resolve(node):
             return star_topology(child_ids), "policy_preserved"
-        if len(child_ids) > config.max_nj_children:
-            return star_topology(child_ids), "fanout_limit"
         return self._topology_resolver.resolve(child_ids, distances), ""
 
     @staticmethod

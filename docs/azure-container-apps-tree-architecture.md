@@ -1,5 +1,11 @@
 # Azure Container Apps Jobs architecture for building the tree
 
+> **Full-scale input:** The one-job MVP in this document does not fit the
+> 6,979,067-record FAISS and Parquet export. See the
+> [full-scale Insecta tree architecture](full-scale-insecta-tree-architecture.md)
+> for the observed production artifacts, required data-contract adapter,
+> partitioned jobs, and Azure resource changes.
+
 ## 1. Recommendation
 
 Use **Azure Container Apps Jobs** as the execution platform for the

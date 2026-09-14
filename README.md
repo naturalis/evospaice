@@ -37,6 +37,9 @@ beyond that; the scope is a given, not something to discover.
   and task IDs.
 - **Deploying the tree builder?** See the [Azure Container Apps Jobs tree architecture](docs/azure-container-apps-tree-architecture.md)
   for the recommended services, job design, security, monitoring, and cost controls.
+  For the 6.98-million-record Insecta FAISS and Parquet export, use the
+  [full-scale Insecta architecture](docs/full-scale-insecta-tree-architecture.md)
+  and [full-scale infrastructure](infra/full-scale/README.md).
   The runnable MVP infrastructure and container contract are in [infra/README.md](infra/README.md).
 
 ---

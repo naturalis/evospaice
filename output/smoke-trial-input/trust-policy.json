@@ -1,0 +1,9 @@
+{
+  "version": "technical-smoke-v1",
+  "resolve_ranks": [
+    "genus"
+  ],
+  "scale_ranks": [
+    "*"
+  ]
+}

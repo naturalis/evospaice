@@ -34,6 +34,7 @@ dependencies = [
     "scikit-bio>=0.6",     # Neighbor-Joining (skbio.tree.nj)
     "dendropy>=4.6",       # tree manipulation and Newick I/O
     "faiss-cpu>=1.8",      # fast nearest-neighbour lookups over vectors
+    "pyarrow>=18.0",       # streaming Parquet metadata for full-scale partitions
     "sourmash>=4.8",       # FracMinHash sketches — the k-mer distance baseline
 ]
 
@@ -43,6 +44,7 @@ dependencies = [
 azure = [
     "azure-identity>=1.17",
     "azure-storage-blob>=12.22",
+    "azure-storage-queue>=12.12",
 ]
 # Only needed if you compute embeddings locally rather than consuming precomputed
 # vectors (Track 1, ML/AI experts). Kept optional so the default install stays light and CPU-only.

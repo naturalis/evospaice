@@ -11,6 +11,9 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Iterable
 
+import numpy as np
+from numpy.typing import NDArray
+
 from .backbone import TreeGraph
 from .models import BuildResult, InputPaths, NodeDiagnostic, TreeBuildConfig, TreeRecord
 from .policy import TrustPolicy
@@ -89,12 +92,14 @@ class ArtifactWriter:
         paths: InputPaths,
         config: TreeBuildConfig,
         policy: TrustPolicy,
+        root_representative: NDArray[np.floating],
     ) -> BuildResult:
         validate_tree(graph, records)
         paths.output_dir.mkdir(parents=True, exist_ok=True)
         tree_path = paths.output_dir / "scaled-tree.nwk"
         diagnostics_path = paths.output_dir / "node-diagnostics.tsv"
         exclusions_path = paths.output_dir / "excluded-records.tsv"
+        representative_path = paths.output_dir / "root-representative.npy"
         manifest_path = paths.output_dir / "tree-manifest.json"
         checkpoint_path = paths.output_dir / "checkpoints" / "complete.json"
 
@@ -102,9 +107,14 @@ class ArtifactWriter:
         _atomic_text(tree_path, f"{_newick(graph, graph.root_id)};\n")
         self._write_diagnostics(diagnostics_path, diagnostic_rows)
         _atomic_text(exclusions_path, "leaf_id\trecord_id\treason\n")
+        self._write_representative(representative_path, root_representative)
         _atomic_text(
             checkpoint_path,
-            json.dumps({"status": "complete", "processed_nodes": len(diagnostic_rows)}, indent=2)
+            json.dumps(
+                {"status": "complete", "processed_nodes": len(diagnostic_rows)},
+                indent=2,
+                sort_keys=True,
+            )
             + "\n",
         )
 
@@ -137,6 +147,7 @@ class ArtifactWriter:
                 tree_path.name: _sha256(tree_path),
                 diagnostics_path.name: _sha256(diagnostics_path),
                 exclusions_path.name: _sha256(exclusions_path),
+                representative_path.name: _sha256(representative_path),
             },
         }
         _atomic_text(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -148,6 +159,21 @@ class ArtifactWriter:
             leaf_count=len(records),
             node_count=len(graph.nodes),
         )
+
+    @staticmethod
+    def _write_representative(path: Path, vector: NDArray[np.floating]) -> None:
+        values = np.asarray(vector, dtype=np.float32)
+        if values.ndim != 1 or values.size == 0 or not np.isfinite(values).all():
+            raise ValueError("root representative must be a finite non-empty vector")
+        descriptor, temporary_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+        os.close(descriptor)
+        try:
+            with Path(temporary_name).open("wb") as handle:
+                np.save(handle, values, allow_pickle=False)
+            os.replace(temporary_name, path)
+        except BaseException:
+            Path(temporary_name).unlink(missing_ok=True)
+            raise
 
     @staticmethod
     def _write_diagnostics(path: Path, rows: list[NodeDiagnostic]) -> None:

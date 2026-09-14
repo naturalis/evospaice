@@ -1,0 +1,14 @@
+node_id	rank	child_count	topology_method	length_method	representative_method	fit_error	clamped_lengths	distance_matrix_size	note
+taxonomy:76ff94b07f0777d7296e	family	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:690a37aa31bc97313793	order	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:5e1cbc3c11bbeedf09c7	family	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:2b474b8fa2dfe02c5c44	order	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:d526f5ba4628ddd30064	class	2	preserved	two_child_split	centroid	0.0	0	4	
+taxonomy:9fd38c45fd05beb4bc52	phylum	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:root	root	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:116e0397f08a069fe04e	species	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:8109cb96b72e47c9c94a	genus	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:root	root	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:d48def972227af6ec62a	species	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:f8b7608a45877b325aec	genus	1	preserved	fallback	centroid	0.0	0	1	
+taxonomy:root	root	1	preserved	fallback	centroid	0.0	0	1	

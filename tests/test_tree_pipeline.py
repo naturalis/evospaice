@@ -41,6 +41,7 @@ def test_build_tree_writes_complete_reproducible_artifacts(tmp_path: Path) -> No
     assert result.diagnostics_path.exists()
     assert result.exclusions_path.exists()
     assert result.manifest_path.exists()
+    assert (tmp_path / "root-representative.npy").exists()
     assert (tmp_path / "checkpoints" / "complete.json").exists()
 
     newick = result.tree_path.read_text(encoding="utf-8")
@@ -59,6 +60,7 @@ def test_build_tree_writes_complete_reproducible_artifacts(tmp_path: Path) -> No
     assert manifest["policy_version"] == "mock-v1"
     assert manifest["distance_scope"]["global_matrix_created"] is False
     assert manifest["distance_scope"]["largest_local_matrix_elements"] == 25
+    assert "root-representative.npy" in manifest["outputs"]
 
 
 def test_tree_cli_runs_the_mock_dataset(tmp_path: Path, capsys) -> None:

@@ -2,6 +2,8 @@
 
 ## Documentation specific to the project
 
+- [Tree classes, responsibilities, and interaction diagrams](tree-class-responsibilities.md)
+- [What is a BIN URI?](explainers/bin-uri.md)
 - [Slides that explain the why and how at high level](https://docs.google.com/presentation/d/1tmwUtHtdYxmklvtVXBrXGwielnjqg3Fat19jX08IHeE/edit?slide=id.g3f408b13edb_0_72#slide=id.g3f408b13edb_0_72)
 - [A video where Rutger presents the slides](https://drive.google.com/file/d/1zPuKvw2lG_GrZrBRYMykWRFMUIKNMRUW/view?usp=drive_link)
 - [A more detailed written explanation](https://docs.google.com/document/d/1eGodZDiN99KipS9K5rlrF06mjwaA8Q6nbJy5c8QP26U/edit?tab=t.0)
