@@ -209,6 +209,14 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# Terraform local state, caches, and saved plans
+**/.terraform/
+**/.tfplans/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+
 # PyPI configuration file
 .pypirc
 
