@@ -61,7 +61,7 @@ def _submit_jobs(request: SpeciesSplitRequest) -> list[str]:
                 "shard_count": shard_count,
             },
             outputs={
-                "species_bundles": Output(type="uri_folder", mode="upload", path=output_path),
+                "species_bundles": Output(type="uri_folder", mode="rw_mount", path=output_path),
             },
             environment=os.environ["AZUREML_ENVIRONMENT"],
             compute=os.environ["AZUREML_COMPUTE_NAME"],

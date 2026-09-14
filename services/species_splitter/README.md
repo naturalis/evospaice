@@ -23,10 +23,10 @@ The hash suffix prevents sanitized species names from colliding. Null, blank,
 `None`, `unknown`, `unidentified`, and `unclassified` labels are grouped into the
 three `unknown` files in its assigned shard. FAISS IDs remain the original global
 IDs, allowing every subset vector to map directly back to its FASTA record.
-Each shard writes to node-local storage and AML uploads completed files in
-parallel into the same version folder when the shard finishes. Hash-suffixed
-species keys are globally unique, so concurrent shards cannot overwrite each
-other's files.
+Temporary partitions stay on node-local storage. Each shard writes completed
+files through a shared read-write Blob mount into the same version folder.
+Hash-suffixed species keys are globally unique, so concurrent shards cannot
+overwrite each other's files.
 
 Each worker emits structured `PROGRESS` JSON every 250,000 metadata records and
 every 250 completed species. Events include shard index/count, completed/total,

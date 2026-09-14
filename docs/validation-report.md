@@ -69,7 +69,7 @@ The two-record bundle validated:
 - one `.faiss`, `.parquet`, and `.json` file per species
 - matching manifest checksums
 - no temporary partition files in result storage
-- concurrent shard uploads
+- concurrent shard writes through a shared Blob mount
 
 ## Species splitter production run
 

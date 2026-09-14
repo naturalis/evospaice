@@ -39,7 +39,7 @@ The optimized implementation uses:
 - up to eight dedicated `Standard_D16ds_v5` nodes
 - Arrow dictionary encoding for species keys
 - node-local temporary partitions
-- parallel AML output upload
+- parallel writes through a shared Blob mount
 
 Measured sharded production:
 
