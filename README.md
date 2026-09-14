@@ -108,6 +108,13 @@ Or open the repo in **GitHub Codespaces** (or VS Code Dev Containers) and the
 `.devcontainer/` config builds the environment for you — recommended so nobody
 loses the first morning to a broken install.
 
+The devcontainer includes **Python 3.12**, **uv**, **Azure CLI** (`az`), and
+**Terraform**. It runs `uv sync` on creation to install the project and its dev
+tools, and configures VS Code to use the project's `.venv` interpreter.
+For local use, install Docker and the VS Code **Dev Containers** extension,
+then run **Dev Containers: Reopen in Container** from the Command Palette.
+Run `az login` inside the container when you need access to Azure.
+
 **Core dependencies:** `numpy`, `scipy`, `biopython`, `scikit-bio` (Neighbor-
 Joining), `dendropy` (tree I/O / Newick), `faiss-cpu` (nearest-neighbour lookups),
 `sourmash` (the k-mer baseline). The embedding model and how it's served are
