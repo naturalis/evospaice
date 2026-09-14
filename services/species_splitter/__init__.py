@@ -1,0 +1,1 @@
+"""Split embedding bundles into per-species FAISS bundles."""

@@ -1,0 +1,1 @@
+"""Omni-DNA embedding worker package."""
