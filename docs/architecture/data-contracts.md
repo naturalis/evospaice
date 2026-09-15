@@ -1,7 +1,4 @@
----
-title: Pipeline data contracts
-description: Pipeline and tree-validation input and output contracts
----
+# Pipeline data contracts
 
 ## Class-filter trigger
 
@@ -128,42 +125,3 @@ manifest, counts, dimensions, and checksums.
 - Global `index.faiss` ETag versions deterministic splitter job names.
 - Schema versions appear in JSON manifests.
 - Consumers must not mix files from different source ETag folders.
-
-## Tree Validation Benchmark
-
-The local evaluator accepts single-tree Newick inputs (optionally gzipped) with
-unique, exact leaf labels and explicit rooted/unrooted comparison mode. Tips must
-refer to equivalent biological units. Missing lengths permit topology-only
-evaluation; absolute length errors require explicitly compatible units and
-provenance. A taxonomy scaffold is not an independent molecular phylogeny.
-
-Optional TSV inputs use these column names:
-
-| Input | Required columns | Optional columns |
-| --- | --- | --- |
-| Taxon mapping | tree, label, taxon | None |
-| Selected taxa | taxon | None |
-| Pair distances | taxon_a, taxon_b, embedding_distance | kmer_distance |
-| Taxonomy | taxon | kingdom, phylum, class, order, family, genus, species |
-| Samples (CSV also accepted) | sample, taxon, abundance | None |
-
-Tree mapping values are inferred, reference or baseline. All other tables use
-canonical taxon IDs. Duplicate/reversed distance pairs and many-to-one taxon
-mappings are rejected. Unknown taxonomy values are missing data, not a shared
-biological identity. A bounded NPZ vector export may replace pair distances:
-`taxa` is a unique string array and `vectors` is a finite nonzero-row matrix;
-loading uses `allow_pickle=False`.
-
-Replicate input is multi-tree Newick, accompanied by its kind and resampling
-method. It does not instruct the evaluator to generate bootstrap trees. Optional
-metadata JSON records reference citations, model/source identity, distance/sketch
-definitions and independence from backbone construction.
-
-The version-1 `validation.json` report includes metric values and unavailable
-reasons, input SHA-256 hashes, library versions, root and length policies, taxon
-coverage, support filtering, limits, pair selection and seed. JSON uses null,
-never NaN/Infinity. CSV artifacts are `taxa.csv`, `clades.csv`, `pairs.csv`,
-`diagnostics.csv`, `diversity_alpha_comparison.csv` and
-`diversity_beta_comparison.csv`. See the
-[validation package](../src/evospaice/validate/README.md) for metric definitions,
-defaults and examples.

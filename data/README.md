@@ -1,5 +1,20 @@
 This is where we put the public reference data. *.tre files are produced from BOLD BCDM-TSV files using the tsv2newick script in src/ingest.
 
+# The Lepidoptera process ID tree
+
+`pruned.tre.txt` is a tree produced with the [Bactria](https://github.com/naturalis/barcode-constrained-phylogeny) pipeline.
+This tree is a useful ground truth for the following reasons:
+
+- Its leaves map back to identifiable records in BOLD
+- It is well resolved and with branch lengths based on sequence distances
+- The (family-level) subtrees were resolved using a maximum-likelihood method that is understood to perform well
+
+However, be aware that the leaves are identified by process IDs. This is both a blessing in that we know the
+exact sequence that was used, but also a curse in how we are going to compare this with the result tree we will
+obtain: either it forces us to have our result tree use the same IDs, or we have to map the butterfly tree to
+BINs. For the former, we also have a [file](pruned.labels.txt) with the leaf labels so that we can generate the corresponding
+embeddings.
+
 # The Arthropoda BIN tree
 
 `outfile.tre.gz` is a taxonomy-derived tree of every BOLD BIN in phylum
@@ -193,7 +208,3 @@ Both scripts are in this repository. The tree took 5 minutes 11 seconds to build
 from a 33 GB TSV inside a tar.gz, reading the archive as a stream, so it does not
 need to be unpacked first. Peak memory is a few GB; this is a workstation job
 rather than a laptop one.
-
-
-# pruned.tre : Reference taxonomic tree
-Sourced from https://github.com/naturalis/barcode-constrained-phylogeny/tree/lepidoptera/results

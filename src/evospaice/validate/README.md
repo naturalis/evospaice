@@ -87,7 +87,7 @@ These are exact-match scores: resolving a reference polytomy can reduce precisio
 without contradicting the reference. No support filtering or compatibility
 classification is performed. The sequence-derived reference is itself an estimate.
 
-For an identity check, use `tests/data/diversity_tree.nwk` as both `--reference`
+For an identity check, use `tests/data/validation_tree.nwk` as both `--reference`
 and `--inferred`. Expected: RF and normalized RF zero, precision and recall one.
 
 ## Comparison Policies
@@ -118,7 +118,7 @@ Scores are printed to the terminal. Each run writes three files:
 
 The former branch-length, distance, embedding, replicate, support-filtering,
 baseline and diversity options and report sections have been removed. The
-standalone diversity package is unchanged. Use a fresh directory when migrating
+standalone diversity package has also been removed. Use a fresh directory when migrating
 from older reports; `--overwrite` does not clean up old optional CSV files.
 
 Default limit: 5,000 tips per input tree, overridable with `--max-tips`.
@@ -135,5 +135,5 @@ a scientific pass.
 
 * [DendroPy tree comparisons](https://jeetsukumaran.github.io/DendroPy/library/treecompare.html)
 * [DendroPy path distances](https://jeetsukumaran.github.io/DendroPy/library/phylogeneticdistance.html) (background only; not computed by this validator)
-* [Diversity backend documentation](../diversity/README.md)
+* [Diversity background references](../../../docs/README.md#diversity-background)
 * [Implementation plan](../../../docs/diversity-tree-validation-plan.md)
