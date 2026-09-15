@@ -1,4 +1,4 @@
-"""Compare inferred and reference tree topology using RF, precision and recall."""
+"""Compare inferred and reference tree topology using raw and normalized RF."""
 
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ def run(args: argparse.Namespace) -> int:
         if path := getattr(args, name):
             input_identities[name] = _input_identity(path)
     report = dict(
-        schema_version=2, mode=args.mode, reference_kind=args.reference_kind,
+        schema_version=3, mode=args.mode, reference_kind=args.reference_kind,
         reference_independence=args.reference_independence, metadata=metadata, warnings=warnings,
         root_policy="supplied_root" if args.mode == "rooted" else "unrooted_splits",
         branch_lengths="ignored", taxa_policy=args.taxa_policy, retained_taxa=len(taxa),

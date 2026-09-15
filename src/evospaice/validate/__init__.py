@@ -1,4 +1,4 @@
-"""Topology comparison APIs for RF, precision and recall."""
+"""Topology comparison APIs for raw and normalized RF."""
 
 from .compare import prepare_trees, topology_metrics
 

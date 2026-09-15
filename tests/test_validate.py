@@ -23,11 +23,12 @@ def test_cli_report_and_overwrite(cli_arguments, tmp_path, capsys):
     output = tmp_path / "report"
     report = json.loads((output / "validation.json").read_text())
     assert report["topology"]["rf"] == 0
-    assert report["topology"]["precision"] == report["topology"]["recall"] == 1
+    assert report["topology"]["rf_normalized"] == 0
+    assert not {"precision", "recall"} & report["topology"].keys()
     assert report["branch_lengths"] == "ignored"
     assert report["warnings"]
     assert {path.name for path in output.iterdir()} == {"validation.json", "taxa.csv", "clades.csv"}
-    assert json.loads(capsys.readouterr().out)["rf"] == 0
+    assert json.loads(capsys.readouterr().out) == report["topology"]
     with pytest.raises(SystemExit) as error:
         cli_main(["validate", *cli_arguments])
     assert error.value.code == 2
@@ -86,7 +87,7 @@ def test_gzip_report_with_metadata(cli_arguments, tmp_path):
     assert len(report["inputs"]["metadata"]["sha256"]) == 64
 
 
-FIXTURE = Path(__file__).parent / "data" / "validation_tree.nwk"
+FIXTURE = Path(__file__).parent / "data" / "reference_tree.nwk"
 MOCK = FIXTURE.with_name("embedding_tree_mock.nwk")
 
 
@@ -102,7 +103,8 @@ def test_rf_known_answer(mode, raw):
     result, rows = topology_metrics(aligned["inferred"], aligned["reference"])
     assert result["rf"] == raw
     assert result["rf_normalized"] == 1
-    assert result["precision"] == result["recall"] == 0
+    assert result["rf_denominator"] == raw
+    assert not {"precision", "recall"} & result.keys()
     assert all(row["origin"] != "both" for row in rows)
     assert len(coverage) == 8
 
@@ -115,21 +117,20 @@ def test_rotation_lengths_and_no_mutation(mode):
                                 "reference": tree("((D,C),(B,A));")}, mode=mode)
     result, _ = topology_metrics(aligned["inferred"], aligned["reference"])
     assert result["rf"] == 0
-    assert result["precision"] == result["recall"] == 1
+    assert result["rf_normalized"] == 0
     assert original.as_string(schema="newick") == before
 
 
-def test_precision_recall_direction():
+def test_rf_symmetry_with_partial_resolution():
     aligned, _ = prepare_trees({"inferred": tree("((A,B),(C,D));"),
                                 "reference": tree("((A,B),C,D);")}, mode="rooted")
     result, _ = topology_metrics(aligned["inferred"], aligned["reference"])
     assert result["rf"] == 1
     assert result["rf_normalized"] == pytest.approx(1 / 3)
-    assert result["precision"] == .5
-    assert result["recall"] == 1
+    assert result["rf_denominator"] == 3
     reverse, _ = topology_metrics(aligned["reference"], aligned["inferred"])
-    assert reverse["precision"] == 1
-    assert reverse["recall"] == .5
+    assert reverse["rf"] == result["rf"]
+    assert reverse["rf_normalized"] == result["rf_normalized"]
 
 
 @pytest.mark.parametrize("mode", ["rooted", "unrooted"])
@@ -139,8 +140,8 @@ def test_unresolved_trees(mode):
     result, rows = topology_metrics(aligned["inferred"], aligned["reference"])
     assert result["rf"] == 0
     assert result["rf_normalized"] is None
-    assert result["precision"] is result["recall"] is None
-    assert set(result["undefined_reasons"]) == {"precision", "recall", "rf_normalized"}
+    assert not {"precision", "recall"} & result.keys()
+    assert result["undefined_reasons"] == {"rf_normalized": "no_resolved_relationships"}
     assert rows == []
 
 
@@ -187,12 +188,12 @@ def test_cli_identity_report(tmp_path, capsys):
                  "--mode", "rooted", "--output-dir", str(output)]
     assert cli_main(arguments) == 0
     report = json.loads((output / "validation.json").read_text())
-    assert report["schema_version"] == 2
+    assert report["schema_version"] == 3
     assert report["topology"]["rf"] == 0
-    assert report["topology"]["precision"] == report["topology"]["recall"] == 1
+    assert report["topology"]["rf_normalized"] == 0
     assert report["branch_lengths"] == "ignored"
     assert not {"branches", "diagnostics", "support", "baseline", "diversity"} & report.keys()
-    assert "f1" not in report["topology"]
+    assert not {"f1", "precision", "recall"} & report["topology"].keys()
     assert report["warnings"]
     assert {path.name for path in output.iterdir()} == {"validation.json", "clades.csv", "taxa.csv"}
     assert json.loads(capsys.readouterr().out)["rf"] == 0
@@ -211,16 +212,15 @@ def test_other_tracks_remain_placeholders(capsys):
     assert "not implemented yet" in capsys.readouterr().err
 
 
-def test_cli_mock_comparison(tmp_path):
-    reference = tmp_path / "reference.nwk"
-    reference.write_text("((AANIC006-10,AANIC018-10),(AANIC027-10,AANIC030-10));")
+@pytest.mark.parametrize("mode,raw", [("rooted", 4), ("unrooted", 2)])
+def test_cli_mock_comparison(tmp_path, mode, raw):
     output = tmp_path / "out"
-    assert main(["--inferred", str(MOCK), "--reference", str(reference), "--mode", "unrooted",
+    assert main(["--inferred", str(MOCK), "--reference", str(FIXTURE), "--mode", mode,
                  "--output-dir", str(output)]) == 0
     result = json.loads((output / "validation.json").read_text())["topology"]
-    assert result["rf"] == 2
+    assert result["rf"] == raw
     assert result["rf_normalized"] == 1
-    assert result["precision"] == result["recall"] == 0
+    assert not {"precision", "recall"} & result.keys()
 
 
 @pytest.mark.parametrize("option", ["--length-mode", "--distances", "--embedding-vectors",

@@ -136,15 +136,12 @@ def split_id(mask: int, tree: dendropy.Tree) -> str:
 
 
 def topology_metrics(inferred: dendropy.Tree, reference: dendropy.Tree) -> tuple[dict, list[dict]]:
-    """Compute RF, precision and recall for prepared trees, ignoring lengths."""
+    """Compute raw and normalized RF for prepared trees, ignoring lengths."""
     first, second = informative_splits(inferred), informative_splits(reference)
     shared = len(first & second)
     denominator = len(first) + len(second)
     raw = treecompare.symmetric_difference(inferred, reference, is_bipartitions_updated=True)
-    false_positive, false_negative = treecompare.false_positives_and_negatives(
-        reference, inferred, is_bipartitions_updated=True
-    )
-    if raw != len(first ^ second) or raw != false_positive + false_negative:
+    if raw != len(first ^ second):
         raise ValueError("DendroPy RF differs from informative split counts after normalization")
     rows = []
     for mask in sorted(first | second):
@@ -157,11 +154,7 @@ def topology_metrics(inferred: dendropy.Tree, reference: dendropy.Tree) -> tuple
         rf_denominator=denominator, rf_normalization="observed_informative_splits",
         shared=shared, inferred_only=len(first - second), reference_only=len(second - first),
         inferred_count=len(first), reference_count=len(second),
-        precision=shared / len(first) if first else None,
-        recall=shared / len(second) if second else None,
         undefined_reasons={
-            **({"precision": "no_inferred_relationships"} if not first else {}),
-            **({"recall": "no_reference_relationships"} if not second else {}),
             **({"rf_normalized": "no_resolved_relationships"} if not denominator else {}),
         },
     )

@@ -1,12 +1,12 @@
 ---
 title: Embedding tree validation
-description: Topology-only tree comparison with Robinson-Foulds distance, precision and recall
+description: Topology-only tree comparison with raw and normalized Robinson-Foulds distance
 ---
 
 ## Purpose
 
 Compare an embedding-derived tree with a reference using raw and normalized
-Robinson-Foulds (RF) distance, precision and recall. All scores use topology only:
+Robinson-Foulds (RF) distance. Both scores use topology only:
 branch lengths, support values and internal node labels are ignored.
 
 Both trees must represent the same biological tip identities. A taxonomy backbone
@@ -28,13 +28,13 @@ To try the command, compare the small included tree with itself:
 
 ```bash
 uv run --no-sync evospaice validate \
-  --reference tests/data/validation_tree.nwk \
-  --inferred tests/data/validation_tree.nwk \
+  --reference tests/data/reference_tree.nwk \
+  --inferred tests/data/reference_tree.nwk \
   --mode unrooted \
   --output-dir results/validation-smoke
 ```
 
-Expected: RF **0**, normalized RF **0**, precision **1**, recall **1**.
+Expected: RF **0**, normalized RF **0**.
 This checks the software, not biological accuracy.
 
 Use a new output directory for each comparison; repeating a command against a
@@ -65,10 +65,11 @@ For intentionally different coverage, add `--taxa-policy intersection` after
 aligning identities. Start with a benchmark clade rather than interpreting a
 small retained fraction as evidence for the full tree.
 
-For a mock comparison, replace the inferred path with the included
-[mock tree](../../../tests/data/embedding_tree_mock.nwk) and add
-`--taxa-policy intersection`. It rearranges four sequence IDs and is not generated
-from embeddings. Inspect the retained taxa before interpreting its scores.
+For a mock comparison, use `tests/data/reference_tree.nwk` as the reference and
+the included [mock tree](../../../tests/data/embedding_tree_mock.nwk) as the
+inferred tree. Both use tip labels A, B, C and D; the mock rearranges their
+groupings and is not generated from embeddings. Expected unrooted RF is **2**
+and normalized RF is **1**; rooted RF is **4** and normalized RF is **1**.
 
 `uv run --no-sync python -m evospaice.validate.evaluate` accepts identical arguments.
 Use `--help` for all options. Choose `--mode rooted` only when supplied roots
@@ -81,14 +82,12 @@ duplicate unary representations are excluded.
 
 * RF: number of relationships present in only one tree; zero is an exact match
 * Normalized RF: RF divided by the total relationship count in both trees; lower is better
-* Precision: shared relationships divided by inferred relationships; higher is better
-* Recall: shared relationships divided by reference relationships; higher is better
 
 RF uses DendroPy `symmetric_difference`. The report includes the normalization
-denominator and shared/inferred-only/reference-only counts. Undefined ratios
-are JSON null with reasons, including normalized RF for two unresolved stars.
+denominator and shared/inferred-only/reference-only counts. Normalized RF is
+JSON null with a reason when both trees have no resolved relationships.
 
-These are exact-match scores: resolving a reference polytomy can reduce precision
+These are exact-match scores: resolving a reference polytomy can increase RF
 without contradicting the reference. No support filtering or compatibility
 classification is performed. The sequence-derived reference is itself an estimate.
 
@@ -112,13 +111,16 @@ classification is performed. The sequence-derived reference is itself an estimat
 
 Scores are printed to the terminal. Each run writes three files:
 
-* `validation.json`: schema version 2, topology scores, input hashes, DendroPy
+* `validation.json`: schema version 3, RF scores, input hashes, DendroPy
   version, provenance, rooting policy, taxon coverage and warnings
 * `taxa.csv`: original/canonical identities and retained/excluded status
 * `clades.csv`: informative relationship IDs, origin (`both`, `inferred`,
   `reference`) and size; for unrooted trees, size is the canonical split side
 
 `--overwrite` replaces these three reports but does not clean up other files.
+
+Schema version 3 removes precision, recall and their undefined-value reasons
+from the topology object; RF scores and supporting relationship counts remain.
 
 Default limit: 5,000 tips per input tree, overridable with `--max-tips`.
 Newick inputs (including decompressed `.gz` files) and TSV tables are bounded at
