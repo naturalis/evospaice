@@ -7,6 +7,10 @@
 - [Success criteria](planning/success-criteria.md)
 - [Workstreams](planning/workstreams.md)
 
+## Decisions
+
+- [Pipeline decisions](decisions/pipeline-decisions.md)
+
 ## Documentation specific to the project
 
 - [Pipeline architecture](architecture/pipeline-architecture.md)
