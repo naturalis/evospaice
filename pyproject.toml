@@ -35,6 +35,7 @@ dependencies = [
     "dendropy>=4.6",       # tree manipulation and Newick I/O
     "faiss-cpu>=1.8",      # fast nearest-neighbour lookups over vectors
     "sourmash>=4.8",       # FracMinHash sketches — the k-mer distance baseline
+    "pandas>=3.0.5",
 ]
 
 [project.optional-dependencies]
