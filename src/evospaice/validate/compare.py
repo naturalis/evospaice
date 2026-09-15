@@ -14,31 +14,21 @@ from dendropy.calculate import treecompare
 
 def leaf_labels(tree: dendropy.Tree) -> set[str]:
     """Require unique, nonempty leaf labels without changing case or punctuation."""
-    labels = [node.taxon.label if node.taxon else None for node in tree.leaf_node_iter()]
-    if any(not isinstance(label, str) or not label.strip() for label in labels):
-        raise ValueError("Every tree leaf must have a nonempty taxon label")
-    if len(labels) != len(set(labels)):
-        raise ValueError("Tree leaf labels must be unique")
-    return set(labels)
-
-
-class BoundedNamespace(dendropy.TaxonNamespace):
-    """Reject excessive tip allocation while DendroPy parses Newick."""
-
-    def __init__(self, maximum: int):
-        super().__init__(is_case_sensitive=True)
-        self.maximum = maximum
-
-    def add_taxon(self, taxon):
-        if taxon not in self and len(self) >= self.maximum:
-            raise ValueError("Tree tip limit exceeded; provide a benchmark subset")
-        return super().add_taxon(taxon)
+    labels: set[str] = set()
+    for node in tree.leaf_node_iter():
+        label = node.taxon.label if node.taxon else None
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError("Every tree leaf must have a nonempty taxon label")
+        if label in labels:
+            raise ValueError("Tree leaf labels must be unique")
+        labels.add(label)
+    return labels
 
 
 def load_tree(
-    path: Path, *, max_bytes: int = 32 * 1024**2, max_tips: int = 5000
+    path: Path, *, max_bytes: int = 32 * 1024**2
 ) -> dendropy.Tree:
-    """Read a single Newick with bounded decompressed size and tip allocation."""
+    """Read a single Newick with bounded decompressed size."""
     opener = gzip.open if path.suffix == ".gz" else open
     with opener(path, "rb") as handle:
         content = handle.read(max_bytes + 1)
@@ -46,7 +36,7 @@ def load_tree(
         raise ValueError("Tree input size limit exceeded; provide a benchmark clade subset")
     trees = dendropy.TreeList.get(
         data=content.decode("utf-8"), schema="newick", preserve_underscores=True,
-        taxon_namespace=BoundedNamespace(max_tips),
+        taxon_namespace=dendropy.TaxonNamespace(is_case_sensitive=True),
         case_sensitive_taxon_labels=True, extract_comment_metadata=True,
     )
     if len(trees) != 1:
@@ -58,20 +48,16 @@ def load_tree(
 def prepare_trees(
     trees: Mapping[str, dendropy.Tree], *, mode: str, taxa_policy: str = "strict",
     mappings: Mapping[str, Mapping[str, str]] | None = None,
-    selected: set[str] | None = None, max_tips: int = 5000,
+    selected: set[str] | None = None,
 ) -> tuple[dict[str, dendropy.Tree], list[dict]]:
     """Align topology-only copies to one namespace and fixed benchmark set."""
     if not trees:
         raise ValueError("No trees supplied")
     if mode not in {"rooted", "unrooted"} or taxa_policy not in {"strict", "intersection"}:
         raise ValueError("Invalid rooting mode or taxa policy")
-    if max_tips < 1:
-        raise ValueError("max_tips must be positive")
     working, originals, sets = {}, {}, {}
     for name, tree in trees.items():
         labels = leaf_labels(tree)
-        if len(labels) > max_tips:
-            raise ValueError(f"{name}: tip limit exceeded; supply a subset or raise --max-tips")
         mapping = dict((mappings or {}).get(name, {}))
         if mapping.keys() - labels:
             raise ValueError(f"{name}: mapping contains labels absent from the tree")

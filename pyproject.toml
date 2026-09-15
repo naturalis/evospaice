@@ -86,3 +86,6 @@ known-first-party = ["evospaice"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.pyright]
+extraPaths = ["src"]

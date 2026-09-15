@@ -32,7 +32,6 @@ def build_parser(parser: argparse.ArgumentParser | None = None) -> argparse.Argu
     parser.add_argument("--reference-independence", choices=["independent", "backbone-derived",
                                                           "unknown"], default="unknown")
     parser.add_argument("--metadata", type=Path, help="JSON citations and provenance")
-    parser.add_argument("--max-tips", type=int, default=5000)
     return parser
 
 
@@ -83,8 +82,6 @@ def _csv(path: Path, rows: list[dict], fields: list[str]) -> None:
 
 def run(args: argparse.Namespace) -> int:
     """Write topology scores, taxon coverage and input provenance."""
-    if args.max_tips < 1:
-        raise ValueError("max_tips must be positive")
     if args.output_dir.exists() and any(args.output_dir.iterdir()) and not args.overwrite:
         raise ValueError("Output directory is not empty; select a new directory or --overwrite")
     input_paths = [
@@ -107,9 +104,9 @@ def run(args: argparse.Namespace) -> int:
         selected = {row["taxon"] for row in read_table(args.taxa_file, {"taxon"})}
     inputs = {"inferred": args.inferred, "reference": args.reference}
     trees, coverage = prepare_trees(
-        {name: load_tree(path, max_tips=args.max_tips) for name, path in inputs.items()},
+        {name: load_tree(path) for name, path in inputs.items()},
         mode=args.mode, taxa_policy=args.taxa_policy, mappings=_mappings(args.taxon_map),
-        selected=selected, max_tips=args.max_tips,
+        selected=selected,
     )
     taxa = leaf_labels(trees["inferred"])
     topology, clades = topology_metrics(trees["inferred"], trees["reference"])
@@ -129,13 +126,13 @@ def run(args: argparse.Namespace) -> int:
         if path := getattr(args, name):
             input_identities[name] = _input_identity(path)
     report = dict(
-        schema_version=3, mode=args.mode, reference_kind=args.reference_kind,
+        schema_version=4, mode=args.mode, reference_kind=args.reference_kind,
         reference_independence=args.reference_independence, metadata=metadata, warnings=warnings,
         root_policy="supplied_root" if args.mode == "rooted" else "unrooted_splits",
         branch_lengths="ignored", taxa_policy=args.taxa_policy, retained_taxa=len(taxa),
         coverage={name: dict(original=sum(row["tree"] == name for row in coverage),
                              retained=len(taxa)) for name in trees},
-        topology=topology, limits=dict(max_tips=args.max_tips),
+        topology=topology,
         versions={"dendropy": version("dendropy")},
         inputs=input_identities,
     )

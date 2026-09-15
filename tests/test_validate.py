@@ -6,7 +6,7 @@ import dendropy
 import pytest
 
 from evospaice.cli import main as cli_main
-from evospaice.validate.compare import load_tree, prepare_trees, topology_metrics
+from evospaice.validate.compare import leaf_labels, load_tree, prepare_trees, topology_metrics
 from evospaice.validate.evaluate import main, read_table
 
 
@@ -171,13 +171,37 @@ def test_loader_bounds_and_labels(tmp_path):
     path = tmp_path / "tree.nwk"
     path.write_text("('BOLD:A_a','with space',A,a);")
     assert len(list(load_tree(path).leaf_node_iter())) == 4
-    with pytest.raises(ValueError, match="tip limit"):
-        load_tree(path, max_tips=3)
     with pytest.raises(ValueError, match="size limit"):
         load_tree(path, max_bytes=2)
     path.write_text("(A,B);(C,D);")
     with pytest.raises(ValueError, match="exactly one"):
         load_tree(path)
+
+
+@pytest.mark.parametrize("label", [None, "", " ", 123, "B"])
+def test_invalid_leaf_labels(label):
+    original = tree("((A,B),(C,D));")
+    next(original.leaf_node_iter()).taxon.label = label
+    with pytest.raises(ValueError, match="nonempty|unique"):
+        leaf_labels(original)
+
+
+def test_missing_leaf_taxon():
+    original = tree("((A,B),(C,D));")
+    next(original.leaf_node_iter()).taxon = None
+    with pytest.raises(ValueError, match="nonempty"):
+        leaf_labels(original)
+
+
+def test_cli_large_tree_without_tip_cap(cli_arguments, tmp_path):
+    source = tmp_path / "tree.nwk"
+    labels = [f"taxon_{index}" for index in range(5001)]
+    source.write_text("(" + ",".join(labels) + ");")
+    assert main(cli_arguments) == 0
+    report = json.loads((tmp_path / "report" / "validation.json").read_text())
+    assert report["retained_taxa"] == 5001
+    assert report["topology"]["rf"] == 0
+    assert "limits" not in report
 
 
 def test_cli_identity_report(tmp_path, capsys):
@@ -188,7 +212,7 @@ def test_cli_identity_report(tmp_path, capsys):
                  "--mode", "rooted", "--output-dir", str(output)]
     assert cli_main(arguments) == 0
     report = json.loads((output / "validation.json").read_text())
-    assert report["schema_version"] == 3
+    assert report["schema_version"] == 4
     assert report["topology"]["rf"] == 0
     assert report["topology"]["rf_normalized"] == 0
     assert report["branch_lengths"] == "ignored"
