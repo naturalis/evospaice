@@ -14,7 +14,10 @@ from decimal import Decimal
 from pathlib import Path
 
 import dendropy
+from dendropy.dataio.nexusprocessing import escape_nexus_token
 from dendropy.utility.error import DataParseError
+
+from evospaice.ingest.tsv2newick import NULL_VALUES
 
 TAXONOMY_COLUMNS = ("family", "genus", "species")
 OUTPUT_COLUMNS = (
@@ -26,6 +29,8 @@ OUTPUT_COLUMNS = (
     "nearest_named_ancestor",
     "ancestor_labels",
     *TAXONOMY_COLUMNS,
+    "tree_newick",
+    "taxonomy_newick",
 )
 MST_COLUMNS = ("Source_ID", "Source_Family", "Source_Genus", "Source_Species")
 Taxonomy = tuple[str, str, str]
@@ -35,6 +40,27 @@ Taxonomy = tuple[str, str, str]
 class DatasetSummary:
     total_leaves: int
     matched_leaves: int
+
+
+def _lineage_newick(leaf_token: str, ancestor_tokens: Sequence[str]) -> str:
+    """Serialize a single-leaf path without collapsing unnamed ancestor nodes."""
+    return (
+        "(" * len(ancestor_tokens)
+        + leaf_token
+        + "".join(")" + token for token in reversed(ancestor_tokens))
+        + ";"
+    )
+
+
+def _taxonomy_newick(identifier: str, taxonomy: Taxonomy) -> str:
+    ancestor_tokens = [
+        escape_nexus_token(
+            value if value.strip().lower() not in NULL_VALUES else "",
+            preserve_spaces=True,
+        )
+        for value in taxonomy
+    ]
+    return _lineage_newick(escape_nexus_token(identifier, preserve_spaces=True), ancestor_tokens)
 
 
 def read_taxonomy(path: Path) -> dict[str, Taxonomy]:
@@ -86,11 +112,11 @@ def iter_leaf_rows(path: Path) -> Iterator[dict[str, str]]:
             raise ValueError(f"{path}: expected exactly one Newick tree")
 
     seen: set[str] = set()
-    stack: list[tuple[dendropy.Node, Decimal, int, tuple[str, ...]]] = [
-        (tree.seed_node, Decimal(0), 0, ())
+    stack: list[tuple[dendropy.Node, Decimal, int, tuple[str, ...], tuple[str, ...]]] = [
+        (tree.seed_node, Decimal(0), 0, (), ())
     ]
     while stack:
-        node, distance, depth, ancestors = stack.pop()
+        node, distance, depth, ancestors, ancestor_tokens = stack.pop()
         length = None
         if node.edge_length is None:
             if node.parent_node is not None:
@@ -101,6 +127,10 @@ def iter_leaf_rows(path: Path) -> Iterator[dict[str, str]]:
             length = Decimal(str(node.edge_length))
             if node.parent_node is not None:
                 distance += length
+
+        token = escape_nexus_token(node.label or "", preserve_spaces=True)
+        if length is not None:
+            token += f":{length}"
 
         if node.is_leaf():
             identifier = node.label
@@ -117,11 +147,13 @@ def iter_leaf_rows(path: Path) -> Iterator[dict[str, str]]:
                 "parent_label": (node.parent_node.label or "") if node.parent_node else "",
                 "nearest_named_ancestor": ancestors[-1] if ancestors else "",
                 "ancestor_labels": " > ".join(ancestors),
+                "tree_newick": _lineage_newick(token, ancestor_tokens),
             }
         else:
             lineage = ancestors + ((node.label,) if node.label else ())
+            path_tokens = ancestor_tokens + (token,)
             for child in reversed(node.child_nodes()):
-                stack.append((child, distance, depth + 1, lineage))
+                stack.append((child, distance, depth + 1, lineage, path_tokens))
 
 
 def build_evaluation_dataset(newick: Path, mst_csv: Path, output: Path) -> DatasetSummary:
@@ -148,6 +180,7 @@ def build_evaluation_dataset(newick: Path, mst_csv: Path, output: Path) -> Datas
                 values = taxonomy.get(row["leaf_id"])
                 if values is not None:
                     row.update(zip(TAXONOMY_COLUMNS, values, strict=True))
+                    row["taxonomy_newick"] = _taxonomy_newick(row["leaf_id"], values)
                     writer.writerow(row)
                     matched += 1
             if not matched:

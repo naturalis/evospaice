@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 
+import dendropy
 import pytest
 from dendropy.utility.error import DataParseError
 
@@ -38,6 +39,15 @@ def read_output(path: Path) -> list[dict[str, str]]:
         return list(reader)
 
 
+def read_newick_path(text: str) -> list[dendropy.Node]:
+    tree = dendropy.Tree.get(data=text, schema="newick", suppress_leaf_node_taxa=True)
+    nodes = list(tree.preorder_node_iter())
+    assert all(len(node.child_nodes()) == 1 for node in nodes[:-1])
+    assert nodes[-1].is_leaf()
+    assert all(not node.annotations and not node.comments for node in nodes)
+    return nodes
+
+
 def test_join_uses_only_source_ids_once_and_preserves_tree_order(inputs):
     newick, mst_csv, output = inputs
     newick.write_text(
@@ -63,8 +73,10 @@ def test_join_uses_only_source_ids_once_and_preserves_tree_order(inputs):
     summary = build_evaluation_dataset(newick, mst_csv, output)
 
     assert summary == DatasetSummary(total_leaves=4, matched_leaves=2)
-    assert read_output(output) == [
-        dict(zip(OUTPUT_COLUMNS, values, strict=True))
+    rows = read_output(output)
+    original_columns = OUTPUT_COLUMNS[:10]
+    assert [{column: row[column] for column in original_columns} for row in rows] == [
+        dict(zip(original_columns, values, strict=True))
         for values in [
             (
                 "A",
@@ -80,6 +92,21 @@ def test_join_uses_only_source_ids_once_and_preserves_tree_order(inputs):
             ),
             ("D", "0.5", "1.1", "2", "", "Root", "Root", "None", "", "None"),
         ]
+    ]
+    assert rows[0]["tree_newick"] == "((A:0.1)Inner:0.3)Root:9.0;"
+    assert rows[1]["tree_newick"] == "((D:0.5):0.6)Root:9.0;"
+    tree_path = read_newick_path(rows[1]["tree_newick"])
+    assert [node.label for node in tree_path] == ["Root", None, "D"]
+    assert [node.edge_length for node in tree_path] == [9.0, 0.6, 0.5]
+    taxonomy_path = read_newick_path(rows[0]["taxonomy_newick"])
+    assert [node.label for node in taxonomy_path] == ["Family,A", "G_A", "Species 'A'", "A"]
+    assert all(node.edge_length is None for node in taxonomy_path)
+    assert rows[1]["taxonomy_newick"] == "(((D)));"
+    assert [node.label for node in read_newick_path(rows[1]["taxonomy_newick"])] == [
+        None,
+        None,
+        None,
+        "D",
     ]
     assert newick.read_bytes() == original_tree
     assert mst_csv.read_bytes() == original_mst
@@ -103,6 +130,14 @@ def test_quoted_labels_underscores_case_and_numeric_internal_labels(inputs):
     assert rows[1]["distance_from_root"] == "0.02"
     assert rows[2]["distance_from_root"] == "-0.18"
     assert rows[2]["ancestor_labels"] == "95 > quoted parent"
+    for row in rows:
+        nodes = read_newick_path(row["tree_newick"])
+        assert nodes[-1].label == row["leaf_id"]
+        assert len(nodes) - 1 == int(row["depth"])
+        assert nodes[0].label == "95"
+    nodes = read_newick_path(rows[2]["tree_newick"])
+    assert [node.label for node in nodes] == ["95", "quoted parent", "O'Brien"]
+    assert [node.edge_length for node in nodes] == [None, 0.02, -0.2]
 
 
 @pytest.mark.parametrize("tree, length", [("A;", ""), ("A:9;", "9.0")])
@@ -116,6 +151,8 @@ def test_single_leaf_has_no_ancestors_and_zero_root_distance(inputs, tree, lengt
     assert row["distance_from_root"] == "0"
     assert row["depth"] == "0"
     assert row["parent_label"] == row["nearest_named_ancestor"] == row["ancestor_labels"] == ""
+    assert row["tree_newick"] == (f"A:{length};" if length else "A;")
+    assert len(read_newick_path(row["tree_newick"])) == 1
 
 
 def test_only_source_columns_are_required_with_utf8_bom(inputs):
@@ -128,6 +165,45 @@ def test_only_source_columns_are_required_with_utf8_bom(inputs):
 
     assert build_evaluation_dataset(newick, mst_csv, output) == DatasetSummary(2, 1)
     assert read_output(output)[0]["species"] == "None"
+
+
+def test_taxonomy_newick_preserves_labels_without_csv_or_tree_distances(inputs):
+    newick, mst_csv, output = inputs
+    newick.write_text("'ID_1':99;", encoding="utf-8")
+    taxonomy = ["Family, A", "Genus_A", "Species (A): O'Brien"]
+    with mst_csv.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(HEADER.strip().split(","))
+        writer.writerows(
+            [
+                ["ID_1", *taxonomy, "external-1", "", "", "", "0.0001"],
+                ["ID_1", *taxonomy, "external-2", "", "", "", "0.9"],
+            ]
+        )
+
+    assert build_evaluation_dataset(newick, mst_csv, output) == DatasetSummary(1, 1)
+    (row,) = read_output(output)
+    nodes = read_newick_path(row["taxonomy_newick"])
+    assert [node.label for node in nodes] == [*taxonomy, "ID_1"]
+    assert all(node.edge_length is None for node in nodes)
+    assert row["tree_newick"] == "'ID_1':99.0;"
+
+
+@pytest.mark.parametrize("missing", ["", "None", "NULL", "NA", "n/a", "nan", "unknown", "-"])
+def test_missing_taxonomy_keeps_unnamed_rank_nodes_and_original_values(inputs, missing):
+    newick, mst_csv, output = inputs
+    with mst_csv.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(MST_COLUMNS)
+        writer.writerow(["A", missing, missing, missing])
+
+    build_evaluation_dataset(newick, mst_csv, output)
+
+    (row,) = read_output(output)
+    assert (row["family"], row["genus"], row["species"]) == (missing, missing, missing)
+    nodes = read_newick_path(row["taxonomy_newick"])
+    assert [node.label for node in nodes] == [None, None, None, "A"]
+    assert all(node.edge_length is None for node in nodes)
 
 
 @pytest.mark.parametrize(

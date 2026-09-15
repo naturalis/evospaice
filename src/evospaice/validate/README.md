@@ -40,8 +40,8 @@ reported as errors.
 
 ### Output columns and their sources
 
-The joined CSV has ten columns: seven extracted or derived from the Newick
-tree and three taxonomy columns from the source side of the MST CSV.
+The joined CSV has twelve columns: the original seven Newick measurements and
+labels, three source-taxonomy columns, and two per-leaf Newick paths.
 
 | Joined column | Source file | Original field or derivation |
 | --- | --- | --- |
@@ -55,6 +55,8 @@ tree and three taxonomy columns from the source side of the MST CSV.
 | `family` | `mst_edges_with_taxonomy.csv` | `Source_Family`. |
 | `genus` | `mst_edges_with_taxonomy.csv` | `Source_Genus`. |
 | `species` | `mst_edges_with_taxonomy.csv` | `Source_Species`. |
+| `tree_newick` | `pruned.tre` | Only this leaf and its full ancestor path, with original labels and branch lengths. |
+| `taxonomy_newick` | `mst_edges_with_taxonomy.csv` | `Source_Family` -> `Source_Genus` -> `Source_Species` -> `Source_ID`, with no branch lengths. |
 
 **Join key:** `leaf_id = Source_ID`. Only the matching source record supplies
 the taxonomy; `Source_ID` is represented by `leaf_id`, not a separate output
@@ -67,6 +69,50 @@ only from the Newick tree, not from MST distances.
 A single-leaf tree has depth and root distance zero; its `branch_length` is
 blank if the root has no stem length. The tool does not infer a biological root
 for an unrooted tree: root-dependent values follow the supplied representation.
+
+### Per-leaf Newick paths
+
+Both new columns contain a complete, semicolon-terminated Newick statement
+with exactly one leaf. Labels are quoted and escaped when necessary to
+preserve spaces, punctuation, apostrophes, and underscores.
+
+`tree_newick` removes all sibling branches but retains every ancestor,
+including unnamed nodes and the original root. It preserves the length of
+each remaining edge, including the root's stem if present, without collapsing
+unary nodes or summing their lengths. Only labels and lengths are emitted;
+comments and annotations are not included.
+
+For example, the original tree:
+
+```text
+((A:0.1,B:0.2)Parent:0.3)Root:0.0;
+```
+
+produces this `tree_newick` value for leaf `A`:
+
+```text
+((A:0.1)Parent:0.3)Root:0.0;
+```
+
+`taxonomy_newick` starts at the family and ends at the matching `Source_ID`.
+For source taxonomy `FamilyA`, `GenusA`, `SpeciesA`, and ID `A`, it contains:
+
+```text
+(((A)SpeciesA)GenusA)FamilyA;
+```
+
+This is taxonomy topology only, not a reconstruction of the MST. The current
+CSV provides no taxonomic parent-child branch lengths, and its `Distance`
+values describe source-target pairs; repeated source IDs may have different
+values. No minimum, mean, zero, or length from the original Newick tree is
+substituted. Taxonomy branch lengths remain unspecified until suitable input
+data and a mapping for those lengths are provided.
+
+Missing taxonomy labels retain their rank positions as unnamed nodes. The
+recognized placeholders are blank, `None`, `null`, `NA`, `n/a`, `nan`,
+`unknown`, and `-` (case-insensitive, ignoring surrounding whitespace).
+The separate `family`, `genus`, and `species` columns still preserve the
+original values verbatim.
 
 For Python callers:
 

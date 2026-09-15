@@ -145,6 +145,11 @@ The CSV keeps only leaves whose IDs match `Source_ID`, in Newick order.
 It combines branch lengths, root distances, and ancestry from the Newick tree
 with family/genus/species from `Source_*` columns. All `Target_*` columns are
 ignored: they refer to a different dataset not stored here.
+Two additional columns contain per-leaf Newick paths: `tree_newick` preserves
+the original leaf and its ancestors with their branch lengths, while
+`taxonomy_newick` contains the source family/genus/species hierarchy with no
+branch lengths. The MST CSV's `Distance` is not a taxonomic edge length and
+is not used.
 Choose a new output path for each run; existing files are never overwritten.
 See the [evaluation dataset documentation](src/evospaice/validate/README.md)
 for input requirements, column definitions, and the Python API.
