@@ -1,5 +1,5 @@
 {
-  "name": "AI Sequence Identification",
+  "name": "Evospaice",
   "dockerComposeFile": [
     "docker-compose.yml",
     "docker-compose.local.yml"
@@ -12,6 +12,10 @@
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/terraform:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
   },
   "customizations": {
     "vscode": {

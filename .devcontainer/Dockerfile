@@ -1,6 +1,11 @@
 FROM pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
 
+# Bring in uv from main
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 ARG DEBIAN_FRONTEND=noninteractive
+
+RUN rm -f /etc/apt/sources.list.d/yarn.list || true
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
