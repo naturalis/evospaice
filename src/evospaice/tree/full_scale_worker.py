@@ -42,6 +42,7 @@ def run_partition_worker(
             CloudRunConfig(
                 input_prefix=item.partition.input_prefix,
                 output_prefix=item.partition.output_prefix,
+                partition_root_rank=item.partition.taxonomy_path[-1][0],
             ),
             tree_config,
         )

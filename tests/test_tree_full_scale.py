@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 from pathlib import Path
@@ -17,7 +18,12 @@ from evospaice.tree.full_scale import (
     PartitionWorkItem,
 )
 from evospaice.tree.full_scale_finalize import _graft_partition_trees
-from evospaice.tree.full_scale_prepare import PrepareConfig, prepare_partitions
+from evospaice.tree.full_scale_prepare import (
+    PrepareConfig,
+    _plan_taxonomy_partition_prefixes,
+    prepare_partitions,
+)
+from evospaice.tree.models import TAXONOMY_RANKS
 
 
 class MemoryStore:
@@ -55,7 +61,51 @@ class FakeVectorIndex:
             2: (2**-0.5, 2**-0.5),
             3: (-1.0, 0.0),
         }
-        return np.asarray([vectors[int(identifier)] for identifier in identifiers], dtype=np.float32)
+        return np.asarray(
+            [vectors[int(identifier)] for identifier in identifiers], dtype=np.float32
+        )
+
+
+def test_partition_plan_keeps_complete_lower_taxa_together() -> None:
+    family_rank_index = TAXONOMY_RANKS.index("family")
+    rows = [
+        ("Animalia", "Arthropoda", "Insecta", "Diptera", "F1", "", "", "G1", "S1", ""),
+        ("Animalia", "Arthropoda", "Insecta", "Diptera", "F1", "", "", "G2", "S2", ""),
+        ("Animalia", "Arthropoda", "Insecta", "Diptera", "F1", "", "", "G1", "S3", ""),
+        ("Animalia", "Arthropoda", "Insecta", "Diptera", "F1", "", "", "G2", "S4", ""),
+    ]
+
+    prefixes = _plan_taxonomy_partition_prefixes(
+        rows,
+        partition_rank_index=family_rank_index,
+        max_partition_records=2,
+    )
+
+    genus_rank_index = TAXONOMY_RANKS.index("genus")
+    assert {prefix[genus_rank_index] for prefix in prefixes} == {"G1", "G2"}
+    assert all(len(prefix) == genus_rank_index + 1 for prefix in prefixes)
+
+
+def test_partition_plan_rejects_an_oversized_terminal_taxon() -> None:
+    taxonomy = (
+        "Animalia",
+        "Arthropoda",
+        "Insecta",
+        "Diptera",
+        "F1",
+        "",
+        "",
+        "G1",
+        "S1",
+        "",
+    )
+
+    with pytest.raises(FullScaleInputError, match="cannot preserve"):
+        _plan_taxonomy_partition_prefixes(
+            [taxonomy, taxonomy, taxonomy],
+            partition_rank_index=TAXONOMY_RANKS.index("family"),
+            max_partition_records=2,
+        )
 
 
 def test_production_embedding_manifest_contract() -> None:
@@ -169,6 +219,7 @@ def test_prepare_selects_one_record_per_bin_and_enqueues_bounded_partitions(
 
     assert result.selected_leaf_count == 3
     assert sum(partition.leaf_count for partition in result.partitions) == 3
+    assert all(partition.leaf_count <= 2 for partition in result.partitions)
     assert len(queue.messages) == len(result.partitions)
     assert "runs/test/prepare/partition-manifest.json" in work_store.objects
     assert "runs/test/prepare/complete.json" in work_store.objects
@@ -179,11 +230,15 @@ def test_prepare_selects_one_record_per_bin_and_enqueues_bounded_partitions(
     assert {item.partition.partition_id for item in work_items} == {
         partition.partition_id for partition in result.partitions
     }
-    generated_records = "\n".join(
-        work_store.objects[f"{partition.input_prefix}/records.tsv"].decode()
+    generated_records = [
+        row
         for partition in result.partitions
-    )
-    assert generated_records.count("BOLD:A") == 1
+        for row in csv.DictReader(
+            work_store.objects[f"{partition.input_prefix}/records.tsv"].decode().splitlines(),
+            delimiter="\t",
+        )
+    ]
+    assert sum(row["bin_uri"] == "BOLD:A" for row in generated_records) == 1
 
 
 def test_partition_manifest_rejects_inconsistent_leaf_total() -> None:

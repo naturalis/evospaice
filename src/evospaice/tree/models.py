@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 TAXONOMY_RANKS = (
     "kingdom",
     "phylum",
@@ -78,6 +77,14 @@ class InputPaths:
     output_dir: Path
     embedding_index: Path | None = None
     trust_policy: Path | None = None
+    partition_root_rank: str | None = None
+
+    def __post_init__(self) -> None:
+        if (
+            self.partition_root_rank is not None
+            and self.partition_root_rank not in TAXONOMY_RANKS
+        ):
+            raise ValueError(f"unsupported partition root rank: {self.partition_root_rank}")
 
 
 @dataclass(frozen=True)

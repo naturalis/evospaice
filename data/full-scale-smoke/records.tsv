@@ -1,0 +1,14 @@
+faiss_id	record_id	bin_uri	kingdom	phylum	class	order	family	subfamily	tribe	genus	species	subspecies
+0	SMOKE-REC-001	BOLD:SMOKE-DAN-1	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Danainae	Danaini	Danaus	Danaus plexippus	
+1	SMOKE-REC-002	BOLD:SMOKE-VAN-1	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa	Vanessa atalanta	
+2	SMOKE-REC-003	BOLD:SMOKE-MUS-1	Animalia	Arthropoda	Insecta	Diptera	Muscidae			Musca	Musca domestica	
+3	SMOKE-REC-004	BOLD:SMOKE-JUN-1	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Junonia	Junonia coenia	
+4	SMOKE-REC-005	BOLD:SMOKE-DAN-2	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Danainae	Danaini	Danaus	Danaus gilippus	
+5	SMOKE-REC-006	BOLD:SMOKE-VAN-2	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa	Vanessa cardui	
+6	SMOKE-REC-007	BOLD:SMOKE-STO-1	Animalia	Arthropoda	Insecta	Diptera	Muscidae			Stomoxys	Stomoxys calcitrans	
+7	SMOKE-REC-008	BOLD:SMOKE-JUN-2	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Junonia	Junonia evarete	
+8	SMOKE-REC-009	BOLD:SMOKE-DAN-3	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Danainae	Danaini	Danaus	Danaus chrysippus	
+9	SMOKE-REC-010	BOLD:SMOKE-VAN-3	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Nymphalinae	Nymphalini	Vanessa	Vanessa virginiensis	
+10	SMOKE-REC-011	BOLD:SMOKE-MUS-2	Animalia	Arthropoda	Insecta	Diptera	Muscidae			Musca	Musca autumnalis	
+11	SMOKE-REC-012	BOLD:SMOKE-PIE-1	Animalia	Arthropoda	Insecta	Lepidoptera	Pieridae					
+12	SMOKE-REC-013	BOLD:SMOKE-DAN-1	Animalia	Arthropoda	Insecta	Lepidoptera	Nymphalidae	Danainae	Danaini	Danaus	Danaus plexippus	

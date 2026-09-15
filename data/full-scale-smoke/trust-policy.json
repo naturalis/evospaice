@@ -1,0 +1,5 @@
+{
+  "version": "full-scale-smoke-v1",
+  "resolve_ranks": ["genus"],
+  "scale_ranks": ["*"]
+}

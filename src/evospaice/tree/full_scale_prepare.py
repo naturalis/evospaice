@@ -7,7 +7,7 @@ import hashlib
 import json
 import shutil
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -74,6 +74,59 @@ class FaissVectorIndex:
         return np.asarray(values, dtype=np.float32)
 
 
+def _plan_taxonomy_partition_prefixes(
+    taxonomy_rows: Iterable[tuple[str, ...]],
+    *,
+    partition_rank_index: int,
+    max_partition_records: int,
+) -> tuple[tuple[str, ...], ...]:
+    base_depth = partition_rank_index + 1
+    rank_count = len(TAXONOMY_RANKS)
+    counts: dict[tuple[str, ...], int] = {}
+
+    for taxonomy in taxonomy_rows:
+        if len(taxonomy) != rank_count:
+            raise FullScaleInputError("taxonomy row has an unexpected number of ranks")
+        normalized = tuple(str(value or "").strip() for value in taxonomy)
+        if not any(normalized[:base_depth]):
+            raise FullScaleInputError("record has no partition taxonomy")
+        for depth in range(base_depth, rank_count + 1):
+            prefix = normalized[:depth]
+            counts[prefix] = counts.get(prefix, 0) + 1
+
+    children: dict[tuple[str, ...], list[tuple[str, ...]]] = {}
+    roots: list[tuple[str, ...]] = []
+    for prefix in counts:
+        if len(prefix) == base_depth:
+            roots.append(prefix)
+        else:
+            children.setdefault(prefix[:-1], []).append(prefix)
+
+    selected: list[tuple[str, ...]] = []
+
+    def select(prefix: tuple[str, ...]) -> None:
+        if counts[prefix] <= max_partition_records:
+            selected.append(prefix)
+            return
+        child_prefixes = children.get(prefix, [])
+        if not child_prefixes:
+            lineage = "/".join(
+                f"{rank}:{name}"
+                for rank, name in zip(TAXONOMY_RANKS, prefix, strict=False)
+                if name
+            )
+            raise FullScaleInputError(
+                f"terminal taxonomy group {lineage!r} contains {counts[prefix]} records; "
+                f"cannot preserve it within the {max_partition_records}-record limit"
+            )
+        for child_prefix in sorted(child_prefixes):
+            select(child_prefix)
+
+    for root in sorted(roots):
+        select(root)
+    return tuple(selected)
+
+
 def prepare_partitions(
     source_store: ArtifactStore,
     work_store: ArtifactStore,
@@ -97,7 +150,9 @@ def prepare_partitions(
         mapping_path = work_dir / "record-bin-map.parquet"
         policy_path = work_dir / "trust-policy.json"
 
-        source_store.download(join_object(config.source_prefix, export.metadata_file), metadata_path)
+        source_store.download(
+            join_object(config.source_prefix, export.metadata_file), metadata_path
+        )
         work_store.download(config.bin_mapping_object, mapping_path)
         work_store.download(config.trust_policy_object, policy_path)
 
@@ -111,7 +166,9 @@ def prepare_partitions(
         taxonomy_columns = [rank for rank in TAXONOMY_RANKS if rank in available_columns]
         metadata = pq.read_table(metadata_path, columns=metadata_columns + taxonomy_columns)
         for column_index, column_name in enumerate(metadata.column_names):
-            if column_name in taxonomy_columns and pa.types.is_null(metadata.schema.field(column_name).type):
+            if column_name in taxonomy_columns and pa.types.is_null(
+                metadata.schema.field(column_name).type
+            ):
                 metadata = metadata.set_column(
                     column_index,
                     column_name,
@@ -182,7 +239,6 @@ def prepare_partitions(
             raise FullScaleInputError("FAISS record count does not match its manifest")
 
         partition_rank_index = TAXONOMY_RANKS.index(config.partition_rank)
-        partition_ranks = TAXONOMY_RANKS[: partition_rank_index + 1]
         selected_columns = [
             export.id_column,
             config.record_id_column,
@@ -190,24 +246,36 @@ def prepare_partitions(
             *TAXONOMY_RANKS,
         ]
         selected = selected.select(selected_columns)
-        sort_keys = [(rank, "ascending") for rank in partition_ranks]
+        sort_keys = [(rank, "ascending") for rank in TAXONOMY_RANKS]
         sort_keys.append((export.id_column, "ascending"))
         selected = selected.take(pc.sort_indices(selected, sort_keys=sort_keys))
+
+        taxonomy_rows = (
+            tuple(str(row.get(rank) or "").strip() for rank in TAXONOMY_RANKS)
+            for batch in selected.select(TAXONOMY_RANKS).to_batches(max_chunksize=65_536)
+            for row in batch.to_pylist()
+        )
+        partition_prefixes = set(
+            _plan_taxonomy_partition_prefixes(
+                taxonomy_rows,
+                partition_rank_index=partition_rank_index,
+                max_partition_records=config.max_partition_records,
+            )
+        )
 
         partitions: list[PartitionSpec] = []
         current_key: tuple[str, ...] | None = None
         current_rows: list[dict[str, object]] = []
-        chunk_index = 0
 
         def flush() -> None:
-            nonlocal chunk_index, current_rows
+            nonlocal current_rows
             if current_key is None or not current_rows:
                 return
             partition = _write_partition(
                 rows=current_rows,
                 lineage=current_key,
-                chunk_index=chunk_index,
-                partition_rank_index=partition_rank_index,
+                chunk_index=0,
+                partition_rank_index=len(current_key) - 1,
                 export=export,
                 config=config,
                 vector_index=vector_index,
@@ -216,22 +284,27 @@ def prepare_partitions(
                 work_store=work_store,
             )
             partitions.append(partition)
-            chunk_index += 1
             current_rows = []
 
         for batch in selected.to_batches(max_chunksize=min(config.max_partition_records, 65_536)):
             for row in batch.to_pylist():
-                key = tuple(str(row.get(rank) or "").strip() for rank in partition_ranks)
-                if not any(key):
+                taxonomy = tuple(
+                    str(row.get(rank) or "").strip() for rank in TAXONOMY_RANKS
+                )
+                key = next(
+                    (
+                        taxonomy[:depth]
+                        for depth in range(partition_rank_index + 1, len(TAXONOMY_RANKS) + 1)
+                        if taxonomy[:depth] in partition_prefixes
+                    ),
+                    None,
+                )
+                if key is None:
                     raise FullScaleInputError(
-                        f"record {row[config.record_id_column]!r} has no partition taxonomy"
+                        f"record {row[config.record_id_column]!r} has no planned partition"
                     )
-                if current_key is not None and (
-                    key != current_key or len(current_rows) >= config.max_partition_records
-                ):
+                if current_key is not None and key != current_key:
                     flush()
-                    if key != current_key:
-                        chunk_index = 0
                 current_key = key
                 current_rows.append(row)
         flush()
@@ -372,6 +445,7 @@ def _require_unique(table, column: str, compute) -> None:
 
 
 def _require_non_empty_strings(table, column: str, compute) -> None:
-    empty_count = int(compute.sum(compute.equal(compute.utf8_trim_whitespace(table[column]), "")).as_py())
+    trimmed = compute.utf8_trim_whitespace(table[column])
+    empty_count = int(compute.sum(compute.equal(trimmed, "")).as_py())
     if empty_count:
         raise FullScaleInputError(f"{column} contains empty values")

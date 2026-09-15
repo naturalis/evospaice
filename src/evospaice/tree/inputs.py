@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
-from .models import InputPaths, TAXONOMY_RANKS, TreeRecord
+from .models import TAXONOMY_RANKS, InputPaths, TreeRecord
 
 
 class InputValidationError(ValueError):
@@ -65,7 +65,9 @@ def _load_index(path: Path | None, record_rows: list[dict[str, str]]) -> dict[st
     for row in rows:
         record_id = row["record_id"]
         if not record_id or record_id in index:
-            raise InputValidationError(f"duplicate or empty record_id in embedding index: {record_id!r}")
+            raise InputValidationError(
+                f"duplicate or empty record_id in embedding index: {record_id!r}"
+            )
         try:
             row_index = int(row["row_index"])
         except ValueError as error:
@@ -108,7 +110,7 @@ def load_inputs(paths: InputPaths) -> LoadedInputs:
             for rank in TAXONOMY_RANKS
             if row.get(rank, "").strip()
         )
-        if not taxonomy:
+        if not taxonomy and paths.partition_root_rank is None:
             raise InputValidationError(f"record has no taxonomy: {record_id}")
         leaf_ids.add(leaf_id)
         record_ids.add(record_id)
@@ -124,7 +126,9 @@ def load_inputs(paths: InputPaths) -> LoadedInputs:
 
     if set(embedding_index) != record_ids:
         extras = sorted(set(embedding_index) - record_ids)
-        raise InputValidationError(f"embedding index contains records absent from metadata: {extras[:5]}")
+        raise InputValidationError(
+            f"embedding index contains records absent from metadata: {extras[:5]}"
+        )
     expected_rows = set(range(embeddings.shape[0]))
     actual_rows = set(embedding_index.values())
     if actual_rows != expected_rows:

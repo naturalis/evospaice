@@ -5,6 +5,12 @@ For a small, reviewable tree-building fixture, see
 embedding index, and a trust policy, so the full post-embedding pipeline can run
 without downloading BOLD data.
 
+For a representative test of full-scale preparation and taxonomy-preserving
+partitioning, see [full-scale-smoke](full-scale-smoke/README.md). It generates
+production-format Parquet and FAISS inputs, runs queued partition workers, and
+finalizes their subtrees locally with `uv run pytest -q
+tests/test_tree_full_scale_smoke.py`.
+
 # The Arthropoda BIN tree
 
 `outfile.tre.gz` is a taxonomy-derived tree of every BOLD BIN in phylum

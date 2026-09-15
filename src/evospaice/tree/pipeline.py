@@ -55,7 +55,10 @@ class TreeBuilder:
     def build(self, paths: InputPaths, config: TreeBuildConfig) -> BuildResult:
         loaded = load_inputs(paths)
         policy = TrustPolicy.from_mapping(loaded.policy_data)
-        graph = build_taxonomy_backbone(loaded.records)
+        graph = build_taxonomy_backbone(
+            loaded.records,
+            root_rank=paths.partition_root_rank or "root",
+        )
         record_by_id = {record.record_id: record for record in loaded.records}
         representatives = RepresentativeStore()
         diagnostics: list[NodeDiagnostic] = []

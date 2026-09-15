@@ -40,10 +40,12 @@ class TreeGraph:
         return order
 
 
-def build_taxonomy_backbone(records: tuple[TreeRecord, ...]) -> TreeGraph:
+def build_taxonomy_backbone(
+    records: tuple[TreeRecord, ...], root_rank: str = "root"
+) -> TreeGraph:
     """Build a path-keyed taxonomy tree and attach one leaf per record."""
 
-    root = TreeNode(node_id="taxonomy:root", label="root", rank="root")
+    root = TreeNode(node_id="taxonomy:root", label="root", rank=root_rank)
     graph = TreeGraph(root)
     path_to_id: dict[tuple[tuple[str, str], ...], str] = {}
 

@@ -49,6 +49,29 @@ def test_loader_rejects_duplicate_leaf_ids(tmp_path: Path) -> None:
         load_inputs(InputPaths(records, embeddings, tmp_path / "output"))
 
 
+def test_loader_allows_empty_taxonomy_only_at_a_partition_root(tmp_path: Path) -> None:
+    records = tmp_path / "records.tsv"
+    with records.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t")
+        writer.writerow(["leaf_id", "record_id", "bin_uri", "family"])
+        writer.writerow(["leaf-one", "record-one", "bin-one", ""])
+    embeddings = tmp_path / "embeddings.npy"
+    np.save(embeddings, np.asarray([[1.0, 0.0]], dtype=np.float32))
+
+    with pytest.raises(InputValidationError, match="record has no taxonomy"):
+        load_inputs(InputPaths(records, embeddings, tmp_path / "standalone-output"))
+
+    loaded = load_inputs(
+        InputPaths(
+            records,
+            embeddings,
+            tmp_path / "partition-output",
+            partition_root_rank="family",
+        )
+    )
+    assert loaded.records[0].taxonomy == ()
+
+
 def test_fanout_limit_prevents_square_distance_allocation(tmp_path: Path) -> None:
     records = tmp_path / "records.tsv"
     with records.open("w", encoding="utf-8", newline="") as handle:

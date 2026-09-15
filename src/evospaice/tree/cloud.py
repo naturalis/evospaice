@@ -117,6 +117,7 @@ class CloudRunConfig:
     input_prefix: str
     output_prefix: str
     embeddings_name: str = "embeddings.npy"
+    partition_root_rank: str | None = None
 
 
 def run_cloud_tree(
@@ -147,6 +148,7 @@ def run_cloud_tree(
                 embedding_index=local_paths["embedding_index"],
                 trust_policy=local_paths["trust_policy"],
                 output_dir=output_dir,
+                partition_root_rank=cloud.partition_root_rank,
             ),
             config,
         )
