@@ -193,3 +193,7 @@ Both scripts are in this repository. The tree took 5 minutes 11 seconds to build
 from a 33 GB TSV inside a tar.gz, reading the archive as a stream, so it does not
 need to be unpacked first. Peak memory is a few GB; this is a workstation job
 rather than a laptop one.
+
+
+# pruned.tre : Reference taxonomic tree
+Sourced from https://github.com/naturalis/barcode-constrained-phylogeny/tree/lepidoptera/results
