@@ -25,7 +25,7 @@ beyond that; the scope is a given, not something to discover.
 
 ## Start here
 
-- **New to the project?** Read the [detailed written brief](docs/Hackathon%20brief.md)
+- **New to the project?** Read the [detailed written brief](docs/planning/hackathon-brief.md)
   (the full explanation), then skim the [slides](https://docs.google.com/presentation/d/1tmwUtHtdYxmklvtVXBrXGwielnjqg3Fat19jX08IHeE/edit)
   or watch [Rutger's walk-through](https://drive.google.com/file/d/1zPuKvw2lG_GrZrBRYMykWRFMUIKNMRUW/view).
 - **Need the diversity maths?** Victor's [distances explainer](docs/explain-distances.md)
@@ -71,7 +71,7 @@ and the validation workstream never block each other.
 | **5 — Applications** | Demonstrate utility: α/β phylogenetic diversity on sample data, and outlier detection for database curation. | `src/diversity/` | PD/UniFrac numbers for sample data + a curation example. |
 
 Full detail, guardrails, and per-track "definition of done" are in the
-[brief](docs/Hackathon%20brief.md).
+[brief](docs/planning/hackathon-brief.md).
 
 ---
 

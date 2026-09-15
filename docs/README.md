@@ -1,5 +1,12 @@
 # Moonshot: Building a Scaled Reference Tree from Barcode Embeddings
 
+## Planning
+
+- [Hackathon brief](planning/hackathon-brief.md)
+- [Project hypothesis](planning/hypothesis.md)
+- [Success criteria](planning/success-criteria.md)
+- [Workstreams](planning/workstreams.md)
+
 ## Documentation specific to the project
 
 - [Pipeline architecture](pipeline-architecture.md)

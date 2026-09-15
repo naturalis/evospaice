@@ -39,7 +39,7 @@ How do users explore large phylogenetic trees?
 
 Inputs:
 
-* A Newick tree. No mock tree exists yet, so the first task is to generate one. Regenerate a real clade from the BOLD dump with `bcdm2tree.py`, or use `tsv2newick` in [ingest](../src/evospaice/ingest/), following the Newick contract and annotation schema in [data/README.md](../data/README.md). Keep the clade small: a genus or family renders, the full 1.1M-tip scaffold will not.
+* A Newick tree. No mock tree exists yet, so the first task is to generate one. Regenerate a real clade from the BOLD dump with `bcdm2tree.py`, or use `tsv2newick` in [ingest](../../src/evospaice/ingest/), following the Newick contract and annotation schema in [data/README.md](../../data/README.md). Keep the clade small: a genus or family renders, the full 1.1M-tip scaffold will not.
 * Once available, the final tree from C3 in the same Newick format.
 
 Outputs:
@@ -51,7 +51,7 @@ Outputs:
 Tasks:
 
 * Generate mock Newick data for a non-trivial clade to develop against.
-* Evaluate visualization packages specifically on how they handle load: how many tips they render before they stall, and how they degrade. Existing starting points in the repo are the static Biopython renderer and the UMAP plot on the feature branches (`src/evospaice/viz/biopython.py`, `src/evospaice/viz/plot_umap.py`); see [viz/README.md](../src/evospaice/viz/README.md) for the intent to reuse tools such as iTOL rather than build a viewer.
+* Evaluate visualization packages specifically on how they handle load: how many tips they render before they stall, and how they degrade. Existing starting points in the repo are the static Biopython renderer and the UMAP plot on the feature branches (`src/evospaice/viz/biopython.py`, `src/evospaice/viz/plot_umap.py`); see [viz/README.md](../../src/evospaice/viz/README.md) for the intent to reuse tools such as iTOL rather than build a viewer.
 * Confirm the Newick and annotation format with C3 so the viewer consumes the real output unchanged.
 
 ## Stream B: Tree validation
@@ -63,8 +63,8 @@ How do we know the tree we built is a good tree?
 
 Inputs:
 
-* Reference tree from Rutger's previous project. Understand what it is and is not first: the BOLD BIN scaffold in [data/README.md](../data/README.md) is a taxonomy-derived topology without branch lengths, not a phylogeny, so it cannot serve as the metric oracle by itself. Confirm which artifact is the trusted reference.
-* The output tree from C3, plus the embedding distances behind it. The Parquet and FAISS embedding contract is in [data-contracts.md](data-contracts.md) and [parquet-metadata-format.md](parquet-metadata-format.md).
+* Reference tree from Rutger's previous project. Understand what it is and is not first: the BOLD BIN scaffold in [data/README.md](../../data/README.md) is a taxonomy-derived topology without branch lengths, not a phylogeny, so it cannot serve as the metric oracle by itself. Confirm which artifact is the trusted reference.
+* The output tree from C3, plus the embedding distances behind it. The Parquet and FAISS embedding contract is in [data-contracts.md](../data-contracts.md) and [parquet-metadata-format.md](../parquet-metadata-format.md).
 
 Outputs:
 
@@ -76,7 +76,7 @@ Tasks:
 
 * Understand and register the reference tree as the comparison baseline.
 * Validate the output tree contract with Stream C3: agree the exact Newick, branch-length, and diagnostics format so evaluation code runs against C3 output without adaptation.
-* Shortlist metrics. Start from the three properties in the "Validate the distance" section of the [Hackathon brief](Hackathon%20brief.md): depth-faithfulness, additivity, and tip-compression, measured against the k-mer baseline. Branch-length divergence is illustrated in [evolutionary-divergence.md](explainers/evolutionary-divergence.md); pipeline validation precedent is in [validation-report.md](validation-report.md).
+* Shortlist metrics. Start from the three properties in the "Validate the distance" section of the [Hackathon brief](hackathon-brief.md): depth-faithfulness, additivity, and tip-compression, measured against the k-mer baseline. Branch-length divergence is illustrated in [evolutionary-divergence.md](../explainers/evolutionary-divergence.md); pipeline validation precedent is in [validation-report.md](../validation-report.md).
 
 ## Stream C: Backend and tree construction
 
@@ -89,7 +89,7 @@ Can we split sequences into independently solvable subsets?
 
 Inputs:
 
-* Embeddings for the target sequences. Use the embeddings generated from Logambal's work as the prerequisite, published as the Parquet and FAISS bundle described in [parquet-metadata-format.md](parquet-metadata-format.md) (256-dimensional, L2-normalized Omni-DNA vectors, joined to taxonomy by `faiss_id`). It helps to have these embeddings in place before the hack.
+* Embeddings for the target sequences. Use the embeddings generated from Logambal's work as the prerequisite, published as the Parquet and FAISS bundle described in [parquet-metadata-format.md](../parquet-metadata-format.md) (256-dimensional, L2-normalized Omni-DNA vectors, joined to taxonomy by `faiss_id`). It helps to have these embeddings in place before the hack.
 
 Outputs:
 
@@ -99,7 +99,7 @@ Tasks:
 
 * Run EDA on the embeddings and on species-level clustering: inspect separability, cluster sizes, and how well embedding neighbourhoods track taxonomy.
 * Confirm the cluster handoff format with Stream C2: how a cluster's records, embeddings, and taxonomy are passed. The tree builder's current input contract is `TreeRecord` plus an embeddings array in `src/evospaice/tree/inputs.py`, which expects records and an `.npy` or `.tsv` embedding matrix. If the embeddings arrive as Parquet and FAISS, an adapter to that contract is part of this handoff.
-* Identify a subset for the first end-to-end tree build (one family, genus, or even species). Candidate sources are Colin's outputs, or regenerate one with `filter_bcdm_bin_representatives.py` in [ingest](../src/evospaice/ingest/), which picks one representative per BIN for a chosen taxon.
+* Identify a subset for the first end-to-end tree build (one family, genus, or even species). Candidate sources are Colin's outputs, or regenerate one with `filter_bcdm_bin_representatives.py` in [ingest](../../src/evospaice/ingest/), which picks one representative per BIN for a chosen taxon.
 
 ### Team C2: Local tree builder
 
