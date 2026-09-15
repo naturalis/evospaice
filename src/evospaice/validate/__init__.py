@@ -1,5 +1,5 @@
-"""Tree comparison and embedding validation APIs."""
+"""Topology comparison APIs for RF, precision and recall."""
 
-from .compare import branch_metrics, prepare_trees, topology_metrics
+from .compare import prepare_trees, topology_metrics
 
-__all__ = ["branch_metrics", "prepare_trees", "topology_metrics"]
+__all__ = ["prepare_trees", "topology_metrics"]

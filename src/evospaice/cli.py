@@ -19,7 +19,7 @@ except PackageNotFoundError:  # running from a source checkout that isn't instal
 TRACKS: dict[str, str] = {
     "ingest": "Trim to primer window, dereplicate within taxon, embed records.",
     "tree": "Resolve the backbone bottom-up (NJ) and assign branch lengths.",
-    "validate": "Compare inferred trees and evaluate embedding distance fidelity.",
+    "validate": "Compare tree topology using RF, precision and recall.",
     "viz": "Render the scaled tree.",
     "diversity": "Alpha/beta phylogenetic diversity and curation outliers.",
 }
