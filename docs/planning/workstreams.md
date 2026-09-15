@@ -36,6 +36,7 @@ How do users explore large phylogenetic trees?
 
 * Upstream: Stream C3 (final scaled tree). Mock data unblocks work before C3 is ready.
 * Downstream: Stream D (visual assets and story).
+* Works in: `src/evospaice/viz/`.
 
 Inputs:
 
@@ -60,6 +61,7 @@ How do we know the tree we built is a good tree?
 
 * Upstream: Stream C3 (tree to evaluate). Reference tree from Rutger's previous project is an external prerequisite.
 * Downstream: Streams C2 and C3 (validation feedback), Stream D (validation story).
+* Works in: `src/evospaice/validate/`.
 
 Inputs:
 
@@ -86,6 +88,7 @@ Can we split sequences into independently solvable subsets?
 
 * Upstream: pre-generated embeddings (external prerequisite).
 * Downstream: Stream C2 (cluster subsets to build trees from).
+* Works in: `src/evospaice/embeddings/` for encoding (on the `embeddings_yml` branch); put partitioning and clustering in a new `src/evospaice/cluster/` module.
 
 Inputs:
 
@@ -107,6 +110,7 @@ Construct trees for individual clusters: distance matrix calculation, tree const
 
 * Upstream: Stream C1 (cluster subsets).
 * Downstream: Stream C3 (local trees to merge).
+* Works in: `src/evospaice/tree/` (on the `lidia/phylogentic_tree` branch): `distance.py`, `topology.py`, `lengths.py`, `representatives.py`, `pipeline.py`.
 
 Inputs:
 
@@ -129,6 +133,7 @@ Merge local trees into larger structures.
 
 * Upstream: Stream C2 (local trees and representatives).
 * Downstream: Streams A and B (final tree), Stream D.
+* Works in: `src/evospaice/tree/` (on the `lidia/phylogentic_tree` branch): `full_scale_prepare.py`, `full_scale_worker.py`, `full_scale_finalize.py`, `cloud.py`.
 
 > [!WARNING]
 > Highest-risk technical area.
@@ -152,6 +157,7 @@ Tasks:
 
 * Upstream: Streams A, B, and C3 (visuals, validation results, final tree).
 * Downstream: the final presentation.
+* Works in: no dedicated module; presentation assets live in `images/` and `docs/`.
 
 Inputs:
 
