@@ -1,16 +1,27 @@
 # Moonshot: Building a Scaled Reference Tree from Barcode Embeddings
 
+## Planning
+
+- [Hackathon brief](planning/hackathon-brief.md)
+- [Project hypothesis](planning/hypothesis.md)
+- [Success criteria](planning/success-criteria.md)
+- [Workstreams](planning/workstreams.md)
+
+## Decisions
+
+- [Pipeline decisions](decisions/pipeline-decisions.md)
+
 ## Documentation specific to the project
 
-- [Pipeline architecture](pipeline-architecture.md)
-- [Operations runbook](operations-runbook.md)
-- [Pipeline data contracts](data-contracts.md)
-- [Parquet metadata format](parquet-metadata-format.md)
-- [Omni-DNA model](omni-dna-model.md)
-- [Performance and cost](performance-and-cost.md)
-- [Validation report](validation-report.md)
-- [Security model](security-model.md)
-- [Species record counts](species-record-counts.md)
+- [Pipeline architecture](architecture/pipeline-architecture.md)
+- [Operations runbook](operations/operations-runbook.md)
+- [Pipeline data contracts](architecture/data-contracts.md)
+- [Parquet metadata format](architecture/parquet-metadata-format.md)
+- [Omni-DNA model](architecture/omni-dna-model.md)
+- [Performance and cost](architecture/performance-and-cost.md)
+- [Validation report](operations/validation-report.md)
+- [Security model](architecture/security-model.md)
+- [Species record counts](operations/species-record-counts.md)
 - [Slides that explain the why and how at high level](https://docs.google.com/presentation/d/1tmwUtHtdYxmklvtVXBrXGwielnjqg3Fat19jX08IHeE/edit?slide=id.g3f408b13edb_0_72#slide=id.g3f408b13edb_0_72)
 - [A video where Rutger presents the slides](https://drive.google.com/file/d/1zPuKvw2lG_GrZrBRYMykWRFMUIKNMRUW/view?usp=drive_link)
 - [A more detailed written explanation](https://docs.google.com/document/d/1eGodZDiN99KipS9K5rlrF06mjwaA8Q6nbJy5c8QP26U/edit?tab=t.0)
@@ -20,6 +31,6 @@
 - [A repo where Naturalis did a prior attempt for COI](https://github.com/naturalis/barcode-constrained-phylogeny). What we learned here is that we can't simply pick one taxonomic level, solve at that level, and then stitch together. It needs to be more recursive.
 - [A repo where compsci students and Naturalis did another prior attempt, for ITS](https://github.com/naturalis/MDDB-phylogeny). What we learned here is that scalable, alignment-free, distance-based approaches are tractable, but need taxonomic guidance to improve quality.
 - [A preprint about assigning branch lengths to fixed tree shapes](https://www.biorxiv.org/content/10.1101/2024.07.29.605688v2). What we can take from this is inspiration for how to get branch lengths on taxonomic backbones from large reference databases. This preprint also has a [repo](https://github.com/KoslickiLab/branch-lengths-assignment).
-- [Video showing case studies of metabarcoding with a worked example of UniFrac beta diversity](https://www.youtube.com/watch?v=6FZMqnk-EeA). This is a screen recording walking you through [this](https://naturalis.github.io/mebioda/doc/week1/w1d4/lecture1.html) web page and the salient parts of [this](https://github.com/naturalis/evospaice/blob/main/docs/deepwater_horizon.pdf) publication.
+- [Video showing case studies of metabarcoding with a worked example of UniFrac beta diversity](https://www.youtube.com/watch?v=6FZMqnk-EeA). This is a screen recording walking you through [this](https://naturalis.github.io/mebioda/doc/week1/w1d4/lecture1.html) web page and the salient parts of [this](https://github.com/naturalis/evospaice/blob/main/docs/references/deepwater_horizon.pdf) publication.
 - [Explainer by Victor about distances on trees](https://github.com/naturalis/evospaice/blob/main/docs/explain-distances.md).
-- [Conference poster](Vos-bactria-NLSEB2023.pdf) that gives an overview of the previous Naturalis pipeline, especially of interest to show the downstream application.
+- [Conference poster](references/Vos-bactria-NLSEB2023.pdf) that gives an overview of the previous Naturalis pipeline, especially of interest to show the downstream application.
