@@ -22,21 +22,6 @@ uv run --no-sync python -m pytest tests/test_validate.py
 For a fresh checkout, install dependencies with `uv sync` first. `--no-sync`
 uses the installed environment without resolving unrelated optional packages.
 
-To try the command, compare the small included tree with itself:
-
-```bash
-uv run --no-sync evospaice validate \
-  --reference tests/data/reference_tree.nwk \
-  --inferred tests/data/embedding_tree_mock.nwk \
-  --mode unrooted \
-  --output-dir results/validation-smoke
-```
-
-Expected: RF **0**, normalized RF **0**.
-
-Use a new output directory for each comparison; repeating a command against a
-nonempty directory requires `--overwrite`. Outputs cannot overwrite input files.
-
 ## Mock Comparison
 
 The included [reference tree](../../../tests/data/reference_tree.nwk) and
@@ -50,6 +35,9 @@ uv run --no-sync evospaice validate \
   --mode unrooted \
   --output-dir results/validation-mock-unrooted
 ```
+
+Use a new output directory for each comparison; repeating a command against a
+nonempty directory requires `--overwrite`. Outputs cannot overwrite input files.
 
 To compare the same fixtures as rooted trees, use `--mode rooted` and a separate
 output directory such as `results/validation-mock-rooted`.
