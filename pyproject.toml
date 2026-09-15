@@ -57,6 +57,7 @@ evospaice = "evospaice.cli:main"
 [dependency-groups]
 # Local dev tooling (installed by `uv sync`, not shipped to consumers).
 dev = [
+    "pre-commit>=4.0",
     "pytest>=8.0",
     "ruff>=0.6",
 ]

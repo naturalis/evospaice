@@ -104,6 +104,15 @@ uv run python -m evospaice.<module>
 uv run pytest            # the toy end-to-end smoke test should stay green
 ```
 
+For local development, install the repository's Git hooks once per clone. They
+scan staged changes for credentials, high-entropy secrets, and private keys
+before each commit. Dev Containers install them automatically:
+
+```bash
+uv run pre-commit install
+uv run pre-commit run --all-files  # optional full-repository check
+```
+
 Or open the repo in **GitHub Codespaces** (or VS Code Dev Containers) and the
 `.devcontainer/` config builds the environment for you — recommended so nobody
 loses the first morning to a broken install.

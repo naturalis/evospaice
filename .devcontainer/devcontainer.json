@@ -11,7 +11,7 @@
   "remoteEnv": {
     "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
   },
-  "postCreateCommand": "uv sync --python /usr/local/bin/python",
+  "postCreateCommand": "uv sync --python /usr/local/bin/python && uv run pre-commit install",
   "customizations": {
     "vscode": {
       "extensions": [
