@@ -124,6 +124,12 @@ def split_id(mask: int, tree: dendropy.Tree) -> str:
 def topology_metrics(inferred: dendropy.Tree, reference: dendropy.Tree) -> tuple[dict, list[dict]]:
     """Compute raw and normalized RF for prepared trees, ignoring lengths."""
     first, second = informative_splits(inferred), informative_splits(reference)
+    for name, relationships in (("inferred", first), ("reference", second)):
+        if not relationships:
+            kind = "clade" if inferred.is_rooted else "split"
+            raise ValueError(
+                f"{name} tree must have at least one informative {kind} after taxa alignment"
+            )
     shared = len(first & second)
     denominator = len(first) + len(second)
     raw = treecompare.symmetric_difference(inferred, reference, is_bipartitions_updated=True)
@@ -136,12 +142,9 @@ def topology_metrics(inferred: dendropy.Tree, reference: dendropy.Tree) -> tuple
                          size=mask.bit_count()))
     metrics = dict(
         kind="clade" if inferred.is_rooted else "split", rf=raw,
-        rf_normalized=raw / denominator if denominator else None,
+        rf_normalized=raw / denominator,
         rf_denominator=denominator, rf_normalization="observed_informative_splits",
         shared=shared, inferred_only=len(first - second), reference_only=len(second - first),
         inferred_count=len(first), reference_count=len(second),
-        undefined_reasons={
-            **({"rf_normalized": "no_resolved_relationships"} if not denominator else {}),
-        },
     )
     return metrics, rows

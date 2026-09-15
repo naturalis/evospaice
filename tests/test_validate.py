@@ -24,7 +24,7 @@ def test_cli_report_and_overwrite(cli_arguments, tmp_path, capsys):
     report = json.loads((output / "validation.json").read_text())
     assert report["topology"]["rf"] == 0
     assert report["topology"]["rf_normalized"] == 0
-    assert not {"precision", "recall"} & report["topology"].keys()
+    assert not {"precision", "recall", "undefined_reasons"} & report["topology"].keys()
     assert report["branch_lengths"] == "ignored"
     assert report["warnings"]
     assert {path.name for path in output.iterdir()} == {"validation.json", "taxa.csv", "clades.csv"}
@@ -134,15 +134,48 @@ def test_rf_symmetry_with_partial_resolution():
 
 
 @pytest.mark.parametrize("mode", ["rooted", "unrooted"])
-def test_unresolved_trees(mode):
-    aligned, _ = prepare_trees({"inferred": tree("(A,B,C,D);"),
-                                "reference": tree("(A,B,C,D);")}, mode=mode)
-    result, rows = topology_metrics(aligned["inferred"], aligned["reference"])
-    assert result["rf"] == 0
-    assert result["rf_normalized"] is None
-    assert not {"precision", "recall"} & result.keys()
-    assert result["undefined_reasons"] == {"rf_normalized": "no_resolved_relationships"}
-    assert rows == []
+@pytest.mark.parametrize("unresolved", [("inferred",), ("reference",),
+                                       ("inferred", "reference")])
+def test_unresolved_trees(mode, unresolved):
+    aligned, _ = prepare_trees(
+        {name: tree("(A,B,C,D);" if name in unresolved else "((A,B),(C,D));")
+         for name in ("inferred", "reference")}, mode=mode,
+    )
+    kind = "clade" if mode == "rooted" else "split"
+    message = f"{unresolved[0]} tree must have at least one informative {kind}"
+    with pytest.raises(ValueError, match=message):
+        topology_metrics(aligned["inferred"], aligned["reference"])
+
+
+@pytest.mark.parametrize("mode", ["rooted", "unrooted"])
+@pytest.mark.parametrize("unresolved", [("inferred",), ("reference",),
+                                       ("inferred", "reference")])
+def test_cli_unresolved_trees(cli_arguments, tmp_path, capsys, mode, unresolved):
+    source = tmp_path / "star.nwk"
+    source.write_text("(A,B,C,D);")
+    arguments = [*cli_arguments, "--mode", mode]
+    for name in unresolved:
+        arguments.extend([f"--{name}", str(source)])
+    with pytest.raises(SystemExit) as error:
+        cli_main(["validate", *arguments])
+    assert error.value.code == 2
+    captured = capsys.readouterr()
+    assert f"error: {unresolved[0]} tree must have at least one informative" in captured.err
+    assert "Traceback" not in captured.err
+    assert captured.out == ""
+    assert not (tmp_path / "report").exists()
+
+
+@pytest.mark.parametrize("mode", ["rooted", "unrooted"])
+@pytest.mark.parametrize("policy", ["selection", "intersection"])
+def test_resolution_lost_after_pruning(mode, policy):
+    aligned, _ = prepare_trees(
+        {"inferred": tree("((A,E),B,C,D);"), "reference": tree("((A,B),(C,D));")},
+        mode=mode, taxa_policy="strict" if policy == "selection" else "intersection",
+        selected=set("ABCD") if policy == "selection" else None,
+    )
+    with pytest.raises(ValueError, match="inferred tree must have at least one informative"):
+        topology_metrics(aligned["inferred"], aligned["reference"])
 
 
 def test_strict_intersection_and_mapping():
@@ -196,7 +229,7 @@ def test_missing_leaf_taxon():
 def test_cli_large_tree_without_tip_cap(cli_arguments, tmp_path):
     source = tmp_path / "tree.nwk"
     labels = [f"taxon_{index}" for index in range(5001)]
-    source.write_text("(" + ",".join(labels) + ");")
+    source.write_text("((" + ",".join(labels[:2]) + ")," + ",".join(labels[2:]) + ");")
     assert main(cli_arguments) == 0
     report = json.loads((tmp_path / "report" / "validation.json").read_text())
     assert report["retained_taxa"] == 5001

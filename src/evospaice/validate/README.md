@@ -96,8 +96,14 @@ RF_{\mathrm{normalized}} =
 $$
 
 RF uses DendroPy `symmetric_difference`. The report includes the normalization
-denominator and shared/inferred-only/reference-only counts. Normalized RF is
-JSON null with a reason when both trees have no resolved relationships.
+denominator and shared/inferred-only/reference-only counts. Each tree must retain
+at least one informative rooted clade or unrooted split after taxa alignment and
+pruning. If either tree has none, validation reports an input error identifying
+the tree and exits with code 2 without writing a report. For example, a star tree
+`(A,B,C,D);` is rejected in either mode.
+
+For valid inputs, normalized RF is always numeric. The output no longer includes
+`undefined_reasons`.
 
 These are exact-match scores: resolving a reference polytomy can increase RF
 without contradicting the reference. No support filtering or compatibility
