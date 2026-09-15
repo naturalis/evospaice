@@ -26,7 +26,7 @@ except PackageNotFoundError:  # running from a source checkout that isn't instal
 TRACKS: dict[str, str] = {
     "ingest": "Trim to primer window, dereplicate within taxon, embed records.",
     "tree": "Resolve the backbone bottom-up (NJ) and assign branch lengths.",
-    "validate": "Check embedding distances are a faithful metric, not just a good ID.",
+    "validate": "Compare tree topology using RF distance, precision and recall.",
     "viz": "Render the scaled tree.",
     "diversity": "Alpha/beta phylogenetic diversity and curation outliers.",
 }
@@ -43,14 +43,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="track", metavar="<track>")
     for name, help_text in TRACKS.items():
-        subparsers.add_parser(name, help=help_text)
+        subparser = subparsers.add_parser(name, help=help_text)
+        if name == "validate":
+            from evospaice.validate.evaluate import build_parser as build_validate_parser
+
+            build_validate_parser(subparser)
     return parser
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Parse arguments and dispatch to a track. Returns a process exit code."""
+    arguments = list(argv) if argv is not None else sys.argv[1:]
+    if arguments and arguments[0] == "validate":
+        from evospaice.validate.evaluate import main as validate_main
+
+        return validate_main(arguments[1:])
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
     if not args.track:
         parser.print_help()
         return 0
