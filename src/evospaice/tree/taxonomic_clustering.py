@@ -3,10 +3,17 @@ import faiss
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 import pandas as pd
+import argparse
 
 def main():
+    parser = argparse.ArgumentParser(description="Taxonomic clustering")
+    parser.add_argument('--rank', type=str, default='species', choices=['species', 'genus', 'family'], 
+                        help='Taxonomic rank to cluster by (species, genus, or family)')
+    args = parser.parse_args()
+    
+    rank = args.rank
     file_path = 'data/dnabert-s_BOLD_Public.30-Jun-2026-Lepidoptera-BIN-representatives.npz'
-    print("Loading data...")
+    print(f"Loading data... (Clustering at {rank} level)")
     data = np.load(file_path, allow_pickle=True)
     
     embeddings = data['embeddings'].astype(np.float32)
@@ -24,33 +31,29 @@ def main():
         'idx': np.arange(len(ids))
     })
     
-    # We group by species to get a single representative embedding per species
-    print("Computing species centroids...")
+    print(f"Computing {rank} centroids...")
     
-    # Filter out empty or NaN species
-    valid_species_mask = (df['species'] != "") & (df['species'].notna()) & (df['species'] != "nan")
-    df_valid = df[valid_species_mask]
+    valid_mask = (df[rank] != "") & (df[rank].notna()) & (df[rank] != "nan")
+    df_valid = df[valid_mask]
     
-    unique_species = df_valid['species'].unique()
-    
-    species_list = []
+    rank_list = []
     family_list = []
     genus_list = []
     centroid_embeddings = []
     
-    for sp in unique_species:
-        sp_indices = df_valid[df_valid['species'] == sp]['idx'].values
-        if len(sp_indices) > 0:
-            sp_embeddings = embeddings[sp_indices]
-            centroid = np.mean(sp_embeddings, axis=0)
-            centroid_embeddings.append(centroid)
-            
-            species_list.append(sp)
-            family_list.append(df.iloc[sp_indices[0]]['family'])
-            genus_list.append(df.iloc[sp_indices[0]]['genus'])
-            
+    grouped = df_valid.groupby(rank)
+    for name, group in grouped:
+        sp_indices = group['idx'].values
+        sp_embeddings = embeddings[sp_indices]
+        centroid = np.mean(sp_embeddings, axis=0)
+        
+        centroid_embeddings.append(centroid)
+        rank_list.append(name)
+        family_list.append(group.iloc[0]['family'])
+        genus_list.append(group.iloc[0]['genus'] if rank != 'family' else "")
+        
     centroid_embeddings = np.array(centroid_embeddings, dtype=np.float32)
-    species_list = np.array(species_list)
+    rank_list = np.array(rank_list)
     family_list = np.array(family_list)
     genus_list = np.array(genus_list)
     
@@ -59,7 +62,7 @@ def main():
     
     N, dim = centroid_embeddings.shape
     
-    print(f"Building HNSW index for {N} species centroids...")
+    print(f"Building HNSW index for {N} {rank} centroids...")
     index = faiss.IndexHNSWFlat(dim, 32)
     index.hnsw.efConstruction = 40
     index.hnsw.efSearch = 16
@@ -94,18 +97,18 @@ def main():
     edges_df = pd.DataFrame({
         'Source_Family': family_list[source_idx],
         'Source_Genus': genus_list[source_idx],
-        'Source_Species': species_list[source_idx],
+        f'Source_{rank.capitalize()}': rank_list[source_idx],
         
         'Target_Family': family_list[target_idx],
         'Target_Genus': genus_list[target_idx],
-        'Target_Species': species_list[target_idx],
+        f'Target_{rank.capitalize()}': rank_list[target_idx],
         
         'Distance': mst_coo.data
     })
     
-    output_file = 'data/mst_edges_species_centroids.csv'
+    output_file = f'data/mst_edges_{rank}_centroids.csv'
     edges_df.to_csv(output_file, index=False)
-    print(f"Successfully saved {len(edges_df)} species-level tree edges to {output_file}")
+    print(f"Successfully saved {len(edges_df)} {rank}-level tree edges to {output_file}")
 
 if __name__ == "__main__":
     main()
