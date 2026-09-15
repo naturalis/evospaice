@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspaces/ai-sequence-identification:cached
+      - ~/.ssh:/home/vscode/.ssh:ro
+    stdin_open: true
+    tty: true

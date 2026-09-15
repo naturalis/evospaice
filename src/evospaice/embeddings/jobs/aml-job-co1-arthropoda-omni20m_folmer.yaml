@@ -1,0 +1,57 @@
+# -----------------------------------------------------------------------------------------
+# Original Repository: evospaice
+# Path: src/evospaice/embeddings/jobs/aml-job-co1-arthropoda-omni20m_folmer.yaml
+#
+# Description:
+# This Azure ML CLI v2 command job encodes a CO1 DNA sequence dataset (from a TSV/FASTA input)
+# into embeddings using the Omni-DNA-20M model.
+#
+# Note:
+# It requires the `encoder` package from the `evospaice` repository,
+# which contains the Python module that executes the model encoding.
+# 
+# How to run:
+#   az ml job create --file aml-job-co1-arthropoda-omni20m_folmer.yaml --workspace-name <YOUR_WORKSPACE> --resource-group <YOUR_RG>
+# -----------------------------------------------------------------------------------------
+
+# Azure ML CLI v2 command job for encoding CO1 query sequences with OMNI20M.
+# Input: sequences datastore (CO1 query FASTA)
+# Output: embeddings datastore (stoembedaiseqdevdl31x0)
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+experiment_name: co1_arthropoda_query_encoding_omni20m_folmer
+
+command: |-
+  sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential && \
+  pip install einops && \
+  pip install --no-deps . && \
+  if [ -d "${{inputs.fasta_path}}" ]; then FASTA_FILE=$(find "${{inputs.fasta_path}}" -type f | head -n 1); else FASTA_FILE="${{inputs.fasta_path}}"; fi && \
+  OUTPUTS_DIR="${{outputs.embeddings}}" python -m evospaice.embeddings.encoder \
+    --fasta "$FASTA_FILE" \
+    --family omnidna \
+    --model "${{inputs.model_name}}" \
+    --batch-size ${{inputs.batch_size}} \
+    --min-len 500 \
+    --max-len 660
+
+inputs:
+  fasta_path:
+    type: uri_file
+    path: azureml://datastores/workspaceblobstore/paths/BINs/cropped_folmer/BOLD_Public.30-Jun-2026_arthropoda_folmer.tsv
+    mode: download
+  model_name: "zehui127/Omni-DNA-20M"
+  batch_size: 32
+
+outputs:
+  embeddings:
+    type: uri_folder
+    path: azureml://datastores/workspaceblobstore/paths/embeddings/Arthropoda-folmer/omni20m
+    mode: rw_mount
+
+code: ../../../../
+
+environment:
+  build:
+    path: ../../../../.devcontainer/
+
+compute: azureml:gpu-NC24ADS-a100-lowpri
