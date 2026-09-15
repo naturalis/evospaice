@@ -34,7 +34,6 @@ flowchart LR
 
 How do users explore large phylogenetic trees?
 
-* Team: 1 designer, 1 engineer, plus SMEs to interview.
 * Upstream: Stream C3 (final scaled tree). Mock data unblocks work before C3 is ready.
 * Downstream: Stream D (visual assets and story).
 
@@ -59,7 +58,6 @@ Tasks:
 
 How do we know the tree we built is a good tree?
 
-* Team: 1 data scientist, 1 part-time data scientist (sounding board), 1 engineer, 1 SME.
 * Upstream: Stream C3 (tree to evaluate). Reference tree from Rutger's previous project is an external prerequisite.
 * Downstream: Streams C2 and C3 (validation feedback), Stream D (validation story).
 
@@ -86,7 +84,6 @@ Tasks:
 
 Can we split sequences into independently solvable subsets?
 
-* Team: 1 engineer, part-time data scientist, 1 SME.
 * Upstream: pre-generated embeddings (external prerequisite).
 * Downstream: Stream C2 (cluster subsets to build trees from).
 
@@ -108,7 +105,6 @@ Tasks:
 
 Construct trees for individual clusters: distance matrix calculation, tree construction, and potentially parallelization.
 
-* Team: 1 to 2 engineers, part-time data scientist.
 * Upstream: Stream C1 (cluster subsets).
 * Downstream: Stream C3 (local trees to merge).
 
@@ -131,7 +127,6 @@ Tasks:
 
 Merge local trees into larger structures.
 
-* Team: 1 data scientist, 1 to 2 engineers.
 * Upstream: Stream C2 (local trees and representatives).
 * Downstream: Streams A and B (final tree), Stream D.
 
@@ -155,7 +150,6 @@ Tasks:
 
 ## Stream D: Demo and story
 
-* Team: 1 TPM, 1 designer, part-time engineer.
 * Upstream: Streams A, B, and C3 (visuals, validation results, final tree).
 * Downstream: the final presentation.
 
