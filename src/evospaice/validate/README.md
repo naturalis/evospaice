@@ -9,9 +9,7 @@ Compare an embedding-derived tree with a reference using raw and normalized
 Robinson-Foulds (RF) distance. Both scores use topology only:
 branch lengths, support values and internal node labels are ignored.
 
-Both trees must represent the same biological tip identities. A taxonomy backbone
-used during construction measures structural consistency, not independent
-phylogenetic accuracy.
+Both trees must represent the same biological tip identities.
 
 ## Quick Test
 
@@ -29,44 +27,15 @@ To try the command, compare the small included tree with itself:
 ```bash
 uv run --no-sync evospaice validate \
   --reference tests/data/reference_tree.nwk \
-  --inferred tests/data/reference_tree.nwk \
+  --inferred tests/data/embedding_tree_mock.nwk \
   --mode unrooted \
   --output-dir results/validation-smoke
 ```
 
 Expected: RF **0**, normalized RF **0**.
-This checks the software, not biological accuracy.
 
 Use a new output directory for each comparison; repeating a command against a
 nonempty directory requires `--overwrite`. Outputs cannot overwrite input files.
-
-## Compare Your Tree
-
-Once `data/embedding_tree.nwk` exists with the same unique tip identities as the
-reference, run:
-
-```bash
-uv run --no-sync evospaice validate \
-  --reference data/pruned.tre.txt \
-  --inferred data/embedding_tree.nwk \
-  --mode unrooted \
-  --output-dir results/validation-embeddings
-```
-
-> [!IMPORTANT]
-> The existing reference uses sequence-record IDs, not BIN IDs. A BIN-labelled
-> embedding tree needs a documented correspondence to reference tips. If several
-> reference records belong to one BIN, select one representative per BIN or apply
-> a scientifically justified aggregation before comparison. A many-to-one rename
-> is rejected. Intersection alone cannot match sequence IDs to BIN IDs.
-
-For intentionally different coverage, add `--taxa-policy intersection` after
-aligning identities. Start with a benchmark clade rather than interpreting a
-small retained fraction as evidence for the full tree.
-
-`uv run --no-sync python -m evospaice.validate.evaluate` accepts identical arguments.
-Use `--help` for all options. Choose `--mode rooted` only when supplied roots
-are biologically compatible; otherwise use `--mode unrooted`.
 
 ## Mock Comparison
 
@@ -162,31 +131,6 @@ classification is performed. The sequence-derived reference is itself an estimat
 * Unary nodes and artificial unrooted degree-two roots are suppressed. Input
   files are not modified. Branch lengths are discarded from working copies.
 
-## Outputs and Limits
-
-Scores are printed to the terminal. Each run writes three files:
-
-* `validation.json`: schema version 4, RF scores, input hashes, DendroPy
-  version, provenance, rooting policy, taxon coverage and warnings
-* `taxa.csv`: original/canonical identities and retained/excluded status
-* `clades.csv`: informative relationship IDs, origin (`both`, `inferred`,
-  `reference`) and size; for unrooted trees, size is the canonical split side
-
-`--overwrite` replaces these three reports but does not clean up other files.
-
-Schema version 4 removes the tip-limit metadata. Version 3 removed precision,
-recall and their undefined-value reasons from the topology object; RF scores
-and supporting relationship counts remain.
-
-There is no configured maximum number of tips per input tree.
-Newick inputs (including decompressed `.gz` files) and TSV tables are bounded at
-32 MiB. Byte limits apply before pruning. Removing the tip cap does not
-guarantee full-tree scalability; parsing, copying and relationship
-reporting still consume memory and time. No tip-pair distance matrix is computed.
-
-Exit codes are 0 for report generation, 2 for invalid inputs/configuration,
-1 for I/O errors, and 130 for interruption. Successful report generation is not
-a scientific pass.
 
 ## References
 
