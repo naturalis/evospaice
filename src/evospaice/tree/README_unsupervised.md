@@ -9,7 +9,7 @@ The `unsupervised_clustering.py` script builds a phylogenetic/minimum spanning t
 3. **HNSW Indexing**: Uses the Faiss library's Hierarchical Navigable Small World (HNSW) index to efficiently compute approximate nearest neighbors.
 4. **Graph Construction**: Connects each sequence to its top *k* nearest neighbors (e.g., *k*=15), generating a sparse adjacency matrix of distances.
 5. **Minimum Spanning Tree**: Computes the Minimum Spanning Tree (MST) on the adjacency graph to extract a fully connected, cycle-free tree structure representing the relationships.
-6. **Export**: Outputs the resulting edges (source, target, distance) and maps the taxonomic metadata back onto the tree for analysis, saving to `data/mst_edges_with_taxonomy.csv`.
+6. **Export**: Outputs the resulting edges (source, target, distance) and maps the taxonomic metadata back onto the tree for analysis, saving to `data/mst_edges_embeddings.csv`. It also traverses the tree to build and export a Newick format output (`data/mst_embeddings_unsupervised.tre.txt`) which is directly comparable to external standard `.tre` files.
 
 ## Advantages & Use Cases
 * Ideal for discovering novel clades or uncovering cryptic diversity that might be hidden by existing taxonomic classifications.

@@ -20,7 +20,7 @@ uv run python src/evospaice/tree/taxonomic_clustering.py --rank family
 4. **HNSW Indexing**: Builds a Faiss HNSW index specifically on the set of unique taxonomic centroids rather than individual sequences.
 5. **Graph Construction**: Connects each group to its closest neighbors using the index, creating a sparse adjacency matrix.
 6. **Minimum Spanning Tree**: Computes the Minimum Spanning Tree (MST) from this matrix to form a cohesive tree at the chosen rank.
-7. **Export**: Outputs the resulting edges connecting the centroids to a CSV file named after the rank (e.g., `data/mst_edges_genus_centroids.csv`).
+7. **Export**: Outputs the resulting edges connecting the centroids to a CSV file named after the rank (e.g., `data/mst_edges_genus_centroids.csv`). It also exports a Newick formatted tree file (e.g., `data/mst_genus_centroids.tre.txt`) which is directly comparable to external reference trees.
 
 ## Advantages & Use Cases
 * Produces a highly interpretable tree that aligns directly with biological taxonomic ranks.
