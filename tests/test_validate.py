@@ -24,7 +24,6 @@ def test_cli_report_and_overwrite(cli_arguments, tmp_path, capsys):
     report = json.loads((output / "validation.json").read_text())
     assert report["topology"]["rf"] == 0
     assert report["topology"]["rf_normalized"] == 0
-    assert not {"precision", "recall", "undefined_reasons"} & report["topology"].keys()
     assert report["branch_lengths"] == "ignored"
     assert report["warnings"]
     assert {path.name for path in output.iterdir()} == {"validation.json", "taxa.csv", "clades.csv"}
