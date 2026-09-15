@@ -1,0 +1,1 @@
+"""Azure Function that filters FASTA records by taxonomic class."""

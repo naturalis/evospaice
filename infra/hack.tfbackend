@@ -1,0 +1,5 @@
+resource_group_name  = "rg-tfstate"
+storage_account_name = "natstoaiseqtfstatehack"
+container_name       = "tfstate"
+key                  = "h3-hack.terraform.tfstate"
+use_azuread_auth     = true

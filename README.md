@@ -25,7 +25,7 @@ beyond that; the scope is a given, not something to discover.
 
 ## Start here
 
-- **New to the project?** Read the [detailed written brief](docs/Hackathon%20brief.md)
+- **New to the project?** Read the [detailed written brief](docs/planning/hackathon-brief.md)
   (the full explanation), then skim the [slides](https://docs.google.com/presentation/d/1tmwUtHtdYxmklvtVXBrXGwielnjqg3Fat19jX08IHeE/edit)
   or watch [Rutger's walk-through](https://drive.google.com/file/d/1zPuKvw2lG_GrZrBRYMykWRFMUIKNMRUW/view).
 - **Need the diversity maths?** Victor's [distances explainer](docs/explain-distances.md)
@@ -71,7 +71,7 @@ and the validation workstream never block each other.
 | **5 — Applications** | Demonstrate utility: α/β phylogenetic diversity on sample data, and outlier detection for database curation. | `src/diversity/` | PD/UniFrac numbers for sample data + a curation example. |
 
 Full detail, guardrails, and per-track "definition of done" are in the
-[brief](docs/Hackathon%20brief.md).
+[brief](docs/planning/hackathon-brief.md).
 
 ---
 
@@ -104,9 +104,25 @@ uv run python -m evospaice.<module>
 uv run pytest            # the toy end-to-end smoke test should stay green
 ```
 
+For local development, install the repository's Git hooks once per clone. They
+scan staged changes for credentials, high-entropy secrets, and private keys
+before each commit. Dev Containers install them automatically:
+
+```bash
+uv run pre-commit install
+uv run pre-commit run --all-files  # optional full-repository check
+```
+
 Or open the repo in **GitHub Codespaces** (or VS Code Dev Containers) and the
 `.devcontainer/` config builds the environment for you — recommended so nobody
 loses the first morning to a broken install.
+
+The devcontainer includes **Python 3.12**, **uv**, **Azure CLI** (`az`), and
+**Terraform**. It runs `uv sync` on creation to install the project and its dev
+tools, and configures VS Code to use the project's `.venv` interpreter.
+For local use, install Docker and the VS Code **Dev Containers** extension,
+then run **Dev Containers: Reopen in Container** from the Command Palette.
+Run `az login` inside the container when you need access to Azure.
 
 **Core dependencies:** `numpy`, `scipy`, `biopython`, `scikit-bio` (Neighbor-
 Joining), `dendropy` (tree I/O / Newick), `faiss-cpu` (nearest-neighbour lookups),
