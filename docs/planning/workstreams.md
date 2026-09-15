@@ -64,7 +64,7 @@ How do we know the tree we built is a good tree?
 Inputs:
 
 * Reference tree from Rutger's previous project. Understand what it is and is not first: the BOLD BIN scaffold in [data/README.md](../../data/README.md) is a taxonomy-derived topology without branch lengths, not a phylogeny, so it cannot serve as the metric oracle by itself. Confirm which artifact is the trusted reference.
-* The output tree from C3, plus the embedding distances behind it. The Parquet and FAISS embedding contract is in [data-contracts.md](../data-contracts.md) and [parquet-metadata-format.md](../parquet-metadata-format.md).
+* The output tree from C3, plus the embedding distances behind it. The Parquet and FAISS embedding contract is in [data-contracts.md](../architecture/data-contracts.md) and [parquet-metadata-format.md](../architecture/parquet-metadata-format.md).
 
 Outputs:
 
@@ -76,7 +76,7 @@ Tasks:
 
 * Understand and register the reference tree as the comparison baseline.
 * Validate the output tree contract with Stream C3: agree the exact Newick, branch-length, and diagnostics format so evaluation code runs against C3 output without adaptation.
-* Shortlist metrics. Start from the three properties in the "Validate the distance" section of the [Hackathon brief](hackathon-brief.md): depth-faithfulness, additivity, and tip-compression, measured against the k-mer baseline. Branch-length divergence is illustrated in [evolutionary-divergence.md](../explainers/evolutionary-divergence.md); pipeline validation precedent is in [validation-report.md](../validation-report.md).
+* Shortlist metrics. Start from the three properties in the "Validate the distance" section of the [Hackathon brief](hackathon-brief.md): depth-faithfulness, additivity, and tip-compression, measured against the k-mer baseline. Branch-length divergence is illustrated in [evolutionary-divergence.md](../explainers/evolutionary-divergence.md); pipeline validation precedent is in [validation-report.md](../operations/validation-report.md).
 
 ## Stream C: Backend and tree construction
 
@@ -89,7 +89,7 @@ Can we split sequences into independently solvable subsets?
 
 Inputs:
 
-* Embeddings for the target sequences. Use the embeddings generated from Logambal's work as the prerequisite, published as the Parquet and FAISS bundle described in [parquet-metadata-format.md](../parquet-metadata-format.md) (256-dimensional, L2-normalized Omni-DNA vectors, joined to taxonomy by `faiss_id`). It helps to have these embeddings in place before the hack.
+* Embeddings for the target sequences. Use the embeddings generated from Logambal's work as the prerequisite, published as the Parquet and FAISS bundle described in [parquet-metadata-format.md](../architecture/parquet-metadata-format.md) (256-dimensional, L2-normalized Omni-DNA vectors, joined to taxonomy by `faiss_id`). It helps to have these embeddings in place before the hack.
 
 Outputs:
 
