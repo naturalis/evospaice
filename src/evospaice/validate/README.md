@@ -9,7 +9,7 @@ Compare an embedding-derived tree with a reference using raw and normalized
 Robinson-Foulds (RF) distance. Both scores use topology only:
 branch lengths, support values and internal node labels are ignored.
 
-Both trees must represent the same biological tip identities.
+Both trees must represent the same biological tip identities. Both the trees in tests/data are mock.
 
 ## Quick Test
 
@@ -26,7 +26,7 @@ uses the installed environment without resolving unrelated optional packages.
 
 The included [reference tree](../../../tests/data/reference_tree.nwk) and
 [mock tree](../../../tests/data/embedding_tree_mock.nwk) share tip labels A, B,
-C and D. The mock rearranges their groupings; it is not generated from embeddings.
+C and D. 
 
 ```bash
 uv run --no-sync evospaice validate \
