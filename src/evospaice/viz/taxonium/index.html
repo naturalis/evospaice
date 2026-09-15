@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evospaice Taxonium viewer</title>
+    <style>
+      html,
+      body,
+      #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        overflow: hidden;
+        background: #f5f7f4;
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      .status {
+        box-sizing: border-box;
+        display: grid;
+        width: 100%;
+        height: 100%;
+        padding: 2rem;
+        place-items: center;
+        color: #24332b;
+        text-align: center;
+      }
+
+      .status[data-state="error"] {
+        color: #8a2828;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.1.1",
+          "react/jsx-runtime": "https://esm.sh/react@19.1.1/jsx-runtime",
+          "react/jsx-dev-runtime": "https://esm.sh/react@19.1.1/jsx-dev-runtime",
+          "react-dom": "https://esm.sh/react-dom@19.1.1",
+          "react-dom/client": "https://esm.sh/react-dom@19.1.1/client"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="status">Loading the pruned phylogenetic tree...</div>
+    </div>
+    <script type="module">
+      import React from "react";
+      import { createRoot } from "react-dom/client";
+      import Taxonium from "https://esm.sh/taxonium-component@2.1.24?external=react,react-dom";
+
+      const treeUrl = "/data/pruned.tre.txt";
+      const container = document.getElementById("root");
+
+      async function loadTree() {
+        const response = await fetch(treeUrl);
+        if (!response.ok) {
+          throw new Error(`Could not load ${treeUrl}: HTTP ${response.status}`);
+        }
+
+        const newick = await response.text();
+        if (!newick.trimEnd().endsWith(";")) {
+          throw new Error(`${treeUrl} is not a complete Newick tree`);
+        }
+
+        const sourceData = {
+          status: "loaded",
+          filename: "pruned.tre.txt",
+          filetype: "nwk",
+          data: newick,
+        };
+
+        createRoot(container).render(React.createElement(Taxonium, { sourceData }));
+      }
+
+      loadTree().catch((error) => {
+        console.error(error);
+        container.innerHTML = `<div class="status" data-state="error">${error.message}</div>`;
+      });
+    </script>
+  </body>
+</html>
