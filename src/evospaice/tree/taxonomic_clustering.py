@@ -39,6 +39,7 @@ def main():
     rank_list = []
     family_list = []
     genus_list = []
+    id_list = []
     centroid_embeddings = []
     
     grouped = df_valid.groupby(rank)
@@ -51,11 +52,13 @@ def main():
         rank_list.append(name)
         family_list.append(group.iloc[0]['family'])
         genus_list.append(group.iloc[0]['genus'] if rank != 'family' else "")
+        id_list.append(group.iloc[0]['id'])
         
     centroid_embeddings = np.array(centroid_embeddings, dtype=np.float32)
     rank_list = np.array(rank_list)
     family_list = np.array(family_list)
     genus_list = np.array(genus_list)
+    id_list = np.array(id_list)
     
     print("Performing L2 normalization on centroids...")
     faiss.normalize_L2(centroid_embeddings)
@@ -95,10 +98,12 @@ def main():
     target_idx = mst_coo.col
     
     edges_df = pd.DataFrame({
+        'Source_ID': id_list[source_idx],
         'Source_Family': family_list[source_idx],
         'Source_Genus': genus_list[source_idx],
         f'Source_{rank.capitalize()}': rank_list[source_idx],
         
+        'Target_ID': id_list[target_idx],
         'Target_Family': family_list[target_idx],
         'Target_Genus': genus_list[target_idx],
         f'Target_{rank.capitalize()}': rank_list[target_idx],
