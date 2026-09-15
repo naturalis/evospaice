@@ -1,10 +1,7 @@
 """Command-line entry point for evospaice.
 
-This is a stub. It gives every track a home from day one: ``evospaice <track>``
-parses, but each subcommand currently reports that it is not yet implemented.
-Fill these in as the tracks land — e.g. the ``ingest`` subcommand will front the
-BOLD-to-Newick builder now living in ``evospaice.ingest`` (tsv2newick), and
-``tree`` will drive the post-order resolve-and-scale pass.
+The ``validate`` subcommand compares tree topology. Other track subcommands
+remain placeholders until their implementations are connected.
 
 Run it with ``uv run evospaice`` (or ``uv run evospaice --help``).
 """
@@ -13,8 +10,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError, version
-from typing import Optional, Sequence
 
 try:
     __version__ = version("evospaice")
@@ -33,7 +30,7 @@ TRACKS: dict[str, str] = {
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the top-level parser with one placeholder subcommand per track."""
+    """Build the top-level parser with one subcommand per track."""
     parser = argparse.ArgumentParser(
         prog="evospaice",
         description="Build a scaled reference tree from barcode embeddings.",
@@ -51,7 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Parse arguments and dispatch to a track. Returns a process exit code."""
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if arguments and arguments[0] == "validate":

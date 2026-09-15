@@ -13,39 +13,41 @@ Both trees must represent the same biological tip identities. A taxonomy backbon
 used during construction measures structural consistency, not independent
 phylogenetic accuracy.
 
-## Run With the Existing Reference and a Mock Tree
+## Quick Test
 
-From the repository root:
+From the repository root, use the existing development environment:
 
 ```bash
-uv run evospaice validate \
-  --reference data/pruned.tre \
-  --inferred tests/data/embedding_tree_mock.nwk \
-  --mode unrooted \
-  --taxa-policy intersection \
-  --max-tips 100000 \
-  --output-dir results/validation-mock
+uv run --no-sync python -m pytest tests/test_validate.py
 ```
 
-The reference currently contains 91,376 sequence-record tips. The
-[mock tree](../../../tests/data/embedding_tree_mock.nwk) deliberately rearranges
-four of those labels: `AANIC006-10`, `AANIC018-10`, `AANIC027-10` and `AANIC030-10`.
-It is not generated from embeddings. Intersection mode prunes copies to those
-four shared tips and records all exclusions. Expected: RF **2**, normalized RF
-**1**, precision **0**, recall **0**. This is a software smoke test, not a
-biological validation result.
+For a fresh checkout, install dependencies with `uv sync` first. `--no-sync`
+uses the installed environment without resolving unrelated optional packages.
+
+To try the command, compare the small included tree with itself:
+
+```bash
+uv run --no-sync evospaice validate \
+  --reference tests/data/validation_tree.nwk \
+  --inferred tests/data/validation_tree.nwk \
+  --mode unrooted \
+  --output-dir results/validation-smoke
+```
+
+Expected: RF **0**, normalized RF **0**, precision **1**, recall **1**.
+This checks the software, not biological accuracy.
 
 Use a new output directory for each comparison; repeating a command against a
-nonempty directory requires `--overwrite`.
+nonempty directory requires `--overwrite`. Outputs cannot overwrite input files.
 
-## Compare a Future Embedding Tree
+## Compare Your Tree
 
 Once `data/embedding_tree.nwk` exists with the same unique tip identities as the
 reference, run:
 
 ```bash
-uv run evospaice validate \
-  --reference data/pruned.tre \
+uv run --no-sync evospaice validate \
+  --reference data/pruned.tre.txt \
   --inferred data/embedding_tree.nwk \
   --mode unrooted \
   --max-tips 100000 \
@@ -63,21 +65,24 @@ For intentionally different coverage, add `--taxa-policy intersection` after
 aligning identities. Start with a benchmark clade rather than interpreting a
 small retained fraction as evidence for the full tree.
 
-`uv run python -m evospaice.validate.evaluate` accepts identical arguments.
+For a mock comparison, replace the inferred path with the included
+[mock tree](../../../tests/data/embedding_tree_mock.nwk) and add
+`--taxa-policy intersection`. It rearranges four sequence IDs and is not generated
+from embeddings. Inspect the retained taxa before interpreting its scores.
+
+`uv run --no-sync python -m evospaice.validate.evaluate` accepts identical arguments.
 Use `--help` for all options. Choose `--mode rooted` only when supplied roots
 are biologically compatible; otherwise use `--mode unrooted`.
 
 ## Metrics
 
-Let $I$ be the set of informative relationships in the inferred tree, $R$ the
-corresponding reference set, and $S = |I \cap R|$. Relationships are rooted clades
-or unrooted splits; trivial tips/root and duplicate unary representations are
-excluded.
+Relationships are rooted clades or unrooted splits. Trivial tips/root and
+duplicate unary representations are excluded.
 
-* Raw RF: $|I \setminus R| + |R \setminus I|$. Zero means identical relationship sets.
-* Normalized RF: $\mathrm{RF} / (|I| + |R|)$. Lower is better; one means no shared informative relationships when the denominator is positive.
-* Precision: $S / |I|$. The fraction of inferred relationships recovered in the reference.
-* Recall: $S / |R|$. The fraction of reference relationships recovered in the inferred tree.
+* RF: number of relationships present in only one tree; zero is an exact match
+* Normalized RF: RF divided by the total relationship count in both trees; lower is better
+* Precision: shared relationships divided by inferred relationships; higher is better
+* Recall: shared relationships divided by reference relationships; higher is better
 
 RF uses DendroPy `symmetric_difference`. The report includes the normalization
 denominator and shared/inferred-only/reference-only counts. Undefined ratios
@@ -86,9 +91,6 @@ are JSON null with reasons, including normalized RF for two unresolved stars.
 These are exact-match scores: resolving a reference polytomy can reduce precision
 without contradicting the reference. No support filtering or compatibility
 classification is performed. The sequence-derived reference is itself an estimate.
-
-For an identity check, use `tests/data/validation_tree.nwk` as both `--reference`
-and `--inferred`. Expected: RF and normalized RF zero, precision and recall one.
 
 ## Comparison Policies
 
@@ -116,10 +118,7 @@ Scores are printed to the terminal. Each run writes three files:
 * `clades.csv`: informative relationship IDs, origin (`both`, `inferred`,
   `reference`) and size; for unrooted trees, size is the canonical split side
 
-The former branch-length, distance, embedding, replicate, support-filtering,
-baseline and diversity options and report sections have been removed. The
-standalone diversity package has also been removed. Use a fresh directory when migrating
-from older reports; `--overwrite` does not clean up old optional CSV files.
+`--overwrite` replaces these three reports but does not clean up other files.
 
 Default limit: 5,000 tips per input tree, overridable with `--max-tips`.
 Newick inputs (including decompressed `.gz` files) and TSV tables are bounded at

@@ -7,6 +7,7 @@ import csv
 import hashlib
 import json
 import sys
+import zlib
 from collections.abc import Sequence
 from importlib.metadata import version
 from pathlib import Path
@@ -86,6 +87,17 @@ def run(args: argparse.Namespace) -> int:
         raise ValueError("max_tips must be positive")
     if args.output_dir.exists() and any(args.output_dir.iterdir()) and not args.overwrite:
         raise ValueError("Output directory is not empty; select a new directory or --overwrite")
+    input_paths = [
+        path for name in ("inferred", "reference", "taxon_map", "taxa_file", "metadata")
+        if (path := getattr(args, name)) is not None
+    ]
+    for filename in ("taxa.csv", "clades.csv", "validation.json"):
+        output = args.output_dir / filename
+        for source in input_paths:
+            if output.resolve() == source.resolve() or (
+                output.exists() and output.samefile(source)
+            ):
+                raise ValueError(f"Output would overwrite an input file: {source}")
     metadata = json.loads(args.metadata.read_text(encoding="utf-8")) if args.metadata else {}
     if not isinstance(metadata, dict):
         raise ValueError("Metadata must be a JSON object")
@@ -112,6 +124,10 @@ def run(args: argparse.Namespace) -> int:
         warnings.append(
             "Reference independence is declared by the caller, not verified automatically"
         )
+    input_identities = {name: _input_identity(path) for name, path in inputs.items()}
+    for name in ("taxon_map", "taxa_file", "metadata"):
+        if path := getattr(args, name):
+            input_identities[name] = _input_identity(path)
     report = dict(
         schema_version=2, mode=args.mode, reference_kind=args.reference_kind,
         reference_independence=args.reference_independence, metadata=metadata, warnings=warnings,
@@ -121,11 +137,8 @@ def run(args: argparse.Namespace) -> int:
                              retained=len(taxa)) for name in trees},
         topology=topology, limits=dict(max_tips=args.max_tips),
         versions={"dendropy": version("dendropy")},
-        inputs={name: _input_identity(path) for name, path in inputs.items()},
+        inputs=input_identities,
     )
-    for name in ("taxon_map", "taxa_file", "metadata"):
-        if path := getattr(args, name):
-            report["inputs"][name] = _input_identity(path)
     serialized = json.dumps(report, indent=2, allow_nan=False) + "\n"
     args.output_dir.mkdir(parents=True, exist_ok=True)
     _csv(args.output_dir / "taxa.csv", coverage, ["tree", "label", "taxon", "retained", "reason"])
@@ -142,7 +155,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run(args)
     except (ValueError, KeyError, DataParseError) as error:
         parser.error(str(error))
-    except OSError as error:
+    except (OSError, EOFError, zlib.error) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
