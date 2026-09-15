@@ -102,8 +102,7 @@ pruning. If either tree has none, validation reports an input error identifying
 the tree and exits with code 2 without writing a report. For example, a star tree
 `(A,B,C,D);` is rejected in either mode.
 
-For valid inputs, normalized RF is always numeric. The output no longer includes
-`undefined_reasons`.
+For valid inputs, normalized RF is always numeric.
 
 These are exact-match scores: resolving a reference polytomy can increase RF
 without contradicting the reference. No support filtering or compatibility
