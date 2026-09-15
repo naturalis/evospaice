@@ -12,7 +12,8 @@ This tree is a useful ground truth for the following reasons:
 However, be aware that the leaves are identified by process IDs. This is both a blessing in that we know the
 exact sequence that was used, but also a curse in how we are going to compare this with the result tree we will
 obtain: either it forces us to have our result tree use the same IDs, or we have to map the butterfly tree to
-BINs.
+BINs. For the former, we also have a [file](pruned.labels.txt) with the leaf labels so that we can generate the corresponding
+embeddings.
 
 # The Arthropoda BIN tree
 
