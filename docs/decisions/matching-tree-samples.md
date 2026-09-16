@@ -1,7 +1,7 @@
-To match the tree with samples from the field we need a matching field.
-The challenge is that the tree has tips that are only a sequence representing a cluster of sequences.
+# Mapping samples onto the reference tree
 
-If we blast a sequence on BOLD and we get a list of possible matches (sequences) with there corresponding sequence ID. They might not exist in the tree! But closely related sequences are clusterd in Barcode Index Numbers (BINS). So if the tree contains the BIN for the choosen sequence in the tips AND the output of the BLAST contains the BINs for each sequence, we can build a match. 
+The trees produced during the hackathon are based on sequence records whose embeddings were used in the divide-and-conquer algorithm. This means that these trees will have, at their tips, values of `process ID`, which reference the individual sequence. So the tips are not species or clusters. Furthermore, those IDs are selected out of a much larger corpus through a process of data reduction that involves filtering on taxonomic annotations and perhaps other criteria. As such, the tips stand in for larger clusters - BINs - that in turn are intended to correspond broadly with species.
 
-IN the current state we do not have BINs in the embeddings and we do not have output containing the BINs.
-We will therefore match on sequence id for now. This means that we need to prune the sample files to only contain data that have sequence ids that are represented in the tree.
+Consequently, if we blast a sequence on BOLD and we get a list of possible matches (sequences) with their corresponding sequence ID, they might not exist in the tree. What we therefore need to do is collapse the sequence IDs from the matches to the BINs to which they belong, map the tips of the trees to their containing BINs, and match those.
+
+However, in the current state we do not have BINs in the embeddings and we do not have output containing the BINs. We will therefore match on sequence id for now. This means that we need to prune the sample files to only contain data that have sequence ids that are represented in the tree.
