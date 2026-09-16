@@ -13,7 +13,7 @@ Two modes, selected by which of --other-tree / --metadata is given:
   not found in the tree.
 
 Run as a script, e.g.:
-    python -m evospaice.validate.align_trees \\
+    python -m evospaice.align_trees.alignment \\
         --tree reference.tre --other-tree embeddings.tre \\
         --output reference.pruned.tre --other-output embeddings.pruned.tre
 """
