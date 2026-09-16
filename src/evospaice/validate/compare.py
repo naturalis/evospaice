@@ -123,34 +123,29 @@ def load_tree(
     return trees[0]
 
 
-def prepare_trees(
+def align_taxa(
     trees: Mapping[str, dendropy.Tree], *, mode: str, taxa_policy: str = "strict",
     mappings: Mapping[str, Mapping[str, str]] | None = None,
     selected: set[str] | None = None, require_rf: bool = True,
-) -> tuple[dict[str, dendropy.Tree], list[dict]]:
-    """Align topology-only copies to one namespace and fixed benchmark set."""
+) -> tuple[set[str], list[dict]]:
+    """Match canonical tip IDs and report coverage without modifying trees."""
     if not trees:
         raise ValueError("No trees supplied")
     if mode not in {"rooted", "unrooted"} or taxa_policy not in {"strict", "intersection"}:
         raise ValueError("Invalid rooting mode or taxa policy")
-    working, originals, sets = {}, {}, {}
+    originals, sets = {}, {}
     for name, tree in trees.items():
         labels = leaf_labels(tree)
         mapping = dict((mappings or {}).get(name, {}))
         if mapping.keys() - labels:
             raise ValueError(f"{name}: mapping contains labels absent from the tree")
-        copy = tree.clone(depth=2)
-        originals[name] = {}
-        for node in copy.preorder_node_iter():
-            node.edge_length = None
-            if node.is_leaf():
-                original = node.taxon.label
-                canonical = mapping.get(original, original)
-                originals[name][original] = canonical
-                node.taxon.label = canonical
-        sets[name] = leaf_labels(copy)
-        copy.is_rooted = mode == "rooted"
-        working[name] = copy
+        originals[name] = {label: mapping.get(label, label) for label in labels}
+        canonical_labels = list(originals[name].values())
+        if any(not isinstance(label, str) or not label.strip() for label in canonical_labels):
+            raise ValueError("Every tree leaf must have a nonempty taxon label")
+        sets[name] = set(canonical_labels)
+        if len(sets[name]) != len(labels):
+            raise ValueError("Tree leaf labels must be unique")
     restricted = {name: labels & selected if selected is not None else labels
                   for name, labels in sets.items()}
     if selected is not None and selected - set.union(*sets.values()):
@@ -162,9 +157,8 @@ def prepare_trees(
     if len(common) < minimum:
         comparison = mode if require_rf else "tip-to-root-correlation"
         raise ValueError(f"{comparison} comparison requires at least {minimum} shared tips")
-    namespace = dendropy.TaxonNamespace(sorted(common), is_case_sensitive=True)
     coverage = []
-    for name, tree in working.items():
+    for name in trees:
         for original, canonical in sorted(originals[name].items()):
             retained = canonical in common
             reason = "retained" if retained else (
@@ -173,9 +167,33 @@ def prepare_trees(
             )
             coverage.append(dict(tree=name, label=original, taxon=canonical,
                                  retained=retained, reason=reason))
+    return common, coverage
+
+
+def prepare_trees(
+    trees: Mapping[str, dendropy.Tree], *, mode: str, taxa_policy: str = "strict",
+    mappings: Mapping[str, Mapping[str, str]] | None = None,
+    selected: set[str] | None = None, require_rf: bool = True,
+) -> tuple[dict[str, dendropy.Tree], list[dict]]:
+    """Align topology-only copies to one namespace and fixed benchmark set."""
+    common, coverage = align_taxa(
+        trees, mode=mode, taxa_policy=taxa_policy, mappings=mappings,
+        selected=selected, require_rf=require_rf,
+    )
+    namespace = dendropy.TaxonNamespace(sorted(common), is_case_sensitive=True)
+    working = {}
+    for name, original in trees.items():
+        tree = original.clone(depth=2)
+        mapping = (mappings or {}).get(name, {})
+        for node in tree.preorder_node_iter():
+            node.edge_length = None
+            if node.is_leaf():
+                node.taxon.label = mapping.get(node.taxon.label, node.taxon.label)
+        tree.is_rooted = mode == "rooted"
         tree.retain_taxa_with_labels(common)
         tree.migrate_taxon_namespace(namespace, unify_taxa_by_label=True)
         tree.encode_bipartitions()
+        working[name] = tree
     return working, coverage
 
 

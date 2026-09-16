@@ -8,6 +8,7 @@ import pytest
 
 from evospaice.cli import main as cli_main
 from evospaice.validate.compare import (
+    align_taxa,
     leaf_labels,
     load_tree,
     prepare_trees,
@@ -144,6 +145,58 @@ def test_cli_progress_interrupted(cli_arguments, monkeypatch, capsys):
     captured = capsys.readouterr()
     assert "Validation interrupted by user" in captured.err
     assert "100%" not in captured.err
+
+
+@pytest.mark.parametrize("mode", ["rooted", "unrooted"])
+@pytest.mark.parametrize("policy", ["strict", "intersection"])
+def test_no_rf_skips_topology_and_preserves_results(tmp_path, monkeypatch, capsys, mode, policy):
+    inferred = tmp_path / "inferred.nwk"
+    inferred.write_text("(((a:1,B:2):1,(C:3,D:4):1):10,E:2):100;")
+    reference = tmp_path / "reference.nwk"
+    reference.write_text("((A:1,B:2):1,(C:3,D:4):1,F:1);")
+    mapping = tmp_path / "map.tsv"
+    mapping.write_text("tree\tlabel\ttaxon\ninferred\ta\tA\n")
+    selected = tmp_path / "selected.tsv"
+    selected.write_text("taxon\nA\nB\nC\nD\n")
+    arguments = ["--inferred", str(inferred), "--reference", str(reference),
+                 "--mode", mode, "--taxa-policy", policy, "--taxon-map", str(mapping)]
+    if policy == "strict":
+        arguments.extend(["--taxa-file", str(selected)])
+    baseline = tmp_path / "baseline"
+    assert main([*arguments, "--output-dir", str(baseline)]) == 0
+
+    def unexpected_topology(*args, **kwargs):
+        pytest.fail("Correlation-only validation must not prepare topology")
+
+    for method in ("clone", "retain_taxa_with_labels", "migrate_taxon_namespace",
+                   "encode_bipartitions"):
+        monkeypatch.setattr(dendropy.Tree, method, unexpected_topology)
+    output = tmp_path / "correlation"
+    assert main([*arguments, "--output-dir", str(output), "--no-rf"]) == 0
+    for filename in ("taxa.csv", "node_lengths.csv", "tip_to_root_correlation.csv"):
+        assert (output / filename).read_bytes() == (baseline / filename).read_bytes()
+    report = json.loads((output / "validation.json").read_text())
+    expected = json.loads((baseline / "validation.json").read_text())
+    for field in ("tip_to_root_correlation", "coverage", "retained_taxa"):
+        assert report[field] == expected[field]
+    assert "topology" not in report
+    assert "skipping topology preparation (--no-rf)" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("mapping,selected,message", [
+    ({"A": "B"}, None, "unique"),
+    ({"A": ""}, None, "nonempty"),
+    ({"absent": "A"}, None, "absent"),
+    ({}, {"A", "B", "absent"}, "absent"),
+    ({}, {"A", "B"}, "at least 3"),
+])
+def test_align_taxa_validates_without_topology(mapping, selected, message):
+    original = tree("((A:1,B:2):1,(C:3,D:4):1);")
+    before = original.as_string(schema="newick")
+    with pytest.raises(ValueError, match=message):
+        align_taxa({"inferred": original}, mode="unrooted", require_rf=False,
+                   mappings={"inferred": mapping}, selected=selected)
+    assert original.as_string(schema="newick") == before
 
 
 def tree(text):

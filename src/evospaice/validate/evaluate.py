@@ -17,6 +17,7 @@ from time import monotonic
 from dendropy.utility.error import DataParseError
 
 from .compare import (
+    align_taxa,
     leaf_labels,
     load_tree,
     prepare_trees,
@@ -137,14 +138,23 @@ def run(args: argparse.Namespace) -> int:
         progress(index * 10, f"Loading {name} tree: {path}")
         originals[name] = load_tree(path)
         progress(index * 10, f"Loaded {name} tree: {len(leaf_labels(originals[name])):,} tips")
-    progress(30, f"Aligning taxa ({args.taxa_policy}, {args.mode}); "
-             "cloning, pruning and indexing trees may take time")
-    trees, coverage = prepare_trees(
-        originals,
-        mode=args.mode, taxa_policy=args.taxa_policy, mappings=_mappings(args.taxon_map),
-        selected=selected, require_rf=args.rf,
-    )
-    taxa = leaf_labels(trees["inferred"])
+    mappings = _mappings(args.taxon_map)
+    trees = {}
+    if args.rf:
+        progress(30, f"Aligning taxa ({args.taxa_policy}, {args.mode}); "
+                 "cloning, pruning and indexing trees may take time")
+        trees, coverage = prepare_trees(
+            originals, mode=args.mode, taxa_policy=args.taxa_policy, mappings=mappings,
+            selected=selected,
+        )
+        taxa = leaf_labels(trees["inferred"])
+    else:
+        progress(30, f"Matching taxon labels ({args.taxa_policy}); "
+                 "skipping topology preparation (--no-rf)")
+        taxa, coverage = align_taxa(
+            originals, mode=args.mode, taxa_policy=args.taxa_policy, mappings=mappings,
+            selected=selected, require_rf=False,
+        )
     progress(40, f"Alignment complete: {len(taxa):,} shared tips retained, "
              f"{sum(not row['retained'] for row in coverage):,} tips excluded across both trees; "
              + ("computing RF topology distance" if args.rf else "RF disabled (--no-rf)"))
@@ -216,7 +226,7 @@ def run(args: argparse.Namespace) -> int:
         reference_independence=args.reference_independence, metadata=metadata, warnings=warnings,
         branch_lengths="ignored", taxa_policy=args.taxa_policy, retained_taxa=len(taxa),
         coverage={name: dict(original=sum(row["tree"] == name for row in coverage),
-                             retained=len(taxa)) for name in trees},
+                             retained=len(taxa)) for name in originals},
         versions={"dendropy": version("dendropy")},
         inputs=input_identities,
     )

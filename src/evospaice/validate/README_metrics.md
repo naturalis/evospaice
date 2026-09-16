@@ -47,6 +47,16 @@ uv run --no-sync evospaice validate \
 * `--no-rf`: correlation only
 * `--rf` and `--tip-to-root-correlation`: explicitly enable the defaults
 
+With `--no-rf`, taxon matching uses labels only: tree cloning, pruning, shared
+namespace migration and bipartition encoding are skipped. Mapping validation,
+taxon selection and coverage reporting still apply. Correlation measures lengths
+on the original trees, including validation of excluded branches.
+
+Progress messages are flushed to stderr with elapsed seconds and stage percentages;
+metric results remain on stdout. Percentages mark workflow stages, not elapsed-time
+estimates. RF-enabled runs can spend substantial time preparing large trees between
+the 30% and 40% updates. Completion is reported only after outputs are written.
+
 Disabling both is an input error. `--mode` accepts `rooted` or `unrooted` and
 controls RF only, but remains required even with `--no-rf`. Expected mock results:
 
