@@ -104,7 +104,7 @@ def test_gzip_report_with_metadata(cli_arguments, tmp_path):
     assert len(report["inputs"]["metadata"]["sha256"]) == 64
 
 
-FIXTURE = Path(__file__).parent / "data" / "reference_tree.nwk"
+FIXTURE = Path(__file__).parent / "data" / "reference_tree_mock.nwk"
 MOCK = FIXTURE.with_name("embedding_tree_mock.nwk")
 
 

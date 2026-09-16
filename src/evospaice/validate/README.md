@@ -5,212 +5,87 @@ description: Tree comparison using Robinson-Foulds distance and tip-to-root-corr
 
 ## Purpose
 
-Compare an embedding-derived tree with a reference using raw and normalized
-Robinson-Foulds (RF) distance. Both scores use topology only:
-branch lengths, support values and internal node labels are ignored.
+Compare an embedding-derived tree with a reference using two metrics, both
+enabled by default:
 
-Also compute `tip-to-root-correlation`, Spearman's rho of cumulative
-branch lengths from each original supplied root to the retained species tips.
-This experimental score measures relative depth, not topological accuracy or
-pairwise tip separation. It complements RF and does not replace it.
+* RF counts unshared rooted clades or unrooted splits, ignoring lengths, support
+  and internal labels. Normalized RF divides by the total relationship count
+  across both trees: 0 means matching topology; 1 means no informative relationships shared.
+* `tip-to-root-correlation` is Spearman's rho of root-to-tip branch-length sums
+  for matching taxa, using average ranks for ties. It measures relative depth,
+  not topology or pairwise separation: +1 means the same ordering, -1 the reverse.
+  No p-value or biological pass/fail threshold is provided.
 
-Both metrics are computed by default. Use `--no-tip-to-root-correlation` for
-RF only, or `--no-rf` for correlation only. Disabling both is an input error.
-The positive flags `--rf` and `--tip-to-root-correlation` explicitly enable
-their respective metrics but are unnecessary for the default run.
+## Run
 
-By default, inputs need finite, nonnegative lengths on every non-root edge.
-For topology-only Newick inputs without lengths, select RF only explicitly.
-
-Both trees must represent the same biological tip identities. Both the trees in tests/data are mock.
-
-## Quick Test
-
-From the repository root, use the existing development environment:
-
-```bash
-uv run --no-sync python -m pytest tests/test_validate.py
-```
-
-For a fresh checkout, install dependencies with `uv sync` first. `--no-sync`
-uses the installed environment without resolving unrelated optional packages.
-
-## Mock Comparison
-
-The included [reference tree](../../../tests/data/reference_tree.nwk) and
-[mock tree](../../../tests/data/embedding_tree_mock.nwk) share tip labels A, B,
-C and D. 
-
-This command computes both RF and tip-to-root-correlation:
+From the repository root, run this comparison of the mock
+[reference](../../../tests/data/reference_tree_mock.nwk) and
+[inferred](../../../tests/data/embedding_tree_mock.nwk) fixtures:
 
 ```bash
 uv run --no-sync evospaice validate \
-  --reference tests/data/reference_tree.nwk \
+  --reference tests/data/reference_tree_mock.nwk \
   --inferred tests/data/embedding_tree_mock.nwk \
   --mode unrooted \
   --output-dir results/validation-mock-unrooted
-  --overwrite
 ```
 
-To compare the same fixtures as rooted trees, use `--mode rooted` and a separate
-output directory such as `results/validation-mock-rooted`.
+Use `uv sync` first on a fresh checkout. Prefer a new output directory;
+`--overwrite` permits reuse but does not remove stale files for disabled metrics.
 
-Ignoring branch lengths and internal node labels, the topologies are:
+* `--no-tip-to-root-correlation`: RF only; suitable for trees without lengths
+* `--no-rf`: correlation only
+* `--rf` and `--tip-to-root-correlation`: explicitly enable the defaults
 
-```text
-Reference: ((A,B),(C,D));
-Mock:      ((C,B),(D,A));
-```
+Disabling both is an input error. `--mode rooted|unrooted` controls RF only but
+remains required even with `--no-rf`. Expected mock results:
 
-### Unrooted Calculation
+| Mode     | Raw RF | Normalized RF | Tip-to-root-correlation |
+|----------|--------|---------------|-------------------------|
+| Unrooted | 2      | 1             | -0.4                    |
+| Rooted   | 4      | 1             | -0.4                    |
 
-1. Suppress the artificial degree-two root and exclude terminal-edge splits.
-2. Extract the nontrivial split in each tree: `AB | CD` in the reference and
-  `BC | AD` in the mock. A split and its reverse count as one relationship.
-3. Count relationships present in only one tree: one reference-only split plus
-  one inferred-only split gives RF = **2**.
-4. Divide by the total number of observed relationships: 2 / (1 + 1) = **1**.
+## Input Rules
 
-### Rooted Calculation
+* Each input contains one Newick tree, optionally gzipped, with unique nonempty
+  tip labels representing the same biological identities.
+* `--taxon-map` accepts TSV columns `tree`, `label`, `taxon`; tree is `reference`
+  or `inferred`. Unlisted labels stay unchanged; many-to-one mappings fail.
+* `--taxa-file` selects canonical IDs from a TSV `taxon` column. After selection,
+  `--taxa-policy strict` (default) requires equal canonical sets; `intersection`
+  retains shared taxa and reports exclusions. Both metrics use the same retained IDs.
+* Correlation requires at least three matched tips. RF requires three in rooted
+  mode or four in unrooted mode, plus an informative clade or split in each tree.
+  Star trees are therefore accepted only with `--no-rf`.
+* With correlation enabled, every original non-root edge, including excluded
+  branches, needs a finite nonnegative length. Zero is valid; missing, negative,
+  NaN or infinite lengths and cumulative overflow are errors. RF-only runs ignore lengths.
 
-1. Treat Z as the supplied root in both fixtures.
-2. Extract nontrivial descendant clades, excluding tips and the full root clade:
-  `{A,B}` and `{C,D}` in the reference; `{B,C}` and `{A,D}` in the mock.
-3. No clades are shared, so RF = 2 + 2 = **4**.
-4. Normalize by the total clade count: 4 / (2 + 2) = **1**.
+Constant tip depths in either tree, including ultrametric trees, produce a valid
+report with `rho: null`, `status: "undefined"` and an `undefined_reason`.
+Both correlation CSVs are still written. Input errors instead exit 2 without
+writing new report files; operating-system I/O errors exit 1.
 
-| Mode     | Raw RF | RF denominator | Normalized RF | Shared relationships |
-|----------|--------|----------------|---------------|----------------------|
-| Unrooted | 2      | 2              | 1             | 0                    |
-| Rooted   | 4      | 4              | 1             | 0                    |
+### Roots and Interpretation
 
-Normalized RF of 1 means no informative relationships are shared. It does not
-mean every aspect of the trees differs. Naming the root Z does not establish
-that the supplied roots are biologically comparable.
+RF uses topology-only copies, suppressing unary nodes and artificial unrooted
+degree-two roots. Correlation uses lengths from the original supplied roots,
+before pruning: the root is zero and its stem is excluded. Inputs are not modified;
+no automatic rerooting is performed for correlation. Matching tips or internal
+labels does not establish biologically comparable roots.
 
-### Tip-to-Root Calculation
+RF is an exact-match score: resolving a reference polytomy can increase RF without
+contradicting it. Correlation uses stored branch lengths, not original embedding
+or sequence distances. Positive rescaling preserves ranks, but raw sums in
+different units are not equivalent. Interpretation needs comparable roots and
+an independent reference, which is itself an estimate.
 
-The same default command uses the following original root-to-tip sums and ranks:
+### Provenance
 
-| Taxon | Reference sum | Inferred sum | Reference rank | Inferred rank |
-|-------|---------------|--------------|----------------|---------------|
-| A     | 0.07          | 0.35         | 1              | 4             |
-| B     | 0.08          | 0.08         | 2              | 2             |
-| C     | 0.32          | 0.07         | 3              | 1             |
-| D     | 0.35          | 0.32         | 4              | 3             |
-
-The mock `tip-to-root-correlation` is **-0.4**. RF remains 2 in unrooted
-mode and 4 in rooted mode, with normalized RF of 1 in either mode.
-
-## Metrics
-
-Relationships are rooted clades or unrooted splits. Trivial tips/root and
-duplicate unary representations are excluded.
-
-* RF: number of relationships present in only one tree; zero is an exact match
-* Normalized RF: RF divided by the total relationship count in both trees; lower is better
-
-For relationship sets $S_{\mathrm{ref}}$ and $S_{\mathrm{inf}}$:
-
-$$
-RF = |S_{\mathrm{ref}} \setminus S_{\mathrm{inf}}|
-  + |S_{\mathrm{inf}} \setminus S_{\mathrm{ref}}|
-$$
-
-$$
-RF_{\mathrm{normalized}} =
-\frac{RF}{|S_{\mathrm{ref}}| + |S_{\mathrm{inf}}|}
-$$
-
-RF uses DendroPy `symmetric_difference`. The report includes the normalization
-denominator and shared/inferred-only/reference-only counts. When RF is enabled,
-each tree must retain
-at least one informative rooted clade or unrooted split after taxa alignment and
-pruning. If either tree has none, validation reports an input error identifying
-the tree and exits with code 2 without writing a report. For example, a star tree
-`(A,B,C,D);` is rejected in either mode.
-
-For valid inputs, normalized RF is always numeric.
-
-These are exact-match scores: resolving a reference polytomy can increase RF
-without contradicting the reference. No support filtering or compatibility
-classification is performed. The sequence-derived reference is itself an estimate.
-
-### Tip-to-Root-Correlation
-
-For every original node $v$, compute the sum along the supplied root-to-node path:
-
-$$
-L(v) = \sum_{e \in \operatorname{path}(\mathrm{root},v)} \ell(e)
-$$
-
-The root has value zero. Its own stem length is ignored, even if present in the
-Newick input. For the canonical tip identities $T$ retained by taxon alignment:
-
-$$
-\rho = \operatorname{Spearman}
-\left((L_{\mathrm{reference}}(t))_{t\in T},
-  (L_{\mathrm{inferred}}(t))_{t\in T}\right)
-$$
-
-Both vectors must contain exactly the retained canonical IDs, each once, and
-are aligned by sorted ID. SciPy computes the correlation and average ranks for
-ties. No p-value is reported. Positive rescaling of one tree preserves the score.
-Higher is better for agreement in relative depth: +1 means the same ordering,
-0 means no rank correlation, and -1 means reversed ordering. Different topologies
-can have equal root-to-tip values, so this is not a topology score.
-
-At least three matched tips are required. When RF is enabled, it requires at least
-three in rooted mode or four in unrooted mode and an informative relationship in
-each tree. With `--no-rf`, those topology requirements do not apply; a star tree
-with at least three tips and valid lengths can be compared.
-If either depth vector is constant (including ultrametric trees), rho is undefined.
-Otherwise-valid inputs produce a successful report with `rho: null`,
-`status: "undefined"`, and an `undefined_reason` identifying the constant tree or
-trees. Both correlation CSVs are still written. This is not an input error.
-
-Missing, negative, NaN or infinite non-root lengths, and non-finite cumulative
-sums, are input errors unless `--no-tip-to-root-correlation` is specified.
-Zero is accepted; lengths
-are never clipped or imputed. Every original non-root edge is checked, including
-excluded branches. Invalid lengths identify the tree and node and cause exit 2
-before new report files are written. RF-only runs retain their length-tolerant
-behavior.
-
-The iterative traversal takes O(V) time and storage for V original nodes, followed
-by O(T log T) ranking for T retained tips. No pairwise distance matrix is built.
-
-## Comparison Policies
-
-* Exact unique leaf labels are required. `--taxon-map` accepts TSV columns
-  `tree`, `label`, `taxon`, where tree is `inferred` or `reference`. Unlisted
-  labels retain their identity. Many-to-one mappings fail.
-* `--taxa-policy strict` is the default and requires equal canonical sets.
-  Explicit `intersection` prunes copies and reports exclusions. `--taxa-file`
-  accepts a TSV with a `taxon` column selecting a benchmark set.
-* `--reference-kind taxonomy` labels a structural consistency check. Set
-  `--reference-independence independent|backbone-derived|unknown` and provide
-  citations and construction provenance in a `--metadata` JSON object.
-  Independence is declared, not automatically verified. Holding out a clade
-  requires withholding its constraints before construction, not pruning afterward.
-* RF suppresses unary nodes and artificial unrooted degree-two roots. Input
-  files and original trees are not modified. Branch lengths are discarded only
-  from RF working copies; original trees preserve lengths for tip-to-root-correlation.
-* Tip-to-root-correlation uses original supplied roots before pruning or suppression.
-  `--mode` controls RF alone. No automatic rerooting or root-acknowledgement flag
-  is used. Matching tip identities or internal labels does not establish comparable
-  biological roots; internal nodes are never matched across trees.
-  `--mode` remains a required CLI argument but has no effect on correlation-only
-  scores and is omitted from correlation-only reports.
-* Lengths are stored tree-edge lengths, not original embedding vectors or sequence
-  distances. Fitted tree paths need not reproduce the original pairwise distances.
-  Raw sums from trees with different units must not be treated as equivalent.
-  Root provenance and an independent reference remain prerequisites for
-  interpretation. No biological pass/fail threshold is defined for this metric.
-
-### Branch-Length Units
-
-Record units in the existing `--metadata` JSON file, for example:
+Set `--reference-independence independent|backbone-derived|unknown` (default:
+`unknown`); this declaration is not verified. `--reference-kind taxonomy` labels
+a structural consistency check rather than phylogenetic accuracy (default: `phylogeny`).
+Provide citations and units through a `--metadata` JSON file:
 
 ```json
 {
@@ -222,58 +97,41 @@ Record units in the existing `--metadata` JSON file, for example:
 }
 ```
 
-Each omitted per-tree unit defaults to `unknown` in the metric's provenance.
-When enabled, `branch_length_units` must be an object and supplied per-tree values
-must be nonempty strings. Units are descriptive provenance, not a conversion or
-verification of comparability. No additional CLI flags are needed.
+Omitted units default to `unknown`. With correlation enabled, supplied units must
+be nonempty strings in a `branch_length_units` object; they describe units without
+converting or verifying them.
 
-## Output Schema
+## Outputs
 
-All new runs use `schema_version: 5`. Default runs print RF and the
-`tip-to-root-correlation` score, or its undefined reason. Explicit RF-only runs
-retain the RF-only terminal output; correlation-only runs print only that score.
+Reports use `schema_version: 5`. Only enabled metrics are printed and included.
 
-* `validation.json`: existing topology, coverage, mode, RF root policy, metadata,
-  warnings, input hashes and DendroPy version
-* `taxa.csv`: original labels, canonical IDs, retention and exclusion reasons
-* `clades.csv`: informative clade or split identifiers, origins and sizes, unless
-  `--no-rf` is specified
+| File                          | Contents                                           | Written when        |
+|-------------------------------|----------------------------------------------------|---------------------|
+| validation.json               | Scores, coverage, provenance, hashes and warnings   | Always              |
+| taxa.csv                      | Original labels, canonical IDs and exclusions      | Always              |
+| clades.csv                    | Informative clade/split IDs, origins and sizes      | RF enabled          |
+| node_lengths.csv              | Root-to-node sums for every original node           | Correlation enabled |
+| tip_to_root_correlation.csv    | Retained taxa, paired sums and average ranks        | Correlation enabled |
 
-Reports include `tip_to_root_correlation` unless explicitly disabled, with
-`rho`, `compared_tip_count`, `status`, `root_policy`, `branch_lengths`,
-`branch_length_units` and `node_id_policy`. `undefined_reason` appears only for an
-undefined score. The metric's root policy is
-`original_supplied_root_stem_excluded`; its lengths are `stored_non_root_edges`.
-`versions.scipy` is recorded only for enabled runs.
+JSON omits `topology`, `mode` and the RF `root_policy` with `--no-rf`; it omits
+`tip_to_root_correlation` and the SciPy version when correlation is disabled.
+Branch-length provenance distinguishes RF's ignored lengths from correlation's
+used lengths. Node IDs are tree-local preorder indices, not cross-tree identities.
+All results are serialized and input/output collisions checked before writing.
+See [evaluate.py](evaluate.py) for exact report fields and CSV columns.
 
-RF-only reports keep `branch_lengths: "ignored"`. Default reports use
-`branch_lengths: {"rf": "ignored", "tip_to_root_correlation": "used"}`
-to distinguish the two calculations. Existing topology fields are preserved.
-With `--no-rf`, `topology`, the RF `mode` and top-level RF `root_policy` are
-omitted, and `branch_lengths` contains only `tip_to_root_correlation: "used"`.
+## Test
 
-Default runs also write these files, even when rho is undefined. They are omitted
-only with `--no-tip-to-root-correlation`:
+```bash
+uv run --no-sync python -m pytest tests/test_validate.py
+```
 
-* `node_lengths.csv`: `tree`, `node_id`, `parent_id`, `original_label`, `node_kind`,
-  `root_to_node_sum`, covering every original node, including excluded tips
-* `tip_to_root_correlation.csv`: `taxon`, `reference_sum`, `inferred_sum`,
-  `reference_rank`, `inferred_rank`, covering retained canonical tips only
-
-Node IDs are zero-based preorder indices local to each input serialization, not
-cross-tree identities. The root's parent ID is empty; node kinds are `tip` or
-`internal`. Unlabelled nodes have empty labels, and repeated internal labels are
-allowed. Rows are deterministic for the same inputs; neither matching rows nor
-matching internal labels imply corresponding nodes between trees.
-
-All metrics and output contents are computed and serialized before creating
-output files. Collision checks include all enabled metrics' filenames, symlinks and
-hard links when those files would be written. Input errors exit 2 without new
-report files; operating-system I/O errors exit 1.
+The [validation tests](../../../tests/test_validate.py) cover mock depths and scores,
+metric selection, undefined correlation, alignment and invalid inputs.
 
 ## References
 
 * [DendroPy tree comparisons](https://jeetsukumaran.github.io/DendroPy/library/treecompare.html)
 * [DendroPy path distances](https://jeetsukumaran.github.io/DendroPy/library/phylogeneticdistance.html) (background only; not computed by this validator)
-* [Diversity background references](../../../docs/README.md#diversity-background)
-* [Implementation plan](../../../docs/diversity-tree-validation-plan.md)
+* [Diversity background references](../../../docs/README.md#prior-art-relevant-background)
+* [Metric implementation](compare.py)
