@@ -1,6 +1,6 @@
 ---
-title: tip-to-root-length-correlation implementation plan
-description: Proposed optional tip-to-root-length-correlation using Spearman ranks
+title: tip-to-root-correlation implementation plan
+description: RF and tip-to-root-correlation using Spearman ranks, both enabled by default
 ---
 
 ## Scope and Assumption
@@ -14,9 +14,10 @@ Confirm this interpretation before implementation. Summing all branches below
 a node is a different metric, subtree total branch length, and is out of scope.
 Pairwise tip-to-tip patristic distances are also out of scope.
 
-Preserve RF calculations, CLI defaults, and RF-only terminal output. Add this
-metric as an explicit opt-in, not as a replacement for RF. All reports will use
-schema version 5; optional metric fields appear only when requested.
+Preserve RF calculations and explicit RF-only terminal output. Compute RF and
+tip-to-root-correlation by default. Allow `--no-tip-to-root-correlation` for
+RF-only runs and `--no-rf` for correlation-only runs; reject disabling both.
+All reports use schema version 5; disabled metric fields and CSVs are omitted.
 
 ## Metric Definition
 
@@ -30,7 +31,7 @@ The root has value zero. Ignore any stem length attached to the root itself:
 it is not an edge on the path from that root to a descendant.
 
 For the retained canonical tip identities T, define
-`tip-to-root-length-correlation` as Spearman's rho of the tip-to-root lengths:
+`tip-to-root-correlation` as Spearman's rho of the tip-to-root lengths:
 
 $$
 \rho = \operatorname{Spearman}
@@ -56,14 +57,14 @@ An ultrametric or otherwise constant vector makes the correlation undefined.
   strict/intersection reconciliation. Reject mismatches or duplicates
   with an informative error. Align both vectors by the same sorted ID
   order before computing ranks and correlation.
-* `tip-to-root-length-correlation` depends on the supplied root positions.
+* `tip-to-root-correlation` depends on the supplied root positions.
   Matching tip IDs does not establish biologically comparable roots.
 * Allow RF to remain unrooted while this separate metric uses the original
   supplied roots. Never reroot either tree automatically.
 * Require finite, nonnegative lengths on every non-root edge in each input tree.
   Accept zero; reject missing, negative, NaN, and infinite values. Reject
   non-finite cumulative sums, including overflow. Do not clip or impute lengths.
-* Apply these extra checks only when the new metric is requested. Identify the
+* Apply these checks unless tip-to-root-correlation is explicitly disabled. Identify the
   offending tree and node in errors; perform all checks before writing outputs.
 * Reuse existing taxon mapping, selection, strict/intersection rules, and coverage.
   Filter tip vectors to retained taxa, but measure from the original supplied
@@ -83,9 +84,9 @@ home; explain the need before creating it. Do not add standalone runner scripts.
 Keep regression tests in the existing test suite specified below; dependency
 declarations may be updated in the existing project configuration if needed.
 
-Use `tip-to-root-length-correlation` consistently as the metric's display name
-and `--tip-to-root-length-correlation` as its CLI flag. Use
-`tip_to_root_length_correlation` for Python identifiers and the JSON result key.
+Use `tip-to-root-correlation` consistently as the metric's display name
+and `--tip-to-root-correlation` as its positive CLI flag. Use
+`tip_to_root_correlation` for Python identifiers and the JSON result key.
 Root-to-node length remains the name of the underlying per-node calculation.
 
 ### 1. Add the Calculation
@@ -118,48 +119,51 @@ of passing a temporary dictionary directly into `prepare_trees()`.
 That function deliberately removes lengths from its clones; do not change
 this behavior to accommodate the new metric.
 
-Use `--tip-to-root-length-correlation` to request the score without a
-root-acknowledgement flag.
-Keep `--mode` dedicated to RF, including its existing report root policy.
+Compute both metrics unless explicitly disabled. Use paired boolean flags
+`--rf`/`--no-rf` and `--tip-to-root-correlation`/`--no-tip-to-root-correlation`.
+No root-acknowledgement flag is needed. Keep `--mode` dedicated to RF, including
+its existing report root policy. Correlation-only runs still require `--mode`
+but omit RF mode and root-policy fields from the report. They require three
+matched tips, without RF's topology checks or unrooted four-tip minimum.
 
-Run the length traversal on original trees. Use retained rows from RF's
+Run the length traversal on original trees. Use retained rows from the shared
 coverage table to translate original tip labels into canonical identities.
 Validate that both retained lists contain exactly the canonical IDs retained
-by RF, each once. Reject mismatches or duplicates, then align values by sorted
+by taxon alignment, each once. Reject mismatches or duplicates, then align values by sorted
 canonical ID before computing correlation. Do not reimplement taxon
 reconciliation independently.
 
 ### 3. Report Results
 
-Add a `tip_to_root_length_correlation` object to the JSON report only when
-requested. Include
+Add a `tip_to_root_correlation` object to the JSON report unless explicitly
+disabled. Include
 Spearman rho, compared-tip count, status, undefined reason when applicable,
 supplied-root policy and branch-length provenance.
 Record the SciPy version for enabled runs. Distinguish lengths ignored by RF
 from lengths used by this metric; do not leave the report globally claiming
 that all lengths were ignored.
 
-When `--tip-to-root-length-correlation` is enabled, write both CSVs below, including when the
+Unless `--no-tip-to-root-correlation` is specified, write both CSVs below, including when the
 correlation is undefined for otherwise valid inputs. Otherwise, write neither:
 
 * `node_lengths.csv`: tree, node ID, parent ID, original label, node kind,
   and root-to-node sum for every original node
-* `tip_to_root_length_correlation.csv`: canonical taxon, reference sum, inferred sum,
+* `tip_to_root_correlation.csv`: canonical taxon, reference sum, inferred sum,
   reference rank, and inferred rank for retained tips
 
 Mark node IDs as local to each input serialization. Neither rows nor labels
 imply that internal nodes correspond between trees. Keep CSV ordering
 deterministic for the same inputs.
 
-Advance the report schema from 4 to 5 for all runs, with regression tests for
-both opt-in and RF-only reports. Preserve existing topology fields; include
-optional metric fields only when requested. Print the additional score when
-requested while preserving RF-only terminal output.
+Use report schema 5 for all runs, with regression tests for default dual-metric,
+RF-only and correlation-only reports. Preserve existing topology fields when RF
+is enabled; omit them and `clades.csv` with `--no-rf`. Print each enabled metric
+while preserving explicit RF-only terminal output.
 
 Extend existing input/output collision checks to both new filenames, including
 symlink and hard-link cases. Compute and serialize all metrics before creating
 output files. Continue recommending fresh output directories: `--overwrite`
-does not clean up stale optional files from earlier runs.
+does not clean up stale files for disabled metrics from earlier runs.
 
 ### 4. Add Tests and Documentation
 
@@ -188,20 +192,22 @@ a separate suite. Use the existing mock fixtures and small inline Newick trees.
 | Unrooted RF with length metric enabled     | Original roots used only for depth score                                 |
 | Unary nodes and deeply nested trees        | Correct sums without recursive traversal                                 |
 | Repeated or absent internal labels         | Unique local node IDs; no label-based matching                           |
-| RF-only invocation                         | Existing RF results preserved; no optional fields or CSVs; schema 5       |
+| Explicit RF-only invocation                | Existing RF results preserved; no correlation fields or CSVs; schema 5   |
 | RF-only inputs with invalid lengths        | Existing length-tolerant behavior preserved                              |
-| Valid metric opt-in invocation              | Score and both CSVs produced; schema 5                                   |
+| Default invocation                         | Both scores and correlation CSVs produced; schema 5                      |
+| Correlation-only invocation                | Three tips suffice; no RF topology checks, fields or clades CSV           |
+| Both metrics disabled                      | CLI exits 2 without new report files                                    |
 | Supplied or omitted units metadata         | Per-tree units recorded; omitted units default to unknown                 |
 | Output/input collision                     | Exit 2 without new report files                                          |
 | Input tree objects and files               | Unmodified by calculations                                               |
 
-Update [README.md](README.md) with the opt-in command, mock depth table,
+Update [README.md](README.md) with the default command, disabling flags, mock depth table,
 undefined-score policy, output schema, units metadata fields, and root/units
 caveats. Update its Purpose and Comparison Policies sections to describe RF as
-topology-only and `tip-to-root-length-correlation` as optional. Clarify that lengths are
+topology-only and `tip-to-root-correlation` as enabled by default alongside RF. Clarify that lengths are
 discarded only from RF working copies and preserved in the original trees for
-the optional metric. Preserve all existing external references. Clearly
-distinguish an input error from a valid RF report with an undefined optional
+tip-to-root-correlation. Preserve all existing external references. Clearly
+distinguish an input error from a valid report with an undefined
 correlation.
 
 ## Verification and Completion

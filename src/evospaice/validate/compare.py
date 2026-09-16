@@ -1,15 +1,92 @@
-"""Topology-only comparisons of phylogenetic trees using DendroPy."""
+"""RF topology comparisons and supplied-root tip-to-root correlation."""
 
 from __future__ import annotations
 
 import gzip
 import hashlib
 import json
-from collections.abc import Mapping
+import math
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import dendropy
 from dendropy.calculate import treecompare
+
+
+def root_to_node_lengths(tree: dendropy.Tree, *, name: str) -> tuple[list[dict], dict[str, float]]:
+    """Measure every original node from the supplied root without mutating it."""
+    try:
+        leaf_labels(tree)
+    except ValueError as error:
+        raise ValueError(f"{name}: {error}") from error
+    rows, tips = [], {}
+    pending: list[tuple[dendropy.Node, int | None, float]] = [(tree.seed_node, None, 0.0)]
+    while pending:
+        node, parent_id, parent_sum = pending.pop()
+        node_id = len(rows)
+        label = node.taxon.label if node.taxon else node.label
+        total = 0.0
+        if parent_id is not None:
+            length = node.edge_length
+            location = f"{name}: node {node_id} (label={label!r})"
+            if length is None or not math.isfinite(length) or length < 0:
+                raise ValueError(
+                    f"{location}: edge length must be finite and nonnegative; got {length!r}"
+                )
+            total = parent_sum + length
+            if not math.isfinite(total):
+                raise ValueError(f"{location}: non-finite cumulative root-to-node length")
+        rows.append(dict(tree=name, node_id=node_id, parent_id=parent_id,
+                         original_label=label, node_kind="tip" if node.is_leaf() else "internal",
+                         root_to_node_sum=total))
+        if node.is_leaf():
+            tips[label] = total
+        pending.extend((child, node_id, total) for child in reversed(node.child_nodes()))
+    return rows, tips
+
+
+def tip_to_root_correlation(
+    reference: Sequence[tuple[str, float]], inferred: Sequence[tuple[str, float]], *,
+    retained_taxa: set[str],
+) -> tuple[dict, list[dict]]:
+    """Align unique retained identities and compare tip depths using SciPy."""
+    from scipy.stats import rankdata, spearmanr
+
+    aligned = {}
+    for name, values in (("reference", reference), ("inferred", inferred)):
+        labels = [label for label, _ in values]
+        if len(labels) != len(set(labels)):
+            raise ValueError(f"{name}: duplicate canonical tip IDs in length comparison")
+        if set(labels) != retained_taxa:
+            raise ValueError(
+                f"{name}: canonical tip IDs differ from retained taxa; "
+                f"missing={sorted(retained_taxa - set(labels))}, "
+                f"unexpected={sorted(set(labels) - retained_taxa)}"
+            )
+        lookup = dict(values)
+        for label, value in values:
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"{name}: tip {label!r} requires a finite nonnegative length")
+        aligned[name] = [lookup[label] for label in sorted(retained_taxa)]
+    if len(retained_taxa) < 3:
+        raise ValueError("tip-to-root-correlation requires at least three matched tips")
+    ranks = {name: rankdata(values, method="average") for name, values in aligned.items()}
+    constant = [name for name, values in aligned.items() if min(values) == max(values)]
+    rho = None
+    if not constant:
+        rho = float(spearmanr(aligned["reference"], aligned["inferred"]).statistic)
+    result = dict(
+        rho=rho,
+        compared_tip_count=len(retained_taxa), status="undefined" if constant else "ok",
+    )
+    if constant:
+        result["undefined_reason"] = "Constant tip-to-root lengths in " + " and ".join(constant)
+    rows = [dict(taxon=label, reference_sum=aligned["reference"][index],
+                 inferred_sum=aligned["inferred"][index],
+                 reference_rank=float(ranks["reference"][index]),
+                 inferred_rank=float(ranks["inferred"][index]))
+            for index, label in enumerate(sorted(retained_taxa))]
+    return result, rows
 
 
 def leaf_labels(tree: dendropy.Tree) -> set[str]:
@@ -48,7 +125,7 @@ def load_tree(
 def prepare_trees(
     trees: Mapping[str, dendropy.Tree], *, mode: str, taxa_policy: str = "strict",
     mappings: Mapping[str, Mapping[str, str]] | None = None,
-    selected: set[str] | None = None,
+    selected: set[str] | None = None, require_rf: bool = True,
 ) -> tuple[dict[str, dendropy.Tree], list[dict]]:
     """Align topology-only copies to one namespace and fixed benchmark set."""
     if not trees:
@@ -80,9 +157,10 @@ def prepare_trees(
     common = set.intersection(*restricted.values())
     if taxa_policy == "strict" and any(labels != common for labels in restricted.values()):
         raise ValueError("Tree taxa differ; supply a mapping or request --taxa-policy intersection")
-    minimum = 3 if mode == "rooted" else 4
+    minimum = 4 if require_rf and mode == "unrooted" else 3
     if len(common) < minimum:
-        raise ValueError(f"{mode} comparison requires at least {minimum} shared tips")
+        comparison = mode if require_rf else "tip-to-root-correlation"
+        raise ValueError(f"{comparison} comparison requires at least {minimum} shared tips")
     namespace = dendropy.TaxonNamespace(sorted(common), is_case_sensitive=True)
     coverage = []
     for name, tree in working.items():
