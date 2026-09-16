@@ -46,11 +46,25 @@ python -m evospaice.align_trees.alignment \
 ## Test fixtures
 
 [`tests/data/overlapping-trees/`](../../../tests/data/overlapping-trees/)
-holds example inputs/outputs from both modes:
+holds the output of running `alignment.py` twice, once per mode:
 
-- `unified_taxonomic_tree_overlap.tre` / `unified_taxonomic_tree_bottom_up_overlap.tre`:
-  full trees before pruning.
-- `papilo/papilio_ids.tsv`: metadata id list used as the `--metadata` source.
-- `papilo/reference_lepidoptera_papilio.tre`,
-  `papilo/unified_taxonomic_tree_bottom_up_papilio.tre`: pruned outputs, each
-  with a matching `*_report.txt` alignment report.
+1. **Tree-vs-tree**: a full unified-taxonomic tree and a full sequence-based
+   reference tree were aligned to each other, producing
+   `unified_taxonomic_tree_overlap.tre` / `unified_taxonomic_tree_bottom_up_overlap.tre`
+   (61,381 tips each) plus a `reference_lepidoptera_overlap.tre` counterpart
+   that is **not** checked in — it's only referenced as the input path in the
+   reports below.
+2. **Tree-vs-metadata**: each `*_overlap.tre` tree from step 1 was pruned
+   again against `papilo/papilio_ids.tsv` (146 BOLD process IDs), producing
+   the 51-tip `papilo/reference_lepidoptera_papilio.tre` and
+   `papilo/unified_taxonomic_tree_bottom_up_papilio.tre`, each with a matching
+   `*_report.txt` alignment report.
+
+Regenerate step 2, for example, with:
+
+```bash
+python -m evospaice.align_trees.alignment \
+  --tree tests/data/overlapping-trees/unified_taxonomic_tree_bottom_up_overlap.tre \
+  --metadata tests/data/overlapping-trees/papilo/papilio_ids.tsv \
+  --output tests/data/overlapping-trees/papilo/unified_taxonomic_tree_bottom_up_papilio.tre
+```
