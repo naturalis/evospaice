@@ -232,3 +232,5 @@ __marimo__/
 
 results/*
 data/*
+
+.azure-extensions/
