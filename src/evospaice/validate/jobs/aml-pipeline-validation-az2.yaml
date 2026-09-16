@@ -1,0 +1,46 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+display_name: AZ2 tree validation
+description: Compare the bottom-up inferred tree with the pruned reference tree.
+experiment_name: tree-validation
+
+inputs:
+  reference:
+    type: uri_file
+    path: ../../../../data/pruned.tre.txt
+  inferred:
+    type: uri_file
+    path: ../../../../data/unified_taxonomic_tree_bottom_up.tre.txt
+
+outputs:
+  validation_results:
+    type: uri_folder
+    mode: rw_mount
+
+jobs:
+  evaluate:
+    type: command
+    code: ../../..
+    command: >-
+      PYTHONPATH=. python -m evospaice.validate.evaluate
+      --reference ${{inputs.reference}}
+      --inferred ${{inputs.inferred}}
+      --mode unrooted
+      --taxa-policy intersection
+      --no-rf
+      --output-dir ${{outputs.results}}
+      --overwrite
+    inputs:
+      reference: ${{parent.inputs.reference}}
+      inferred: ${{parent.inputs.inferred}}
+    outputs:
+      results: ${{parent.outputs.validation_results}}
+    environment:
+      image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu22.04@sha256:c5b3129d6db35d912f39f8a494e8f858bedecc7153fb59b5ec9d53df13aa8ab6
+      conda_file: validation-environment.yaml
+    compute: azureml:cpu-species-split-dedicated
+
+settings:
+  continue_on_step_failure: false
+  force_rerun: true
