@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
 function skipWhitespace(state) {
   while (/\s/.test(state.text[state.position] || "")) {
     state.position += 1;
@@ -164,6 +166,26 @@ function descriptorLabel(descriptor) {
   throw new Error("The tree contains an unterminated quoted label");
 }
 
+export function propagateTipMemberships(root, membershipsByTip) {
+  const membershipsByNode = new Map();
+  postorder(root).forEach((node) => {
+    const memberships = new Set();
+    if (!node.children.length) {
+      (membershipsByTip.get(descriptorLabel(node.descriptor)) || [])
+        .forEach((sample) => memberships.add(sample));
+    } else {
+      node.children.forEach((child) => {
+        (membershipsByNode.get(child) || [])
+          .forEach((sample) => memberships.add(sample));
+      });
+    }
+    if (memberships.size) {
+      membershipsByNode.set(node, [...memberships]);
+    }
+  });
+  return membershipsByNode;
+}
+
 export function filterToTipLabels(root, selectedLabels) {
   function cloneSelected(node) {
     if (!node.children.length) {
@@ -203,6 +225,73 @@ function serializeNode(node) {
   return children + node.descriptor;
 }
 
+function appendMetadata(descriptor, metadata) {
+  const payload = Object.entries(metadata)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(",");
+  let commentStart = -1;
+  let commentEnd = -1;
+  let currentStart = -1;
+  let commentDepth = 0;
+  let inQuote = false;
+
+  for (let position = 0; position < descriptor.length; position += 1) {
+    const character = descriptor[position];
+    if (inQuote) {
+      if (character === "'" && descriptor[position + 1] === "'") {
+        position += 1;
+      } else if (character === "'") {
+        inQuote = false;
+      }
+    } else if (character === "'") {
+      inQuote = true;
+    } else if (character === "[") {
+      if (commentDepth === 0) {
+        currentStart = position;
+      }
+      commentDepth += 1;
+    } else if (character === "]" && commentDepth > 0) {
+      commentDepth -= 1;
+      if (commentDepth === 0) {
+        commentStart = currentStart;
+        commentEnd = position;
+      }
+    }
+  }
+
+  if (commentEnd < 0) {
+    return `${descriptor}[&${payload}]`;
+  }
+  const commentBody = descriptor.slice(commentStart + 1, commentEnd);
+  const separator = commentBody.trim() ? "," : "&";
+  return `${descriptor.slice(0, commentEnd)}${separator}${payload}` +
+    `${descriptor.slice(commentEnd)}`;
+}
+
+function serializeNodeWithMemberships(node, membershipsByNode) {
+  const children = node.children.length
+    ? `(${node.children
+      .map((child) => serializeNodeWithMemberships(child, membershipsByNode))
+      .join(",")})`
+    : "";
+  const memberships = membershipsByNode.get(node) || [];
+  if (!memberships.length) {
+    return children + node.descriptor;
+  }
+  const sample = memberships.length > 1
+    ? `Overlap (${memberships.length})`
+    : memberships[0];
+  return children + appendMetadata(node.descriptor, {
+    sample,
+    sample_memberships: memberships.join(" | "),
+    overlap_count: memberships.length,
+  });
+}
+
 export function serializeSubtree(root) {
   return `${serializeNode(root)};`;
+}
+
+export function serializeTreeWithMemberships(root, membershipsByNode) {
+  return `${serializeNodeWithMemberships(root, membershipsByNode)};`;
 }

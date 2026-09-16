@@ -1,0 +1,157 @@
+diff --git a/taxonium_component/src/hooks/useLayers.tsx b/taxonium_component/src/hooks/useLayers.tsx
+index b6bbbaf..5a5dab3 100644
+--- a/taxonium_component/src/hooks/useLayers.tsx
++++ b/taxonium_component/src/hooks/useLayers.tsx
+@@ -1,3 +1,5 @@
++// Modified by the Evospaice project on 2026-09-16 to support metadata-colored
++// branches and configurable visibility of internal node points.
+ import {
+   LineLayer,
+   ScatterplotLayer,
+@@ -127,6 +129,26 @@ const useLayers = ({
+     }
+   }, [data.data, getX]);
+ 
++  const hasBranchColor = useCallback(
++    (node: Node, dataset: NodeLookupData) => {
++      if (!config.colorBranchesByMetadata) {
++        return false;
++      }
++      const value = getNodeColorField(node, dataset);
++      return value !== undefined && value !== "" && value !== "None";
++    },
++    [config.colorBranchesByMetadata, getNodeColorField],
++  );
++
++  const getBranchColor = useCallback(
++    (node: Node, dataset: NodeLookupData) => {
++      return hasBranchColor(node, dataset)
++        ? toRGB(getNodeColorField(node, dataset))
++        : lineColor;
++    },
++    [getNodeColorField, hasBranchColor, lineColor, toRGB],
++  );
++
+   const keyStuff = useMemo(() => {
+     return getKeyStuff(getNodeColorField, colorByField, detailed_data, toRGB);
+   }, [detailed_data, getNodeColorField, colorByField, toRGB]);
+@@ -168,9 +190,16 @@ const useLayers = ({
+       (node: Node) =>
+         node.is_tip ||
+         (node.is_tip === undefined && node.num_tips === 1) ||
+-        settings.displayPointsForInternalNodes,
++        (!config.hideInternalNodes &&
++          (settings.displayPointsForInternalNodes ||
++            hasBranchColor(node, detailed_data))),
+     );
+-  }, [detailed_data, settings.displayPointsForInternalNodes]);
++  }, [
++    config.hideInternalNodes,
++    detailed_data,
++    hasBranchColor,
++    settings.displayPointsForInternalNodes,
++  ]);
+ 
+   const minimap_scatter_data = useMemo(() => {
+     return base_data
+@@ -178,10 +207,17 @@ const useLayers = ({
+           (node: Node) =>
+             node.is_tip ||
+             (node.is_tip === undefined && node.num_tips === 1) ||
+-            settings.displayPointsForInternalNodes,
++            (!config.hideInternalNodes &&
++              (settings.displayPointsForInternalNodes ||
++                hasBranchColor(node, base_data))),
+         )
+       : [];
+-  }, [base_data, settings.displayPointsForInternalNodes]);
++  }, [
++    base_data,
++    config.hideInternalNodes,
++    hasBranchColor,
++    settings.displayPointsForInternalNodes,
++  ]);
+ 
+   const computedViewState = useMemo(
+     () => computeBounds({ ...viewState }, deckSize),
+@@ -247,7 +283,7 @@ const useLayers = ({
+   const line_layer_horiz_common_props = {
+     getSourcePosition: (d: Node) => [getX(d), d.y],
+     getTargetPosition: (d: Node) => [d.parent_x, d.y],
+-    getColor: lineColor,
++    getColor: (d: Node) => getBranchColor(d, detailed_data),
+     pickable: true,
+     widthUnits: "pixels",
+     getWidth: (d: Node) =>
+@@ -264,6 +300,7 @@ const useLayers = ({
+     updateTriggers: {
+       getSourcePosition: [detailed_data, xType],
+       getTargetPosition: [detailed_data, xType],
++      getColor: [detailed_data, getBranchColor],
+       getWidth: [hoverInfo, selectedDetails.nodeDetails],
+     },
+   };
+@@ -272,7 +309,7 @@ const useLayers = ({
+     getSourcePosition: (d: Node) => [d.parent_x, d.y],
+     getTargetPosition: (d: Node) => [d.parent_x, d.parent_y],
+     onHover: (info: HoverInfo<Node>) => setHoverInfo(info),
+-    getColor: lineColor,
++    getColor: (d: Node) => getBranchColor(d, detailed_data),
+     pickable: true,
+     getWidth: (d: Node) =>
+       d === (hoverInfo && hoverInfo.object)
+@@ -285,6 +322,7 @@ const useLayers = ({
+     updateTriggers: {
+       getSourcePosition: [detailed_data, xType],
+       getTargetPosition: [detailed_data, xType],
++      getColor: [detailed_data, getBranchColor],
+       getWidth: [hoverInfo, selectedDetails.nodeDetails],
+     },
+   };
+@@ -485,10 +523,11 @@ const useLayers = ({
+     data: base_data.nodes,
+     getSourcePosition: (d: Node) => [getX(d), d.y],
+     getTargetPosition: (d: Node) => [d.parent_x, d.y],
+-    getColor: lineColor,
++    getColor: (d: Node) => getBranchColor(d, base_data),
+     updateTriggers: {
+       getSourcePosition: [base_data, xType],
+       getTargetPosition: [base_data, xType],
++      getColor: [base_data, getBranchColor],
+     },
+   };
+ 
+@@ -499,11 +538,12 @@ const useLayers = ({
+     data: base_data.nodes,
+     getSourcePosition: (d: Node) => [d.parent_x, d.y],
+     getTargetPosition: (d: Node) => [d.parent_x, d.parent_y],
+-    getColor: lineColor,
++    getColor: (d: Node) => getBranchColor(d, base_data),
+ 
+     updateTriggers: {
+       getSourcePosition: [base_data, xType],
+       getTargetPosition: [base_data, xType],
++      getColor: [base_data, getBranchColor],
+     },
+   };
+ 
+diff --git a/taxonium_component/vite.config.js b/taxonium_component/vite.config.js
+index 653c56d..2b4234a 100644
+--- a/taxonium_component/vite.config.js
++++ b/taxonium_component/vite.config.js
+@@ -1,3 +1,4 @@
++// Modified by the Evospaice project on 2026-09-16 to add a distribution notice.
+ import { defineConfig } from "vite";
+ import react from "@vitejs/plugin-react";
+ import { nodePolyfills } from "vite-plugin-node-polyfills";
+@@ -42,6 +43,10 @@ export default defineConfig({
+       ],
+ 
+       output: {
++        banner:
++          "/*! Modified Taxonium component, GPL-3.0-only. " +
++          "Modified by Evospaice on 2026-09-16. " +
++          "License: ./LICENSE. Corresponding source: ./source/ */",
+         // Provide global variables to use in the UMD build
+         globals: {
+           react: "React",

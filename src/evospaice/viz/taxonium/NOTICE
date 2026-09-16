@@ -1,0 +1,23 @@
+Evospaice Taxonium viewer
+Copyright (C) 2026 Naturalis Biodiversity Center
+
+This viewer is distributed under the GNU General Public License version 3 only.
+See LICENSE in this directory.
+
+It incorporates a modified version of taxonium-component v2.1.24 from
+https://github.com/theosanderson/taxonium at commit
+9d251e3c4f6ee8a9de00bcfdc31b27de4a0bfb34.
+
+The modified component, its complete corresponding source, build instructions,
+upstream notices, and GPL license are available at:
+
+  vendor/taxonium-component/
+
+The Taxonium component was modified by the Evospaice project on 2026-09-16.
+The modifications add metadata-derived branch colors and configurable internal
+node point visibility. Taxonium and this viewer are provided without warranty,
+as described in the GPL.
+
+The GPL terms for this viewer do not change the licenses of separate and
+independent Evospaice pipeline services or project data merely distributed in
+the same repository.
