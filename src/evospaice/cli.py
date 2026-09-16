@@ -1,6 +1,6 @@
 """Command-line entry point for evospaice.
 
-The ``validate`` subcommand compares tree topology. Other track subcommands
+The ``validate`` subcommand computes RF and tip-to-root correlation. Other track subcommands
 remain placeholders until their implementations are connected.
 
 Run it with ``uv run evospaice`` (or ``uv run evospaice --help``).
@@ -23,7 +23,7 @@ except PackageNotFoundError:  # running from a source checkout that isn't instal
 TRACKS: dict[str, str] = {
     "ingest": "Trim to primer window, dereplicate within taxon, embed records.",
     "tree": "Resolve the backbone bottom-up (NJ) and assign branch lengths.",
-    "validate": "Compare tree topology using RF distance, precision and recall.",
+    "validate": "Compare trees using RF distance and tip-to-root-correlation.",
     "viz": "Render the scaled tree.",
     "diversity": "Alpha/beta phylogenetic diversity and curation outliers.",
 }
