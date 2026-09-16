@@ -215,7 +215,15 @@ def main():
     output_file = 'data/unified_taxonomic_tree.tre.txt'
     print(f"Writing unified Newick tree to {output_file}...")
     unified_tree.write(output_file, format="newick")
-    print("Tree saved successfully.")
+    
+    # Save taxonomy metadata for visualization (e.g. Taxonium)
+    metadata_file = 'data/unified_taxonomic_tree_metadata.tsv'
+    print(f"Writing metadata to {metadata_file}...")
+    df_meta = df_valid[['id', 'family', 'genus', 'species']].copy()
+    df_meta['id'] = df_meta['id'].apply(sanitize_name)
+    df_meta.to_csv(metadata_file, sep='\t', index=False)
+    
+    print("Tree and metadata saved successfully.")
 
 if __name__ == "__main__":
     main()
