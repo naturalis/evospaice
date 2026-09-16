@@ -560,6 +560,9 @@
         </label>
         <div id="sample-list" class="sample-list"></div>
         <div id="comparison-summary" class="comparison-summary" aria-live="polite">No samples added</div>
+        <button id="focus-selected-subtrees" class="subtree-button" type="button" disabled>
+          Focus selected subtrees
+        </button>
         <details id="overlap-details" class="overlap-details" hidden>
           <summary>
             <span class="overlap-swatch" aria-hidden="true"></span>
@@ -574,11 +577,11 @@
           <input id="show-internal-nodes" type="checkbox">
           Show internal nodes
         </label>
-        <div class="subtree-controls" aria-label="Subtree focus">
-          <strong>Subtree focus</strong>
+        <div class="subtree-controls" aria-label="Subtree filter">
+          <strong>Subtree filter</strong>
           <span id="selection-instruction">Select two nodes in the tree</span>
           <div id="node-selections" class="node-selections"></div>
-          <button id="focus-subtree" class="subtree-button" type="button" disabled>Focus subtree</button>
+          <button id="filter-subtree" class="subtree-button" type="button" disabled>Filter subtree</button>
           <button id="clear-node-selections" class="subtree-button" type="button" hidden>Clear</button>
           <button id="show-full-tree" class="subtree-button" type="button" hidden>Show full tree</button>
         </div>
@@ -609,6 +612,7 @@
       const sampleList = document.getElementById("sample-list");
       const filename = document.getElementById("filename");
       const comparisonSummary = document.getElementById("comparison-summary");
+      const focusSelectedSubtreesButton = document.getElementById("focus-selected-subtrees");
       const overlapDetails = document.getElementById("overlap-details");
       const overlapCount = document.getElementById("overlap-count");
       const overlapList = document.getElementById("overlap-list");
@@ -616,7 +620,7 @@
       const showInternalNodesInput = document.getElementById("show-internal-nodes");
       const selectionInstruction = document.getElementById("selection-instruction");
       const nodeSelections = document.getElementById("node-selections");
-      const focusSubtreeButton = document.getElementById("focus-subtree");
+      const filterSubtreeButton = document.getElementById("filter-subtree");
       const clearNodeSelectionsButton = document.getElementById("clear-node-selections");
       const showFullTreeButton = document.getElementById("show-full-tree");
       const viewer = document.getElementById("viewer");
@@ -642,6 +646,7 @@
       let taxonomyByNode = new Map();
       let taxonomyFields = ["species"];
       let showInternalNodes = false;
+      let canFocusSelectedSubtrees = false;
       let sampleCounter = 0;
       let treeVersion = 0;
 
@@ -852,6 +857,37 @@
         comparisonSummary.dataset.state = state;
       }
 
+      function focusSelectedSubtrees() {
+        const zoomButton = viewer.querySelector('button[title="Zoom to this search"]');
+        if (zoomButton) {
+          zoomButton.click();
+          return;
+        }
+
+        focusSelectedSubtreesButton.disabled = true;
+        const originalText = focusSelectedSubtreesButton.textContent;
+        focusSelectedSubtreesButton.textContent = "Preparing focus...";
+        const observer = new MutationObserver(() => {
+          const pendingZoomButton = viewer.querySelector(
+            'button[title="Zoom to this search"]',
+          );
+          if (pendingZoomButton) {
+            cleanup();
+            pendingZoomButton.click();
+          }
+        });
+        const timeout = window.setTimeout(cleanup, 10000);
+
+        function cleanup() {
+          observer.disconnect();
+          window.clearTimeout(timeout);
+          focusSelectedSubtreesButton.textContent = originalText;
+          focusSelectedSubtreesButton.disabled = !canFocusSelectedSubtrees;
+        }
+
+        observer.observe(viewer, { childList: true, subtree: true });
+      }
+
       function renderOverlapDetails(overlappingTips) {
         overlappingTipLabels = overlappingTips.map(([node]) => node);
         overlapDetails.open = false;
@@ -888,19 +924,19 @@
         if (focusedSubtree) {
           selectionInstruction.textContent = focusedSubtree.description ||
             `Showing a ${focusedSubtree.tipCount.toLocaleString()}-tip subtree`;
-          focusSubtreeButton.hidden = true;
+          filterSubtreeButton.hidden = true;
           clearNodeSelectionsButton.hidden = true;
           showFullTreeButton.hidden = false;
           return;
         }
 
         selectionInstruction.textContent = selectedNodes.length === 2
-          ? "Ready to focus"
+          ? "Ready to filter"
           : selectedNodes.length === 1
             ? "Select one more node"
             : "Select two nodes in the tree";
-        focusSubtreeButton.hidden = false;
-        focusSubtreeButton.disabled = selectedNodes.length !== 2;
+        filterSubtreeButton.hidden = false;
+        filterSubtreeButton.disabled = selectedNodes.length !== 2;
         clearNodeSelectionsButton.hidden = selectedNodes.length === 0;
         showFullTreeButton.hidden = true;
       }
@@ -937,7 +973,7 @@
         renderNodeSelections();
       }
 
-      function focusSelectedSubtree() {
+      function filterSelectedSubtree() {
         if (selectedNodes.length !== 2 || !displayedTopology) {
           return;
         }
@@ -1113,6 +1149,8 @@
       }
 
       function renderTree() {
+        canFocusSelectedSubtrees = false;
+        focusSelectedSubtreesButton.disabled = true;
         const displayNewick = focusedSubtree ? focusedSubtree.newick : currentTree.newick;
         displayedTopology = parseNewickTopology(displayNewick);
         const sourceData = {
@@ -1169,6 +1207,8 @@
           renderOverlapDetails(overlappingTips);
 
           if (matchedTips.size > 0) {
+            canFocusSelectedSubtrees = true;
+            focusSelectedSubtreesButton.disabled = false;
             const comparisonSearchValue = comparisonValue + "\u200B".repeat(treeVersion + 1);
             const colorMapping = Object.fromEntries(
               includedOverlays.map((sample) => [sample.name, sample.color]),
@@ -1443,10 +1483,11 @@
         }
       });
 
-      focusSubtreeButton.addEventListener("click", focusSelectedSubtree);
+      filterSubtreeButton.addEventListener("click", filterSelectedSubtree);
       clearNodeSelectionsButton.addEventListener("click", clearNodeSelections);
       showFullTreeButton.addEventListener("click", showFullTree);
       showOverlapOnlyButton.addEventListener("click", showOverlapOnly);
+      focusSelectedSubtreesButton.addEventListener("click", focusSelectedSubtrees);
       showInternalNodesInput.addEventListener("change", () => {
         showInternalNodes = showInternalNodesInput.checked;
         if (currentTree) {

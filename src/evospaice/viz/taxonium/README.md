@@ -29,6 +29,9 @@ matching tips; use **Reset zoom** to return to the full tree. This compares leaf
 membership; it does not graft or display the subtrees' internal topology.
 Independently generated trees therefore need stable, shared tip identifiers.
 
+After panning or zooming elsewhere, choose **Focus selected subtrees** to return
+the viewport to all matching tips from the currently included samples.
+
 Paths shared by multiple included samples are colored black as **Overlap (N)**,
 where `N` is the number of sample memberships. Use the **overlapping tips**
 control in the sample bar to list exact process IDs that occur in multiple
@@ -38,7 +41,7 @@ samples. Choose **Show overlap only** to display their induced tree, then
 Internal node points are hidden by default. Select **Show internal nodes** to
 display colored internal junctions; branch colors are unchanged by this option.
 
-To isolate a clade, select two nodes in the tree and choose **Focus subtree**.
+To isolate a clade, select two nodes in the tree and choose **Filter subtree**.
 The viewer displays only their most recent common ancestor and its descendants.
 Choose **Show full tree** to restore the reference. Selecting another node when
 two are already queued starts a new pair.
