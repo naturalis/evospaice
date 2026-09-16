@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genus tree comparison</title>
+  <style>
+    :root { --ink:#19383d; --muted:#587278; --paper:#eef5f4; --line:#d2e1df;
+      --left:#ad5c26; --right:#087f83; --shared:#819496; --white:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper);
+      font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { max-width:1540px; margin:auto; padding:30px 28px 42px; }
+    .eyebrow { color:var(--muted); font:12px/1.5 Menlo,Consolas,monospace; letter-spacing:.09em; }
+    h1 { margin:5px 0 6px; font:600 clamp(30px,4vw,48px)/1.15 "Avenir Next","Trebuchet MS",sans-serif; }
+    h1 em { font-style:italic; }
+    h2 { margin:0 0 8px; font-size:20px; }
+    p { margin:6px 0 14px; }
+    .intro { max-width:1050px; color:var(--muted); }
+    .cohort { display:flex; flex-wrap:wrap; gap:8px 24px; margin:18px 0; font-size:14px; }
+    .cohort strong { font:600 21px Menlo,Consolas,monospace; margin-right:5px; }
+    .panel { background:var(--white); border:1px solid var(--line); border-radius:12px;
+      margin-top:18px; overflow:hidden; }
+    .controls { display:flex; gap:16px; align-items:end; flex-wrap:wrap;
+      padding:18px 20px; background:#f9fbfb; border-bottom:1px solid var(--line); }
+    label { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:600; }
+    select,input[type="search"] { border:1px solid #aabfbc; border-radius:6px; padding:9px 11px;
+      color:var(--ink); background:white; font:14px inherit; min-height:40px; }
+    select { min-width:215px; max-width:320px; }
+    input[type="search"] { width:225px; }
+    .options { display:flex; gap:18px; flex-wrap:wrap; padding:10px 20px; border-bottom:1px solid var(--line); }
+    .options label { flex-direction:row; align-items:center; font-weight:400; }
+    .upload-controls { display:flex; flex-wrap:wrap; align-items:start; gap:12px 24px;
+      padding:14px 20px; border-bottom:1px solid var(--line); }
+    .upload-controls label { flex:0 1 290px; min-width:0; }
+    .upload-controls input { width:100%; font:inherit; font-size:13px; }
+    .upload-controls input::file-selector-button { border:1px solid #aabfbc; border-radius:6px;
+      padding:8px 12px; margin-right:8px; background:var(--paper); color:var(--ink); cursor:pointer; }
+    .upload-help { flex:1; min-width:220px; color:var(--muted); font-size:12px; }
+    .upload-help p { margin:0 0 5px; overflow-wrap:anywhere; }
+    #upload-status { color:var(--right); font-weight:600; }
+    #upload-status.error { color:#963e22; }
+    #upload-status:empty { display:none; }
+    input[type="checkbox"] { accent-color:var(--right); }
+    :focus-visible { outline:3px solid #247eb4; outline-offset:3px; }
+    button { border:1px solid var(--line); padding:7px 11px; background:white;
+      border-radius:6px; color:var(--ink); cursor:pointer; font:inherit; }
+    button:hover { background:var(--paper); }
+    .pair-summary { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      padding:12px 20px; font:13px/1.5 Menlo,Consolas,monospace; }
+    .legend { font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--muted); }
+    .swatch { display:inline-block; width:18px; height:3px; vertical-align:middle; margin:0 5px 0 12px; }
+    .chart { overflow:auto; max-height:76vh; background:white; }
+    .chart svg { display:block; width:100%; min-width:1160px; height:auto; }
+    .tree-edge { fill:none; stroke-linecap:round; stroke-linejoin:round; }
+    .tip-label { font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:var(--ink); cursor:pointer; }
+    .tip-link { fill:none; stroke:#849ba0; stroke-width:.75; opacity:.23; }
+    .dim { opacity:.12; }
+    .focus-edge { stroke-width:3.3!important; opacity:1!important; }
+    .focus-label { fill:#005f68!important; font-weight:700; }
+    .focus-link { stroke:#005f68; stroke-width:2; opacity:1; }
+    .caption { padding:13px 20px; margin:0; font-size:12px; color:var(--muted); border-top:1px solid var(--line); }
+    .detail { padding:20px; }
+    .descriptions { display:grid; grid-template-columns:1fr 1fr; gap:25px; }
+    .descriptions p { font-size:14px; color:var(--muted); }
+    .table-scroll { overflow:auto; }
+    table { border-collapse:collapse; width:100%; font-size:13px; white-space:nowrap; }
+    th,td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--line); }
+    th { background:#f4f8f7; color:var(--muted); font-size:12px; font-weight:600; }
+    td.num { font-family:Menlo,Consolas,monospace; }
+    tr.current { background:#edf7f5; }
+    .unit { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
+    details { margin-top:18px; padding:16px 20px; background:#e4efed; border-radius:9px; }
+    summary { cursor:pointer; font-weight:600; }
+    details p, details li { font-size:13px; }
+    footer { color:var(--muted); font-size:12px; padding-top:20px; overflow-wrap:anywhere; }
+    a { color:#006b77; }
+    .warning { padding:11px 15px; border-left:3px solid #bb7136; background:#fcf5ec; font-size:13px; }
+    #status { padding:25px; }
+    @media(max-width:760px) { main { padding:20px 12px; } .controls { gap:12px; padding:14px; }
+      .controls label { flex:1; min-width:180px; } select,input[type="search"] { width:100%; min-width:0; }
+      .descriptions { grid-template-columns:1fr; gap:5px; } .cohort { gap:8px 16px; } }
+    @media print { .chart { max-height:none; } .controls,.options,button { display:none; } }
+  </style>
+</head>
+<body>
+  <div id="status">Generate this page with <code>python -m evospaice.tree.compare_representations</code>.</div>
+  <main id="app" hidden>
+    <div class="eyebrow">EVOSPAICE / SAME RECORDS, DIFFERENT REPRESENTATIONS</div>
+    <h1><em id="genus"></em>: where the trees disagree</h1>
+    <p class="intro">Compare bottom-up NJ trees built from the same real embedding cohort.
+      Colored branches mark unrooted splits present in one tree but absent from the other.
+      Links between labels track the same sequence, not an evolutionary connection.</p>
+    <div class="cohort" id="cohort"></div>
+    <div class="warning">Experimental representations, not validated evolutionary reconstructions.
+      Wasserstein changes the distance geometry as well as the representation.</div>
+    <section class="panel" aria-label="Interactive tree comparison">
+      <div class="controls">
+        <label>Left tree<select id="left-method"></select></label>
+        <label>Right tree<select id="right-method"></select></label>
+        <label>Horizontal position<select id="layout">
+          <option value="topology">Topology only</option>
+          <option value="length">Branch lengths (independent scales)</option>
+        </select></label>
+        <label>Find species or BOLD ID<input id="search" type="search" placeholder="e.g. Papilio helenus"></label>
+        <button id="swap" type="button">Swap trees</button>
+      </div>
+      <div class="upload-controls">
+        <label>Upload Newick for comparison
+          <input id="newick-upload" type="file" accept=".nwk,.newick,.tre,.tree,.txt"
+            aria-describedby="upload-help upload-status">
+        </label>
+        <div class="upload-help">
+          <p id="upload-help">Files stay in your browser (maximum 20 MB). Every displayed record ID
+            must be present; extra tips are pruned. Use original IDs, not species display labels.
+            Uploads are kept only in this tab; download Newick or JSON to save them.</p>
+          <p id="upload-status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="options">
+        <label><input id="align" type="checkbox" checked> Rotate branches to align labels</label>
+        <label><input id="links" type="checkbox" checked> Show matching-record links</label>
+        <label><input id="show-ids" type="checkbox" checked> Show BOLD IDs</label>
+      </div>
+      <p id="length-note" class="caption" hidden>Branch-length view is unavailable because a selected
+        uploaded tree has missing lengths. Topology and RF comparisons remain available.</p>
+      <div class="pair-summary">
+        <span id="pair-rf" aria-live="polite"></span>
+        <span class="legend">
+          <i class="swatch" style="background:var(--left)"></i>Left-only split
+          <i class="swatch" style="background:var(--right)"></i>Right-only split
+          <i class="swatch" style="background:var(--shared)"></i>Shared / terminal edge
+        </span>
+      </div>
+      <div id="chart" class="chart" aria-label="Tree diagrams; horizontal scroll available on small screens"></div>
+      <p class="caption">Hover or focus a record label to trace its route in both trees. Crossings can
+        change when branches rotate; the RF score, not the number of crossings, measures topology
+        disagreement. Labels are not evidence that a branch is well supported.</p>
+    </section>
+    <section class="panel detail descriptions" aria-label="Selected methods">
+      <div><h2 id="left-title"></h2><p id="left-description"></p><a id="left-download">Download Newick</a></div>
+      <div><h2 id="right-title"></h2><p id="right-description"></p><a id="right-download">Download Newick</a></div>
+    </section>
+    <section class="panel">
+      <div class="detail"><h2 id="view-count">One cohort. Six views.</h2>
+        <p id="evaluation-note" class="intro"></p>
+        <p class="intro">RF counts differing unrooted splits: lower is closer, not automatically better.
+          Correlations compare path ordering or association; they do not validate branch-length scale.</p>
+      </div>
+      <div class="table-scroll">
+        <table id="metrics-table">
+          <thead><tr><th>Tree / units</th><th>RF to centroid</th><th>RF to reference</th>
+            <th>Embedding rank correlation</th><th>Reference path correlation</th><th>View</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+    <details>
+      <summary>Read the comparison correctly</summary>
+      <ul>
+        <li>The centroid, medoid, GSC-weighted and spherical-mean variants use cosine
+          dissimilarity both within species and between species representatives.</li>
+        <li>Gaussian W2 uses Euclidean distances between individual raw vectors and W2 between
+          species distributions. Its branch lengths cannot be directly compared with cosine lengths.</li>
+        <li>Singleton species have zero covariance. No artificial covariance or hidden jitter is added.
+          GSC uses uniform weights only when all local branch lengths are zero.</li>
+        <li>All connectors use NJ with negative lengths clamped and counted, and midpoint rooting
+          as a convention. There is no attachment-offset correction or global length refit.</li>
+        <li>All selected pairs are evaluated, including fitting data. These are descriptive
+          comparisons, not held-out validation or confidence estimates.</li>
+        <li>The downloadable JSON also includes a least-squares scalar alignment of tree distances
+          to cosine distances. It is fitted on these same pairs and is not biological calibration.</li>
+        <li>Uploaded trees keep their supplied rooting and branch lengths. Unary nodes introduced by
+          pruning are collapsed, preserving retained leaf-to-leaf distances. Negative or non-finite
+          lengths are rejected; missing lengths permit topology comparisons only.</li>
+        <li>Upload RF scores use the same unrooted split definition. Normalized RF is unavailable if
+          neither tree has informative splits. Uploaded trees have no embedding correlation because
+          the original pairwise embedding distances are not included in this page.</li>
+      </ul>
+      <p id="singletons"></p>
+      <a id="data-download" download="comparison.json">Download full data and evaluation JSON</a>
+    </details>
+    <footer id="provenance"></footer>
+  </main>
+  <script>
+    const DATA = /* COMPARISON_DATA */ null;
+    if (DATA) initialize(DATA);
+
+    function parseNewick(text) {
+      let position=0, lookahead=null;
+      const nodes=[], stack=[];
+      let root=null, needNode=true;
+      const fail=message=>{throw new Error(`${message} at character ${position+1}.`);};
+      function token() {
+        while(position<text.length) {
+          if(/\s/.test(text[position])) {position++; continue;}
+          if(text[position]!=="[") break;
+          let depth=1; position++;
+          while(position<text.length && depth) {
+            const char=text[position++];
+            if(char==="[")depth++; else if(char==="]")depth--;
+          }
+          if(depth)fail("Unclosed Newick comment");
+        }
+        if(position===text.length)return {kind:"end"};
+        const char=text[position++];
+        if("(),:;".includes(char))return {kind:char};
+        if(char==="'") {
+          let value="";
+          while(position<text.length) {
+            const next=text[position++];
+            if(next==="'") {
+              if(text[position]==="'") {value+="'"; position++;}
+              else return {kind:"label",value};
+            } else value+=next;
+          }
+          fail("Unclosed quoted label");
+        }
+        const start=position-1;
+        while(position<text.length && !/[\s(),:;\[\]']/.test(text[position]))position++;
+        if(char==="]")fail("Unexpected closing comment bracket");
+        return {kind:"label",value:text.slice(start,position)};
+      }
+      const peek=()=>lookahead||(lookahead=token());
+      const take=()=>{const result=peek(); lookahead=null; return result;};
+      function add(label="") {
+        if(nodes.length>=500000)fail("File exceeds the 500,000-node limit");
+        const id=nodes.length;
+        nodes.push({label,length:null,children:[]});
+        if(stack.length)nodes[stack[stack.length-1]].children.push(id);
+        else if(root===null)root=id;
+        else fail("Expected one Newick tree");
+        return id;
+      }
+      function suffix(id,internal) {
+        if(internal && peek().kind==="label")nodes[id].label=take().value;
+        if(peek().kind!==":")return;
+        take();
+        const value=take();
+        if(value.kind!=="label" ||
+            !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.value)) {
+          fail("Expected a finite numeric branch length");
+        }
+        const length=Number(value.value);
+        if(!Number.isFinite(length) || length<0)fail("Branch lengths must be finite and nonnegative");
+        nodes[id].length=length;
+      }
+      while(true) {
+        if(needNode) {
+          const next=take();
+          if(next.kind==="(") {stack.push(add()); continue;}
+          if(next.kind!=="label" || !next.value)fail("Expected a named tip or subtree");
+          suffix(add(next.value),false); needNode=false;
+        } else {
+          const next=take();
+          if(next.kind===",") {
+            if(!stack.length)fail("Unexpected comma outside a subtree");
+            needNode=true;
+          } else if(next.kind===")") {
+            if(!stack.length)fail("Unmatched closing parenthesis");
+            suffix(stack.pop(),true);
+          } else if(next.kind===";") {
+            if(stack.length)fail("Unclosed subtree");
+            if(peek().kind!=="end")fail("Upload exactly one Newick tree");
+            break;
+          } else fail("Expected a comma, closing parenthesis, or terminating semicolon");
+        }
+      }
+      return {nodes,root};
+    }
+
+    function matchNewick(parsed,recordIds) {
+      const wanted=new Set(recordIds), seen=new Set();
+      for(const node of parsed.nodes)if(!node.children.length) {
+        if(seen.has(node.label))throw new Error(`Duplicate tip ID: ${node.label}.`);
+        seen.add(node.label);
+      }
+      const missing=recordIds.filter(id=>!seen.has(id));
+      if(missing.length)throw new Error(
+        `Missing ${missing.length} of ${recordIds.length} record IDs (examples: ${missing.slice(0,5).join(", ")}). Use original record IDs, not species display labels.`);
+      const kept=new Map();
+      for(let id=parsed.nodes.length-1;id>=0;id--) {
+        const node=parsed.nodes[id];
+        if(!node.children.length) {
+          if(wanted.has(node.label))kept.set(id,{...node,children:[]});
+          continue;
+        }
+        const children=node.children.map(child=>kept.get(child)).filter(Boolean);
+        if(children.length===1) {
+          const child=children[0];
+          child.length=child.length===null||node.length===null?null:child.length+node.length;
+          kept.set(id,child);
+        } else if(children.length)kept.set(id,{...node,children});
+      }
+      const root=kept.get(parsed.root);
+      if(!root)throw new Error("No displayed record IDs were found.");
+      root.length=0;
+      const preorder=[], pending=[{node:root,distance:0,depth:0}];
+      while(pending.length) {
+        const item=pending.pop();
+        if(!Number.isFinite(item.distance))throw new Error("Path lengths exceed the numeric range.");
+        preorder.push(item);
+        for(const child of item.node.children)pending.push({
+          node:child,distance:item.distance+(child.length??0),depth:item.depth+1,
+        });
+      }
+      const ids=new Map(), descendants=new Map(), nodes=[], sortedIds=[...recordIds].sort();
+      for(const {node,distance,depth} of preorder.reverse()) {
+        const tips=node.children.length
+          ?node.children.flatMap(child=>descendants.get(child)):[node.label];
+        descendants.set(node,tips);
+        let split=null;
+        if(tips.length>1 && tips.length<recordIds.length-1) {
+          const subset=new Set(tips);
+          split=JSON.stringify(subset.has(sortedIds[0])
+            ?[...tips].sort():sortedIds.filter(id=>!subset.has(id)));
+        }
+        const id=nodes.length; ids.set(node,id);
+        nodes.push({id,children:node.children.map(child=>ids.get(child)),label:node.label,
+          leaf:!node.children.length,length:node.length,distance,depth,split});
+      }
+      return {tree:{root:ids.get(root),nodes,hasLengths:nodes.every(node=>node.length!==null)},
+        originalTips:seen.size,prunedTips:seen.size-recordIds.length};
+    }
+
+    function treeRF(first,second) {
+      const splits=tree=>new Set(tree.nodes.map(node=>node.split).filter(Boolean));
+      const left=splits(first),right=splits(second);
+      const shared=[...left].filter(split=>right.has(split)).length;
+      const denominator=left.size+right.size,rf=denominator-2*shared;
+      return {kind:"split",rf,rf_normalized:denominator?rf/denominator:null,
+        rf_denominator:denominator,rf_normalization:"observed_informative_splits",shared,
+        inferred_only:left.size-shared,reference_only:right.size-shared,
+        inferred_count:left.size,reference_count:right.size};
+    }
+
+    function treePaths(tree,recordIds) {
+      if(tree.hasLengths===false)return null;
+      const nodes=new Map(tree.nodes.map(node=>[node.id,node])), routes=new Map();
+      const stack=[{id:tree.root,route:[]}];
+      while(stack.length) {
+        const {id,route}=stack.pop(),node=nodes.get(id),path=[...route,id];
+        if(node.leaf)routes.set(node.label,path);
+        else node.children.forEach(child=>stack.push({id:child,route:path}));
+      }
+      const result=[];
+      for(let i=0;i<recordIds.length;i++)for(let j=i+1;j<recordIds.length;j++) {
+        const first=routes.get(recordIds[i]),second=routes.get(recordIds[j]);
+        let ancestor=tree.root;
+        for(let k=0;k<Math.min(first.length,second.length) && first[k]===second[k];k++)ancestor=first[k];
+        const base=nodes.get(ancestor).distance;
+        const distance=(nodes.get(first[first.length-1]).distance-base)
+          +(nodes.get(second[second.length-1]).distance-base);
+        if(!Number.isFinite(distance))throw new Error("Path lengths exceed the numeric range.");
+        result.push(distance);
+      }
+      return result;
+    }
+
+    function correlation(first,second) {
+      if(!first || !second || first.length<2)return null;
+      const average=values=>values.reduce((sum,value)=>sum+value/values.length,0);
+      const x=average(first),y=average(second);
+      // Scaling deviations avoids overflow for uploaded trees with very large units.
+      const scaleX=first.reduce((maximum,value)=>Math.max(maximum,Math.abs(value-x)),0);
+      const scaleY=second.reduce((maximum,value)=>Math.max(maximum,Math.abs(value-y)),0);
+      if(!scaleX || !scaleY)return null;
+      let xx=0,yy=0,xy=0;
+      first.forEach((value,i)=>{
+        const a=(value-x)/scaleX,b=(second[i]-y)/scaleY;
+        xx+=a*a; yy+=b*b; xy+=a*b;
+      });
+      return Math.max(-1,Math.min(1,xy/Math.sqrt(xx*yy)));
+    }
+
+    function serializeNewick(tree) {
+      const texts=new Map();
+      for(const node of tree.nodes) {
+        const children=node.children.length?`(${node.children.map(id=>texts.get(id)).join(",")})`:"";
+        const label=node.label?`'${node.label.replaceAll("'","''")}'`:"";
+        texts.set(node.id,children+label+(node.length===null?"":`:${node.length}`));
+      }
+      return texts.get(tree.root)+";\n";
+    }
+
+    function initialize(data) {
+      const $ = id => document.getElementById(id);
+      const number = (value, digits=3) => value === null ? "n/a" : Number(value).toFixed(digits);
+      const NS = "http://www.w3.org/2000/svg";
+      const colors = {left:"#ad5c26",right:"#087f83",shared:"#819496"};
+      const names = Object.keys(data.methods);
+      for(const tree of Object.values(data.trees))for(const node of tree.nodes) {
+        if(node.split)node.split=JSON.stringify(JSON.parse(node.split));
+      }
+      const recordIds=Object.keys(data.speciesById).sort();
+      const referencePaths=treePaths(data.trees.reference,recordIds);
+      const newickURLs=new Map();
+      $("status").hidden=true; $("app").hidden=false;
+      $("genus").textContent=data.genus;
+      document.title=`${data.genus} - representation comparison`;
+      for (const [value,label] of [[data.records,"records"],[data.species,"species"],
+          [data.dimensions,"embedding dimensions"],[data.pairs.toLocaleString(),"leaf pairs"]]) {
+        const item=document.createElement("span"), strong=document.createElement("strong");
+        strong.textContent=value; item.append(strong,document.createTextNode(label)); $("cohort").append(item);
+      }
+      $("evaluation-note").textContent=`All ${data.pairs.toLocaleString()} unordered pairs among the same ${data.records} records; no held-out split.`;
+      const counts={};
+      Object.values(data.speciesById).forEach(name=>counts[name]=(counts[name]||0)+1);
+      $("singletons").textContent=`${Object.values(counts).filter(n=>n>1).length} of ${data.species} species have multiple records. Differences among point representations can only originate in those multi-record species before genus assembly.`;
+      $("provenance").textContent=`Source: real stored embeddings, SHA-256 ${data.provenance.sha256}. Midpoint roots are not inferred biological ancestors.`;
+      const body=$("metrics-table").querySelector("tbody");
+      function addMethod(name) {
+        for(const id of ["left-method","right-method"]) {
+          const option=document.createElement("option"); option.value=name;
+          option.textContent=data.methods[name].label; $(id).append(option);
+        }
+        const item=data.methods[name], row=document.createElement("tr"); row.dataset.method=name;
+        const label=document.createElement("td"), unit=document.createElement("span");
+        label.textContent=item.label; unit.className="unit"; unit.textContent=item.units; label.append(unit);
+        row.append(label);
+        for (const value of [item.rf_to_centroid.rf,item.rf_to_reference.rf,
+            number(item.cosine_comparison.spearman),number(item.reference_path_pearson)]) {
+          const cell=document.createElement("td"); cell.className="num"; cell.textContent=value; row.append(cell);
+        }
+        const cell=document.createElement("td"), button=document.createElement("button");
+        button.textContent="Compare"; button.setAttribute("aria-label",`Compare ${item.label} with the left tree`);
+        button.addEventListener("click",()=>{$("right-method").value=name; render(); $("chart").scrollIntoView({block:"center"});});
+        cell.append(button); row.append(cell); body.append(row);
+        $("view-count").textContent=`One cohort. ${names.length} trees.`;
+      }
+      names.forEach(addMethod);
+      $("left-method").value=names.includes(data.defaultComparison?.left)?data.defaultComparison.left:"centroid";
+      $("right-method").value=names.includes(data.defaultComparison?.right)?data.defaultComparison.right:"medoid";
+      let dataURL=null;
+      function updateDataDownload() {
+        if(dataURL)URL.revokeObjectURL(dataURL);
+        dataURL=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+        $("data-download").href=dataURL;
+      }
+      updateDataDownload();
+      $("newick-upload").addEventListener("change",async event=>{
+        const input=event.target,file=input.files[0],status=$("upload-status");
+        if(!file)return;
+        input.disabled=true;
+        status.classList.remove("error"); status.setAttribute("role","status");
+        status.textContent=`Reading ${file.name} locally...`;
+        try {
+          if(file.size>20*1024*1024)throw new Error("File exceeds the 20 MB upload limit.");
+          const matched=matchNewick(parseNewick(await file.text()),recordIds);
+          const tree=matched.tree,paths=treePaths(tree,recordIds);
+          const comparisons=Object.fromEntries(names.map(name=>[name,treeRF(tree,data.trees[name])]));
+          const reverse=Object.fromEntries(names.map(name=>[name,treeRF(data.trees[name],tree)]));
+          const pathCorrelation=correlation(paths,referencePaths);
+          let index=1; while(names.includes(`upload_${index}`))index++;
+          const name=`upload_${index}`;
+          data.methods[name]={
+            label:`Uploaded: ${file.name}`,units:tree.hasLengths?"Supplied file units":"Lengths missing",
+            description:`Local Newick upload. ${recordIds.length} matched records; ${matched.prunedTips} extra tips pruned. Supplied rooting retained; no embedding inference or branch-length calibration.`,
+            rf_to_centroid:comparisons.centroid,rf_to_reference:comparisons.reference,
+            cosine_comparison:{spearman:null},reference_path_pearson:pathCorrelation,
+          };
+          data.trees[name]=tree;
+          data.pairwiseRF[name]={...comparisons,[name]:treeRF(tree,tree)};
+          names.forEach(other=>{data.pairwiseRF[other][name]=reverse[other];});
+          data.provenance.uploads??=[];
+          data.provenance.uploads.push({name,filename:file.name,original_tips:matched.originalTips,
+            matched_tips:recordIds.length,pruned_tips:matched.prunedTips,has_lengths:tree.hasLengths});
+          names.push(name); addMethod(name); updateDataDownload();
+          $("right-method").value=name; render();
+          status.textContent=`Loaded ${file.name}: ${recordIds.length} matched records; ${matched.prunedTips} extra tips pruned.${tree.hasLengths?"":" Missing lengths: topology comparison only."}`;
+        } catch(error) {
+          status.classList.add("error"); status.setAttribute("role","alert");
+          status.textContent=`Could not load ${file.name}: ${error.message}`;
+        } finally {input.disabled=false; input.value="";}
+      });
+      function svgElement(tag,attributes={},text) {
+        const element=document.createElementNS(NS,tag);
+        Object.entries(attributes).forEach(([key,value])=>element.setAttribute(key,value));
+        if(text!==undefined) element.textContent=text;
+        return element;
+      }
+      function layout(tree,anchor) {
+        const nodes=new Map(tree.nodes.map(node=>[node.id,node]));
+        const tips=new Map(),children=new Map();
+        for(const node of tree.nodes) {
+          tips.set(node.id,node.leaf?[node.label]:node.children.flatMap(id=>tips.get(id)));
+          const sorted=[...node.children];
+          if(anchor) sorted.sort((a,b)=>{
+            const average=id=>tips.get(id).reduce((sum,leaf)=>sum+anchor.get(leaf),0)/tips.get(id).length;
+            return average(a)-average(b);
+          });
+          children.set(node.id,sorted);
+        }
+        const order=[];
+        function visit(id) {const node=nodes.get(id); if(node.leaf)order.push(node.label); else children.get(id).forEach(visit);}
+        visit(tree.root);
+        const leafY=new Map(order.map((id,i)=>[id,92+i*24])),y=new Map(),parent=new Map();
+        for(const node of tree.nodes) {
+          if(node.leaf)y.set(node.id,leafY.get(node.label));
+          else {
+            const positions=node.children.map(id=>y.get(id));
+            y.set(node.id,(Math.min(...positions)+Math.max(...positions))/2);
+            node.children.forEach(id=>parent.set(id,node.id));
+          }
+        }
+        return {nodes,tips,children,order,leafY,y,parent};
+      }
+      function render() {
+        const left=$("left-method").value,right=$("right-method").value;
+        const missingLengths=[left,right].some(name=>data.trees[name].hasLengths===false);
+        $("length-note").hidden=!missingLengths;
+        $("layout").querySelector('option[value="length"]').disabled=missingLengths;
+        if(missingLengths)$("layout").value="topology";
+        const pair=data.pairwiseRF[left][right];
+        $("pair-rf").textContent=`RF ${pair.rf}  /  normalized ${number(pair.rf_normalized)}  /  shared splits ${pair.shared}`;
+        for(const side of ["left","right"]) {
+          const name=side==="left"?left:right, method=data.methods[name];
+          $(`${side}-title`).textContent=method.label;
+          $(`${side}-description`).textContent=`${method.description} Units: ${method.units}.`;
+          if(!newickURLs.has(name))newickURLs.set(name,URL.createObjectURL(
+            new Blob([serializeNewick(data.trees[name])],{type:"text/plain"})));
+          $(`${side}-download`).href=newickURLs.get(name);
+          $(`${side}-download`).download=`${name}.nwk`;
+        }
+        body.querySelectorAll("tr").forEach(row=>row.classList.toggle("current",row.dataset.method===right));
+        const leftTree=data.trees[left],rightTree=data.trees[right];
+        const first=layout(leftTree);
+        const anchor=$("align").checked?new Map(first.order.map((id,i)=>[id,i])):null;
+        const second=layout(rightTree,anchor);
+        const layouts={left:first,right:second},trees={left:leftTree,right:rightTree};
+        const width=1440,height=92+data.records*24+55;
+        const svg=svgElement("svg",{viewBox:`0 0 ${width} ${height}`,role:"img",
+          "aria-label":`${data.genus}: ${data.methods[left].label} versus ${data.methods[right].label}, ${data.records} matched record labels`});
+        const query=$("search").value.trim().toLowerCase();
+        const found=new Set(Object.keys(data.speciesById).filter(id=>
+          `${data.speciesById[id]} ${id}`.toLowerCase().includes(query)));
+        if($("links").checked) {
+          for(const id of first.order) {
+            const y1=first.leafY.get(id),y2=second.leafY.get(id);
+            const line=svgElement("path",{d:`M660,${y1} C710,${y1} 730,${y2} 780,${y2}`,
+              class:`tip-link${query&&!found.has(id)?" dim":""}`,"data-record":id});
+            svg.append(line);
+          }
+        }
+        const edgeElements=[],labelElements=[];
+        function highlight(id) {
+          edgeElements.forEach(({element,side,node})=>{
+            const matched=id && layouts[side].tips.get(node.id).includes(id);
+            element.classList.toggle("focus-edge",Boolean(matched));
+          });
+          labelElements.forEach(({element,record})=>element.classList.toggle("focus-label",record===id));
+          svg.querySelectorAll(".tip-link").forEach(link=>link.classList.toggle("focus-link",link.dataset.record===id));
+        }
+        for(const side of ["left","right"]) {
+          const current=layouts[side],tree=trees[side],method=data.methods[side==="left"?left:right];
+          const other=trees[side==="left"?"right":"left"];
+          const otherSplits=new Set(other.nodes.map(n=>n.split).filter(Boolean));
+          const lengths=$("layout").value==="length";
+          const maximum=Math.max(...tree.nodes.map(n=>lengths?n.distance:n.depth),1e-12);
+          const x=node=>{
+            const value=!lengths&&node.leaf?maximum:(lengths?node.distance:node.depth);
+            return side==="left"?40+350*value/maximum:1400-350*value/maximum;
+          };
+          const tx=side==="left"?40:1400,align=side==="left"?"start":"end";
+          svg.append(svgElement("text",{x:tx,y:23,"text-anchor":align,fill:colors[side],
+            "font-size":17,"font-weight":650},method.label));
+          svg.append(svgElement("text",{x:tx,y:45,"text-anchor":align,fill:"#587278","font-size":11},
+            lengths?`0 to ${number(maximum,4)} · ${method.units} · independent scale`:"Equal-step cladogram · branch lengths not shown"));
+          for(const node of tree.nodes) {
+            if(node.id!==tree.root) {
+              const parent=current.nodes.get(current.parent.get(node.id));
+              const changed=node.split&&!otherSplits.has(node.split);
+              const active=!query||current.tips.get(node.id).some(id=>found.has(id));
+              const path=svgElement("path",{d:`M${x(parent)},${current.y.get(parent.id)} V${current.y.get(node.id)} H${x(node)}`,
+                class:`tree-edge${active?"":" dim"}`,stroke:changed?colors[side]:"#819496",
+                "stroke-width":changed?2.1:1.2});
+              path.append(svgElement("title",{},`${node.label||"Internal edge"}; length ${number(node.length,6)}; ${changed?"split differs":"shared or terminal edge"}`));
+              svg.append(path); edgeElements.push({element:path,side,node});
+            }
+            if(node.leaf) {
+              const y=current.y.get(node.id),labelX=side==="left"?403:1037;
+              const label=svgElement("text",{x:labelX,y:y+4,"text-anchor":side==="left"?"start":"end",
+                class:`tip-label${query&&!found.has(node.label)?" dim":""}`,tabindex:0,
+                "data-record":node.label});
+              label.textContent=$("show-ids").checked?`${data.speciesById[node.label]} · ${node.label}`:data.speciesById[node.label];
+              label.append(svgElement("title",{},`${data.speciesById[node.label]} | ${node.label}`));
+              const leader=svgElement("path",{d:`M${x(node)},${y} H${side==="left"?397:1043}`,
+                fill:"none",stroke:"#cbd7d5","stroke-width":.7,"stroke-dasharray":"2 3"});
+              svg.append(leader,label); labelElements.push({element:label,record:node.label});
+              label.addEventListener("pointerenter",()=>highlight(node.label));
+              label.addEventListener("pointerleave",()=>highlight(null));
+              label.addEventListener("focus",()=>highlight(node.label));
+              label.addEventListener("blur",()=>highlight(null));
+            }
+          }
+        }
+        svg.append(svgElement("text",{x:720,y:height-15,"text-anchor":"middle",fill:"#587278","font-size":11},
+          query?`${found.size} matching records; all ${data.records} remain in both trees`:`${data.records} identical record IDs in both trees`));
+        $("chart").replaceChildren(svg);
+      }
+      ["left-method","right-method","layout","align","links","show-ids"].forEach(id=>$(id).addEventListener("change",render));
+      $("search").addEventListener("input",render);
+      $("swap").addEventListener("click",()=>{
+        const previous=$("left-method").value;
+        $("left-method").value=$("right-method").value; $("right-method").value=previous; render();
+      });
+      render();
+    }
+  </script>
+</body>
+</html>

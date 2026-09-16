@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Whole-tree centroid evaluation</title>
+  <style>
+    :root { color:#19383d; background:#eef5f4; font:15px/1.55 -apple-system,
+      BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    * { box-sizing:border-box; }
+    main { max-width:1240px; margin:auto; padding:30px 24px 50px; }
+    .eyebrow { font:12px Menlo,Consolas,monospace; color:#587278; letter-spacing:.08em; }
+    h1 { font:600 clamp(28px,4vw,44px)/1.2 "Avenir Next","Trebuchet MS",sans-serif;
+      margin:10px 0; }
+    h2 { margin:0 0 10px; font-size:21px; }
+    p { margin:8px 0 15px; }
+    .muted { color:#587278; }
+    .warning { padding:12px 18px; border-left:3px solid #ad5c26; background:#fcf5ec; }
+    section { background:white; border:1px solid #d2e1df; border-radius:10px;
+      margin-top:20px; padding:20px; }
+    .coverage { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+    .coverage strong { display:block; font:600 30px Menlo,Consolas,monospace; color:#087f83; }
+    .coverage span { display:block; color:#587278; font-size:13px; }
+    .table-scroll { overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { text-align:left; padding:11px 12px; border-bottom:1px solid #d2e1df; }
+    th { color:#587278; background:#f4f8f7; }
+    td:not(:first-child) { font-family:Menlo,Consolas,monospace; }
+    .note { font-size:13px; color:#587278; }
+    ul { padding-left:22px; }
+    li { margin:7px 0; }
+    a { color:#006b77; }
+    a:focus-visible { outline:3px solid #247eb4; outline-offset:3px; }
+    .downloads { display:flex; flex-wrap:wrap; gap:12px 24px; }
+    footer { margin-top:20px; font-size:12px; overflow-wrap:anywhere; color:#587278; }
+    @media(max-width:650px) { main { padding:20px 12px; } section { padding:14px; }
+      .coverage { grid-template-columns:1fr; gap:14px; } th,td { padding:9px 8px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">EVOSPAICE / ALGORITHM REVIEW / WHOLE-TREE METRICS</div>
+    <h1>Centroid versus sequence reference</h1>
+    <p class="muted">The complete trees are evaluated on their shared original record IDs.
+      This is not the Papilio-only comparison.</p>
+    <p class="warning">An experimental embedding tree compared with a sequence-derived estimate.
+      Shared taxonomy constraints and fitting data limit claims of independent biological accuracy.</p>
+    <section class="coverage" id="coverage" aria-label="Evaluation cohort"></section>
+    <section>
+      <h2>Topology</h2>
+      <div class="table-scroll"><table id="topology">
+        <thead><tr><th>Metric</th><th>Value</th><th>Scope</th></tr></thead><tbody></tbody>
+      </table></div>
+      <p id="kc-note" class="note"></p>
+    </section>
+    <section>
+      <h2>Embedding-distance fidelity</h2>
+      <p id="sampling" class="note"></p>
+      <div class="table-scroll"><table id="fidelity">
+        <thead><tr><th>Metric</th><th>Centroid</th><th>Reference</th></tr></thead><tbody></tbody>
+      </table></div>
+      <p class="note">Patristic correlation uses leaf-to-leaf path lengths, not ultrametric merge
+        heights. Review stress is squared relative error, without a square root. Raw reference
+        magnitude scores are omitted here because sequence and cosine distances have different units.
+        Scalar-aligned stress is fitted on the evaluated pairs, not held-out calibration.</p>
+      <p id="path-comparison"></p>
+    </section>
+    <section>
+      <h2>Taxonomic clade purity</h2>
+      <div class="table-scroll"><table id="purity">
+        <thead><tr><th>Rank</th><th>Multi-record taxa</th><th>Centroid mean purity</th>
+          <th>Reference mean purity</th><th>Reference monophyletic fraction</th></tr></thead><tbody></tbody>
+      </table></div>
+      <p class="note">Singleton taxa are excluded from these means. Purity is the taxon's record
+        count divided by its MRCA subtree size, using each supplied root after matching IDs.
+        Centroid taxonomy was imposed during construction: its purity is a constraint check.</p>
+    </section>
+    <section><h2>Not measured in this first pass</h2><ul id="pending"></ul></section>
+    <section><h2>Definitions and limitations</h2><ul id="interpretation"></ul></section>
+    <section>
+      <h2>Reproducible outputs</h2>
+      <div class="downloads">
+        <a id="json-download" download="report.json">Report JSON</a>
+        <a href="taxa.tsv">Record coverage</a><a href="taxon-purity.tsv">Per-taxon purity</a>
+        <a href="evaluated-pairs.tsv">Evaluated pairs</a><a href="neighbors.tsv">Neighbor sets</a>
+        <a href="centroid-matched.nwk">Matched centroid tree</a>
+        <a href="reference-matched.nwk">Matched reference tree</a>
+      </div>
+    </section>
+    <footer id="provenance"></footer>
+  </main>
+  <script>
+    const DATA = /* VALIDATION_DATA */ null;
+    if (DATA) {
+      const $=id=>document.getElementById(id), number=value=>value===null?"n/a":Number(value).toFixed(4);
+      function row(table,values) {
+        const tr=document.createElement("tr");
+        for(const value of values) {const td=document.createElement("td"); td.textContent=value; tr.append(td);}
+        $(table).querySelector("tbody").append(tr);
+      }
+      for(const [label,value,note] of [
+        ["Centroid input",DATA.coverage.centroid.original_tips,`${DATA.coverage.centroid.excluded_tips.toLocaleString()} IDs absent from reference`],
+        ["Reference input",DATA.coverage.reference.original_tips,`${DATA.coverage.reference.excluded_tips.toLocaleString()} IDs absent from centroid`],
+        ["Matched cohort",DATA.coverage.shared_tips,"All matching IDs; no genus/family subsampling"],
+      ]) {
+        const item=document.createElement("div"),strong=document.createElement("strong"),small=document.createElement("span");
+        item.append(document.createTextNode(label)); strong.textContent=value.toLocaleString();
+        small.textContent=note; item.append(strong,small); $("coverage").append(item);
+      }
+      const rf=DATA.topology.rf,kc=DATA.topology.kendall_colijn;
+      row("topology",["Robinson-Foulds",rf.rf.toLocaleString(),"Exact, all matched tips"]);
+      row("topology",["Normalized RF",number(rf.rf_normalized),`Denominator: ${rf.rf_denominator.toLocaleString()} observed splits`]);
+      row("topology",["Shared unrooted splits",rf.shared.toLocaleString(),`${rf.inferred_count.toLocaleString()} centroid / ${rf.reference_count.toLocaleString()} reference`]);
+      row("topology",["Kendall-Colijn, topology only",number(kc.distance),kc.exact?"Exact":"Sampled-pair estimate"]);
+      row("topology",["Normalized topology KC",number(kc.normalized),"Difference norm / sum of vector norms"]);
+      $("kc-note").textContent=`KC uses root-to-MRCA edge counts and unit pendant entries (lambda = 0).
+        Both trees are rooted at ${kc.rooting.outgroup_id}'s edge as a convention, not a biological root.
+        The normalization is explicitly chosen, not uniquely standardized.`;
+      $("sampling").textContent=`${DATA.sampling.sampled_pairs.toLocaleString()} uniformly sampled pairs
+        of ${DATA.sampling.possible_pairs.toLocaleString()} possible; seed ${DATA.sampling.seed}.
+        Neighbors use ${DATA.neighbors.anchors} sampled anchors and all ${DATA.neighbors.candidate_tips.toLocaleString()} matched candidates.`;
+      const a=DATA.embedding_fidelity.centroid,b=DATA.embedding_fidelity.reference;
+      for(const [label,key] of [["Patristic Pearson","pearson"],["Patristic Spearman","spearman"]])
+        row("fidelity",[label,number(a.raw[key]),number(b.raw[key])]);
+      for(const [label,key] of [["Review stress (squared)","stress_squared"],["MAE","mae"],["MAPE (%)","mape_percent"]])
+        row("fidelity",[label,number(a.raw[key]),"Different units"]);
+      row("fidelity",["MAPE zero targets excluded",a.raw.mape_zero_targets_excluded,b.raw.mape_zero_targets_excluded]);
+      row("fidelity",["Scalar-aligned squared stress",number(a.scale_aligned.metrics?.stress_squared??null),
+        number(b.scale_aligned.metrics?.stress_squared??null)]);
+      row("fidelity",[`Embedding neighbor precision@${DATA.neighbors.k}`,
+        number(DATA.neighbors.mean_precision_at_k.centroid),number(DATA.neighbors.mean_precision_at_k.reference)]);
+      const paths=DATA.reference_path_comparison;
+      $("path-comparison").textContent=`Centroid versus reference path distances: Pearson ${number(paths.raw.pearson)};
+        Spearman ${number(paths.raw.spearman)}. Scalar-aligned squared stress:
+        ${number(paths.scale_aligned.metrics?.stress_squared??null)}.`;
+      for(const [rank,values] of Object.entries(DATA.taxonomic_purity.by_rank))
+        row("purity",[rank,values.centroid.nontrivial_taxa,number(values.centroid.macro_purity_nontrivial),
+          number(values.reference.macro_purity_nontrivial),number(values.reference.monophyletic_fraction_nontrivial)]);
+      for(const [name,reason] of Object.entries(DATA.not_computed)) {
+        const li=document.createElement("li"); li.textContent=`${name.replaceAll("_"," ")}: ${reason}.`; $("pending").append(li);
+      }
+      for(const text of DATA.interpretation) {const li=document.createElement("li"); li.textContent=text; $("interpretation").append(li);}
+      $("json-download").href=URL.createObjectURL(new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"}));
+      $("provenance").textContent=Object.entries(DATA.inputs).map(([name,input])=>`${name}: ${input.path} (SHA-256 ${input.sha256})`).join(" | ");
+    }
+  </script>
+</body>
+</html>
