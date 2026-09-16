@@ -26,7 +26,7 @@ uses the installed environment without resolving unrelated optional packages.
 
 The included [reference tree](../../../tests/data/reference_tree.nwk) and
 [mock tree](../../../tests/data/embedding_tree_mock.nwk) share tip labels A, B,
-C and D. 
+C and D.
 
 ```bash
 uv run --no-sync evospaice validate \
@@ -131,6 +131,72 @@ classification is performed. The sequence-derived reference is itself an estimat
 * [DendroPy path distances](https://jeetsukumaran.github.io/DendroPy/library/phylogeneticdistance.html) (background only; not computed by this validator)
 * [Diversity background references](../../../docs/README.md#diversity-background)
 * [Implementation plan](../../../docs/diversity-tree-validation-plan.md)
+
+## Whole-tree algorithm-review metrics
+
+The separate `whole_tree` module implements the first, static evaluation pass
+from section 4 of `docs/dna-tree-algorithmic-literature-survey.html`. It does not
+change the existing topology-only `evospaice validate` command or its output
+schema.
+
+```bash
+uv run python -m evospaice.validate.whole_tree \
+  --inferred results/lepidoptera-centroid-complete/centroid.nwk \
+  --reference data/pruned.tre.txt \
+  --embeddings /path/to/butterfly-omnidna-leray.npz \
+  --pairs 50000 --anchors 128 --neighbors 10 --seed 42 \
+  --output-dir results/lepidoptera-centroid-validation
+```
+
+The input trees are not modified. Comparison uses their exact, case-sensitive
+record-ID intersection, with no genus/family subsampling or BIN remapping.
+Every shared ID must have a valid embedding and complete taxonomy. A new
+output directory is required. Non-root branch lengths must be finite and
+nonnegative on the matched trees; missing lengths are not imputed.
+
+| Review metric | Implemented definition and scope |
+| --- | --- |
+| RF / normalized RF | Exact informative unrooted split comparison on every matched tip. Normalization uses the sum of observed split counts, including zero-length resolved splits. |
+| Kendall-Colijn | Topology-only, lambda = 0: root-to-MRCA **edge counts** plus one unit pendant entry per leaf. Both trees are rooted at the same lexicographically first matched tip edge; unary nodes are suppressed. |
+| Normalized KC | Explicit bounded convention: Euclidean difference divided by the sum of the vector norms. This is not a uniquely standardized KC normalization. Uniform sampled pair sums are expanded to the full pair count, so the reported large-cohort distance and normalized ratio are estimates, not exact scores. |
+| Taxonomic monophyly/purity | For each taxon, its record count divided by its MRCA subtree's tip count. Uses supplied roots after pruning. Reports all taxa and multi-record taxa separately, plus the fraction with purity exactly one. |
+| CPCC-related correlation | Patristic Pearson and Spearman against embedding cosine distance. NJ trees are not ultrametric; these are **not merge-height CPCC** as phrased in the review. |
+| Stress | The review's squared relative error, `sum((tree - target)^2) / sum(target^2)`, without a square root. `normalized_stress` is retained as the square-root version used in the earlier centroid report. |
+| MAE / MAPE | Absolute error and mean percentage error on sampled pairs. MAPE excludes and counts exactly zero target distances; near-zero targets remain and can dominate. |
+| k-NN preservation | Mean overlap/k for uniformly sampled anchors, with exact nearest neighbors searched over **all matched candidates**. Equal computed distances break ties by record ID. Anchor sampling uses seed + 1. |
+
+All sampled quantities are descriptive, not held-out tests. High correlation
+alone does not establish low distortion. Reference sequence distances and
+centroid cosine-derived lengths have different units: raw reference magnitude
+errors are labelled diagnostic only. A separate nonnegative scalar fit is
+reported, fitted and evaluated on the same pairs, without claims of biological
+calibration.
+
+Centroid taxonomic purity is a construction-constraint check, not independent
+accuracy. The sequence reference is an estimate and may share taxonomic
+constraints. Supplied-root purity and common-outgroup KC have different,
+explicit rooting policies.
+
+Bootstrap support, feature-noise perturbation, and subsampling invariance are
+explicitly **not computed** from the two static trees. They require replicate
+rebuilds and defined perturbation/assignment rules. Gaussian feature noise is
+not equivalent to a classical sequence-site bootstrap. Branch-length KC is
+also omitted because the two trees have incompatible length units.
+
+Outputs include an offline `index.html` metrics dashboard, `report.json`,
+`taxa.tsv`, `taxon-purity.tsv`, `evaluated-pairs.tsv`, `neighbors.tsv`, and
+branch-length-preserving `centroid-matched.nwk` / `reference-matched.nwk`.
+The JSON records input hashes, versions, sampling, rooting, definitions,
+undefined quantities, and uncomputed metrics.
+
+The implementation uses indexed, vectorized MRCA queries and one candidate
+distance vector per neighbor anchor, not a global all-pairs distance matrix.
+RF summary mode skips per-split label expansion; the existing detailed
+per-clade RF output remains unchanged by default.
+
+```bash
+uv run python -m pytest tests/test_whole_tree_metrics.py tests/test_validate.py
+```
 
 ## Matched-leaf evaluation dataset
 

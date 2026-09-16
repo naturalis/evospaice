@@ -48,17 +48,23 @@
   </head>
   <body>
     <div id="root">
-      <div class="status">Loading the pruned phylogenetic tree...</div>
+      <div class="status">Loading the phylogenetic tree...</div>
     </div>
     <script type="module">
       import React from "react";
       import { createRoot } from "react-dom/client";
       import Taxonium from "https://esm.sh/taxonium-component@2.1.24?external=react,react-dom";
 
-      const treeUrl = "/data/pruned.tre.txt";
+      const parameters = new URLSearchParams(window.location.search);
+      const treePath = parameters.get("tree") || "/data/pruned.tre.txt";
       const container = document.getElementById("root");
+      document.title = parameters.get("title") || "Evospaice Taxonium viewer";
 
       async function loadTree() {
+        const treeUrl = new URL(treePath, window.location.href);
+        if (treeUrl.origin !== window.location.origin) {
+          throw new Error("The Newick input must be served from this local viewer's origin.");
+        }
         const response = await fetch(treeUrl);
         if (!response.ok) {
           throw new Error(`Could not load ${treeUrl}: HTTP ${response.status}`);
@@ -71,7 +77,7 @@
 
         const sourceData = {
           status: "loaded",
-          filename: "pruned.tre.txt",
+          filename: treeUrl.pathname.split("/").pop(),
           filetype: "nwk",
           data: newick,
         };
@@ -81,7 +87,11 @@
 
       loadTree().catch((error) => {
         console.error(error);
-        container.innerHTML = `<div class="status" data-state="error">${error.message}</div>`;
+        const status = document.createElement("div");
+        status.className = "status";
+        status.dataset.state = "error";
+        status.textContent = error.message;
+        container.replaceChildren(status);
       });
     </script>
   </body>
