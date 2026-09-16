@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
 <html lang="en">
   <head>
     <meta charset="UTF-8">
@@ -312,6 +313,23 @@
         color: #a32929;
       }
 
+      .internal-node-toggle {
+        display: flex;
+        min-height: 2rem;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .internal-node-toggle input {
+        width: 1rem;
+        height: 1rem;
+        margin: 0;
+        accent-color: #1d1d1d;
+      }
+
       .overlap-details {
         position: relative;
         flex: 0 0 auto;
@@ -504,7 +522,8 @@
           "react/jsx-runtime": "https://esm.sh/react@19.1.1/jsx-runtime",
           "react/jsx-dev-runtime": "https://esm.sh/react@19.1.1/jsx-dev-runtime",
           "react-dom": "https://esm.sh/react-dom@19.1.1",
-          "react-dom/client": "https://esm.sh/react-dom@19.1.1/client"
+          "react-dom/client": "https://esm.sh/react-dom@19.1.1/client",
+          "prop-types": "https://esm.sh/prop-types@15.8.1"
         }
       }
     </script>
@@ -551,6 +570,10 @@
         <button id="show-overlap-only" class="subtree-button" type="button" hidden>
           Show overlap only
         </button>
+        <label class="internal-node-toggle">
+          <input id="show-internal-nodes" type="checkbox">
+          Show internal nodes
+        </label>
         <div class="subtree-controls" aria-label="Subtree focus">
           <strong>Subtree focus</strong>
           <span id="selection-instruction">Select two nodes in the tree</span>
@@ -567,16 +590,19 @@
     <script type="module">
       import React from "react";
       import { createRoot } from "react-dom/client";
-      import Taxonium from "https://esm.sh/taxonium-component@2.1.24?external=react,react-dom";
+      import Taxonium from "./vendor/taxonium-component/taxonium-component.es.js";
       import {
         filterToTipLabels,
         findMrca,
         parseNewickTopology,
+        propagateTipMemberships,
         serializeSubtree,
+        serializeTreeWithMemberships,
       } from "./newick.mjs";
 
       const treeUrl = "/data/pruned.tre.txt";
-      const taxonomyUrl = "/data/pruned.taxonomy.tsv";
+      const taxonomyUrl = "/data/unified_taxonomic_tree_metadata.tsv";
+      const fallbackTaxonomyUrl = "/data/pruned.taxonomy.tsv";
       const fileInput = document.getElementById("tree-file");
       const overlayInput = document.getElementById("overlay-file");
       const sampleDropzone = document.getElementById("sample-dropzone");
@@ -587,6 +613,7 @@
       const overlapCount = document.getElementById("overlap-count");
       const overlapList = document.getElementById("overlap-list");
       const showOverlapOnlyButton = document.getElementById("show-overlap-only");
+      const showInternalNodesInput = document.getElementById("show-internal-nodes");
       const selectionInstruction = document.getElementById("selection-instruction");
       const nodeSelections = document.getElementById("node-selections");
       const focusSubtreeButton = document.getElementById("focus-subtree");
@@ -613,6 +640,8 @@
       let selectedNodes = [];
       let suppressComparisonAutoZoom = false;
       let taxonomyByNode = new Map();
+      let taxonomyFields = ["species"];
+      let showInternalNodes = false;
       let sampleCounter = 0;
       let treeVersion = 0;
 
@@ -956,15 +985,43 @@
         renderTree();
       }
 
-      function parseTaxonomyMetadata(tsv) {
+      function parseTaxonomyMetadata(tsv, sourceUrl) {
         const lines = tsv.trimEnd().split(/\r?\n/);
-        if (lines.shift() !== "node\tspecies") {
-          throw new Error(`${taxonomyUrl} does not have the expected node and species columns`);
+        const columns = (lines.shift() || "").split("\t");
+        if (!["id", "node"].includes(columns[0]) || columns.length < 2) {
+          throw new Error(`${sourceUrl} does not have an id or node column`);
         }
-        return new Map(lines.map((line) => {
-          const separator = line.indexOf("\t");
-          return [line.slice(0, separator), line.slice(separator + 1)];
+        const fields = columns.slice(1);
+        if (new Set(fields).size !== fields.length) {
+          throw new Error(`${sourceUrl} has duplicate metadata columns`);
+        }
+        const records = new Map(lines.filter(Boolean).map((line) => {
+          const values = line.split("\t");
+          return [values[0], Object.fromEntries(
+            fields.map((field, index) => [field, values[index + 1] || ""]),
+          )];
         }));
+        return { fields, records };
+      }
+
+      function loadMetadataText(sourceUrl) {
+        return new Promise((resolve, reject) => {
+          const request = new XMLHttpRequest();
+          request.open("GET", sourceUrl);
+          request.timeout = 30000;
+          request.onload = () => {
+            if (request.status >= 200 && request.status < 300) {
+              resolve(request.responseText);
+            } else {
+              reject(new Error(
+                `Could not load ${sourceUrl}: HTTP ${request.status}`,
+              ));
+            }
+          };
+          request.onerror = () => reject(new Error(`Could not load ${sourceUrl}`));
+          request.ontimeout = () => reject(new Error(`${sourceUrl} timed out`));
+          request.send();
+        });
       }
 
       function sampleNameFromFilename(selectedFilename) {
@@ -1066,13 +1123,17 @@
           filetype: "nwk",
           data: annotateBranchLengths(displayNewick),
         };
-        let configDict = { defaultColorByField: "None" };
+        let configDict = {
+          defaultColorByField: "None",
+          hideInternalNodes: !showInternalNodes,
+        };
         let initialQuery = {};
         const mainTips = new Set(extractTipLabels(displayNewick));
         const referenceTips = focusedSubtree
           ? new Set(extractTipLabels(currentTree.newick))
           : mainTips;
         const assignments = new Map();
+        let membershipsByNode = new Map();
         const includedOverlays = currentOverlays
           .filter((sample) => sample.included !== false);
         const includedSampleSummary = includedOverlays.length === currentOverlays.length
@@ -1101,6 +1162,10 @@
           renderSampleChips();
           const overlappingTips = [...assignments]
             .filter(([, samples]) => samples.length > 1);
+          membershipsByNode = propagateTipMemberships(
+            displayedTopology.root,
+            assignments,
+          );
           renderOverlapDetails(overlappingTips);
 
           if (matchedTips.size > 0) {
@@ -1108,13 +1173,17 @@
             const colorMapping = Object.fromEntries(
               includedOverlays.map((sample) => [sample.name, sample.color]),
             );
-            new Set(overlappingTips.map(([, samples]) => samples.length))
+            new Set([...membershipsByNode.values()]
+              .filter((memberships) => memberships.length > 1)
+              .map((memberships) => memberships.length))
               .forEach((count) => {
                 colorMapping[`Overlap (${count})`] = [31, 31, 31];
               });
             configDict = {
               defaultColorByField: overlayField,
               colorMapping,
+              colorBranchesByMetadata: true,
+              hideInternalNodes: !showInternalNodes,
             };
             const overlaySearch = {
               key: `overlay-match-${treeVersion + 1}`,
@@ -1164,25 +1233,40 @@
             : "No samples added");
         }
 
+        if (membershipsByNode.size) {
+          sourceData.data = annotateBranchLengths(
+            serializeTreeWithMemberships(displayedTopology.root, membershipsByNode),
+          );
+        }
+
         const comparisonSearchValue = includedOverlays.length
           ? comparisonValue + "\u200B".repeat(treeVersion + 1)
           : "";
+        const comparisonMetadataFields = includedOverlays.length
+          ? ["sample", "sample_memberships", "overlap_count", "in_comparison"]
+          : [];
         const metadataRows = [
-          includedOverlays.length
-            ? "node\tspecies\tsample\tsample_memberships\toverlap_count\tin_comparison"
-            : "node\tspecies",
+          ["node", ...taxonomyFields, ...comparisonMetadataFields].join("\t"),
         ];
         mainTips.forEach((node) => {
-          const species = taxonomyByNode.get(node) || "";
+          const taxonomy = taxonomyByNode.get(node) || {};
+          const taxonomyValues = taxonomyFields.map((field) => taxonomy[field] || "");
           const memberships = assignments.get(node) || [];
           const sample = memberships.length > 1
             ? `Overlap (${memberships.length})`
             : memberships[0] || "";
-          if (species || sample) {
-            metadataRows.push(includedOverlays.length
-              ? `${node}\t${species}\t${sample}\t${memberships.join(", ")}` +
-                `\t${memberships.length}\t${sample ? comparisonSearchValue : ""}`
-              : `${node}\t${species}`);
+          if (taxonomyValues.some(Boolean) || sample) {
+            const comparisonValues = includedOverlays.length
+              ? [
+                sample,
+                memberships.join(", "),
+                memberships.length,
+                sample ? comparisonSearchValue : "",
+              ]
+              : [];
+            metadataRows.push(
+              [node, ...taxonomyValues, ...comparisonValues].join("\t"),
+            );
           }
         });
         if (metadataRows.length > 1) {
@@ -1259,20 +1343,61 @@
         }
       }
 
+      async function loadTaxonomyMetadata() {
+        const fallbackTaxonomy = parseTaxonomyMetadata(
+          await loadMetadataText(fallbackTaxonomyUrl),
+          fallbackTaxonomyUrl,
+        );
+        taxonomyByNode = fallbackTaxonomy.records;
+        taxonomyFields = fallbackTaxonomy.fields;
+        const taxonomyText = await loadMetadataText(taxonomyUrl).catch((error) => {
+          console.warn(
+            `${taxonomyUrl} could not be loaded; using species-only fallback metadata`,
+            error,
+          );
+          return null;
+        });
+        if (taxonomyText !== null) {
+          const richerTaxonomy = parseTaxonomyMetadata(
+            taxonomyText,
+            taxonomyUrl,
+          );
+          taxonomyFields = [
+            ...richerTaxonomy.fields,
+            ...fallbackTaxonomy.fields.filter(
+              (field) => !richerTaxonomy.fields.includes(field),
+            ),
+          ];
+          richerTaxonomy.records.forEach((taxonomy, id) => {
+            taxonomyByNode.set(id, {
+              ...(taxonomyByNode.get(id) || {}),
+              ...taxonomy,
+            });
+          });
+        } else {
+          console.warn(
+            `${taxonomyUrl} is unavailable; using species-only fallback metadata`,
+          );
+        }
+      }
+
       async function loadDefaultTree() {
-        const [treeResponse, taxonomyResponse] = await Promise.all([
-          fetch(treeUrl),
-          fetch(taxonomyUrl),
-        ]);
+        const treeResponse = await fetch(treeUrl);
         if (!treeResponse.ok) {
           throw new Error(`Could not load ${treeUrl}: HTTP ${treeResponse.status}`);
         }
-        if (!taxonomyResponse.ok) {
-          throw new Error(`Could not load ${taxonomyUrl}: HTTP ${taxonomyResponse.status}`);
-        }
 
-        taxonomyByNode = parseTaxonomyMetadata(await taxonomyResponse.text());
         showTree(await treeResponse.text(), "pruned.tre.txt");
+        const defaultTree = currentTree;
+        loadTaxonomyMetadata()
+          .then(() => {
+            if (currentTree === defaultTree) {
+              renderTree();
+            }
+          })
+          .catch((error) => {
+            console.warn("Taxonomy metadata could not be loaded", error);
+          });
       }
 
       fileInput.addEventListener("change", async () => {
@@ -1322,6 +1447,12 @@
       clearNodeSelectionsButton.addEventListener("click", clearNodeSelections);
       showFullTreeButton.addEventListener("click", showFullTree);
       showOverlapOnlyButton.addEventListener("click", showOverlapOnly);
+      showInternalNodesInput.addEventListener("change", () => {
+        showInternalNodes = showInternalNodesInput.checked;
+        if (currentTree) {
+          renderTree();
+        }
+      });
 
       renderNodeSelections();
       loadDefaultTree().catch(showError);

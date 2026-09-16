@@ -145,3 +145,10 @@ specified in [`data/README.md`](data/README.md).
 and derived diversity numbers — are released into the public domain
 ([CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)).** Use them for
 anything, no attribution required.
+
+The Taxonium viewer under `src/evospaice/viz/taxonium/` is a separate covered
+work distributed under GPL-3.0-only because it incorporates a modified GPL
+Taxonium component. Its license, notices, complete corresponding source, and
+build instructions are included in that directory. This exception does not
+change the CC0 status of project outputs or the licenses of separate pipeline
+services.
