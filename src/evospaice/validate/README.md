@@ -8,9 +8,10 @@ description: Tree comparison using Robinson-Foulds distance and tip-to-root-corr
 Compare an embedding-derived tree with a reference using two metrics, both
 enabled by default:
 
-* RF counts unshared rooted clades or unrooted splits, ignoring lengths, support
-  and internal labels. Normalized RF divides by the total relationship count
-  across both trees: 0 means matching topology; 1 means no informative relationships shared.
+* Robinson-Foulds (RF) distance counts informative clades (rooted) or splits
+  (unrooted) present in only one tree, ignoring lengths, support and internal labels.
+  Normalized RF divides by their total count across both trees: 0 means matching
+  topology on retained taxa; 1 means no informative relationships shared.
 * `tip-to-root-correlation` is Spearman's rho of root-to-tip branch-length sums
   for matching taxa, using average ranks for ties. It measures relative depth,
   not topology or pairwise separation: +1 means the same ordering, -1 the reverse.
@@ -22,23 +23,25 @@ From the repository root, run this comparison of the mock
 [reference](../../../tests/data/reference_tree_mock.nwk) and
 [inferred](../../../tests/data/embedding_tree_mock.nwk) fixtures:
 
+Run `uv sync` first on a fresh checkout. This command replaces existing mock
+outputs. For your own runs, prefer a new output directory and omit `--overwrite`;
+overwriting does not remove stale files for disabled metrics.
+
 ```bash
 uv run --no-sync evospaice validate \
   --reference tests/data/reference_tree_mock.nwk \
   --inferred tests/data/embedding_tree_mock.nwk \
   --mode unrooted \
-  --output-dir results/validation-mock-unrooted
+  --output-dir results/validation-mock-unrooted \
+  --overwrite
 ```
-
-Use `uv sync` first on a fresh checkout. Prefer a new output directory;
-`--overwrite` permits reuse but does not remove stale files for disabled metrics.
 
 * `--no-tip-to-root-correlation`: RF only; suitable for trees without lengths
 * `--no-rf`: correlation only
 * `--rf` and `--tip-to-root-correlation`: explicitly enable the defaults
 
-Disabling both is an input error. `--mode rooted|unrooted` controls RF only but
-remains required even with `--no-rf`. Expected mock results:
+Disabling both is an input error. `--mode` accepts `rooted` or `unrooted` and
+controls RF only, but remains required even with `--no-rf`. Expected mock results:
 
 | Mode     | Raw RF | Normalized RF | Tip-to-root-correlation |
 |----------|--------|---------------|-------------------------|
@@ -47,8 +50,8 @@ remains required even with `--no-rf`. Expected mock results:
 
 ## Input Rules
 
-* Each input contains one Newick tree, optionally gzipped, with unique nonempty
-  tip labels representing the same biological identities.
+* Each input contains one Newick tree. Tip labels must be unique, nonempty and are case-sensitive.
+  Matched labels must represent the same biological identities.
 * `--taxon-map` accepts TSV columns `tree`, `label`, `taxon`; tree is `reference`
   or `inferred`. Unlisted labels stay unchanged; many-to-one mappings fail.
 * `--taxa-file` selects canonical IDs from a TSV `taxon` column. After selection,
@@ -61,8 +64,8 @@ remains required even with `--no-rf`. Expected mock results:
   branches, needs a finite nonnegative length. Zero is valid; missing, negative,
   NaN or infinite lengths and cumulative overflow are errors. RF-only runs ignore lengths.
 
-Constant tip depths in either tree, including ultrametric trees, produce a valid
-report with `rho: null`, `status: "undefined"` and an `undefined_reason`.
+For otherwise-valid inputs, constant depths among retained tips in either tree
+produce `rho: null`, `status: "undefined"` and an `undefined_reason`.
 Both correlation CSVs are still written. Input errors instead exit 2 without
 writing new report files; operating-system I/O errors exit 1.
 
@@ -77,14 +80,15 @@ labels does not establish biologically comparable roots.
 RF is an exact-match score: resolving a reference polytomy can increase RF without
 contradicting it. Correlation uses stored branch lengths, not original embedding
 or sequence distances. Positive rescaling preserves ranks, but raw sums in
-different units are not equivalent. Interpretation needs comparable roots and
-an independent reference, which is itself an estimate.
+different units are not equivalent. Correlation requires comparable roots;
+unrooted RF does not. Claims of phylogenetic accuracy need an independent reference,
+which is itself an estimate.
 
 ### Provenance
 
-Set `--reference-independence independent|backbone-derived|unknown` (default:
-`unknown`); this declaration is not verified. `--reference-kind taxonomy` labels
-a structural consistency check rather than phylogenetic accuracy (default: `phylogeny`).
+`--reference-independence` accepts `independent`, `backbone-derived` or `unknown`
+(default); this declaration is not verified. `--reference-kind` defaults to
+`phylogeny`; choose `taxonomy` for a structural consistency check.
 Provide citations and units through a `--metadata` JSON file:
 
 ```json
@@ -132,6 +136,6 @@ metric selection, undefined correlation, alignment and invalid inputs.
 ## References
 
 * [DendroPy tree comparisons](https://jeetsukumaran.github.io/DendroPy/library/treecompare.html)
-* [DendroPy path distances](https://jeetsukumaran.github.io/DendroPy/library/phylogeneticdistance.html) (background only; not computed by this validator)
+* [DendroPy phylogenetic distance matrices](https://jeetsukumaran.github.io/DendroPy/library/phylogeneticdistance.html) (background only; not computed by this validator)
 * [Diversity background references](../../../docs/README.md#prior-art-relevant-background)
 * [Metric implementation](compare.py)
