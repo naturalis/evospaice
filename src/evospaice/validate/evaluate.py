@@ -12,6 +12,7 @@ import zlib
 from collections.abc import Sequence
 from importlib.metadata import version
 from pathlib import Path
+from time import monotonic
 
 from dendropy.utility.error import DataParseError
 
@@ -96,6 +97,13 @@ def _serialize_csv(rows: list[dict], fields: list[str]) -> str:
 
 def run(args: argparse.Namespace) -> int:
     """Validate and serialize all scores and provenance before writing outputs."""
+    started = monotonic()
+
+    def progress(percent: int, message: str) -> None:
+        print(f"[{percent:3d}%] [{monotonic() - started:.1f}s] {message}",
+              file=sys.stderr, flush=True)
+
+    progress(0, "Starting validation (percentages track stages, not elapsed time); checking inputs")
     if not args.rf and not args.tip_to_root_correlation:
         raise ValueError("At least one metric must be enabled")
     if args.output_dir.exists() and any(args.output_dir.iterdir()) and not args.overwrite:
@@ -124,16 +132,28 @@ def run(args: argparse.Namespace) -> int:
     if args.taxa_file:
         selected = {row["taxon"] for row in read_table(args.taxa_file, {"taxon"})}
     inputs = {"inferred": args.inferred, "reference": args.reference}
-    originals = {name: load_tree(path) for name, path in inputs.items()}
+    originals = {}
+    for index, (name, path) in enumerate(inputs.items(), start=1):
+        progress(index * 10, f"Loading {name} tree: {path}")
+        originals[name] = load_tree(path)
+        progress(index * 10, f"Loaded {name} tree: {len(leaf_labels(originals[name])):,} tips")
+    progress(30, f"Aligning taxa ({args.taxa_policy}, {args.mode}); "
+             "cloning, pruning and indexing trees may take time")
     trees, coverage = prepare_trees(
         originals,
         mode=args.mode, taxa_policy=args.taxa_policy, mappings=_mappings(args.taxon_map),
         selected=selected, require_rf=args.rf,
     )
     taxa = leaf_labels(trees["inferred"])
+    progress(40, f"Alignment complete: {len(taxa):,} shared tips retained, "
+             f"{sum(not row['retained'] for row in coverage):,} tips excluded across both trees; "
+             + ("computing RF topology distance" if args.rf else "RF disabled (--no-rf)"))
     topology, clades = None, []
     if args.rf:
         topology, clades = topology_metrics(trees["inferred"], trees["reference"])
+    progress(50, "Topology stage complete; "
+             + ("measuring original-root branch lengths" if args.tip_to_root_correlation
+                else "tip-to-root correlation disabled"))
     length_metric, node_rows, tip_rows = None, [], []
     if args.tip_to_root_correlation:
         units = metadata.get("branch_length_units", {})
@@ -146,13 +166,17 @@ def run(args: argparse.Namespace) -> int:
         ):
             raise ValueError("Metadata branch_length_units values must be nonempty strings")
         retained_lengths = {}
-        for name, original in originals.items():
+        for index, (name, original) in enumerate(originals.items()):
+            progress(50 + index * 10, f"Measuring {name} root-to-node lengths")
             rows, tip_lengths = root_to_node_lengths(original, name=name)
             node_rows.extend(rows)
             retained_lengths[name] = [
                 (row["taxon"], tip_lengths[row["label"]]) for row in coverage
                 if row["tree"] == name and row["retained"]
             ]
+            progress(60 + index * 10, f"Measured {name}: {len(rows):,} nodes, "
+                     f"{len(retained_lengths[name]):,} retained tips")
+        progress(70, f"Computing Spearman tip-to-root correlation for {len(taxa):,} matched tips")
         length_metric, tip_rows = tip_to_root_correlation(
             retained_lengths["reference"], retained_lengths["inferred"], retained_taxa=taxa,
         )
@@ -162,6 +186,10 @@ def run(args: argparse.Namespace) -> int:
             branch_length_units=branch_length_units,
             node_id_policy="tree_local_preorder_indices",
         )
+    else:
+        progress(60, "Skipping root-to-node lengths (tip-to-root correlation disabled)")
+        progress(70, "Skipping Spearman tip-to-root correlation")
+    progress(80, "Metrics complete; hashing inputs and collecting provenance")
     warnings = []
     if length_metric is not None:
         warnings.append(
@@ -182,6 +210,7 @@ def run(args: argparse.Namespace) -> int:
     for name in ("taxon_map", "taxa_file", "metadata"):
         if path := getattr(args, name):
             input_identities[name] = _input_identity(path)
+    progress(90, "Input hashes complete; serializing JSON and CSV reports")
     report: dict = dict(
         schema_version=5, reference_kind=args.reference_kind,
         reference_independence=args.reference_independence, metadata=metadata, warnings=warnings,
@@ -212,6 +241,7 @@ def run(args: argparse.Namespace) -> int:
             tip_rows, ["taxon", "reference_sum", "inferred_sum", "reference_rank", "inferred_rank"],
         )
     outputs["validation.json"] = json.dumps(report, indent=2, allow_nan=False) + "\n"
+    progress(95, f"Writing {len(outputs)} report files to {args.output_dir}")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for filename, content in outputs.items():
         (args.output_dir / filename).write_text(content, encoding="utf-8", newline="")
@@ -222,6 +252,7 @@ def run(args: argparse.Namespace) -> int:
         if score is None:
             score = f"undefined ({length_metric['undefined_reason']})"
         print(f"tip-to-root-correlation: {score}")
+    progress(100, f"Validation complete; reports saved to {args.output_dir}")
     return 0
 
 
@@ -236,6 +267,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
+        print("Validation interrupted by user", file=sys.stderr, flush=True)
         return 130
 
 

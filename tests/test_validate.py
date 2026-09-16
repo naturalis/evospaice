@@ -69,7 +69,9 @@ def test_truncated_gzip_is_reported_without_traceback(cli_arguments, tmp_path, c
     source = tmp_path / "tree.nwk.gz"
     source.write_bytes(gzip.compress(b"((A,B),(C,D));")[:-5])
     assert main([*cli_arguments, "--inferred", str(source)]) == 1
-    assert "error:" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert "error:" in captured.err
+    assert "100%" not in captured.err
 
 
 @pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
@@ -106,6 +108,42 @@ def test_gzip_report_with_metadata(cli_arguments, tmp_path):
 
 FIXTURE = Path(__file__).parent / "data" / "reference_tree_mock.nwk"
 MOCK = FIXTURE.with_name("embedding_tree_mock.nwk")
+
+
+@pytest.mark.parametrize("options", [[], ["--no-rf"], ["--no-tip-to-root-correlation"]])
+def test_cli_progress_stages(tmp_path, capsys, options):
+    assert cli_main([
+        "validate", "--reference", str(FIXTURE), "--inferred", str(MOCK),
+        "--mode", "unrooted", "--taxa-policy", "intersection",
+        "--output-dir", str(tmp_path / "report"), *options,
+    ]) == 0
+    captured = capsys.readouterr()
+    lines = captured.err.splitlines()
+    percentages = [int(line.split("%]", 1)[0].lstrip("[")) for line in lines]
+    assert percentages == sorted(percentages)
+    assert set(range(0, 101, 10)) <= set(percentages)
+    assert "percentages track stages" in lines[0]
+    assert "Validation complete" in lines[-1]
+    assert "4 shared tips retained" in captured.err
+    assert "Writing" in captured.err
+    assert "%]" not in captured.out
+    if "--no-rf" in options:
+        assert "RF disabled (--no-rf)" in captured.err
+        assert captured.out.startswith("tip-to-root-correlation:")
+    if "--no-tip-to-root-correlation" in options:
+        assert "Skipping Spearman" in captured.err
+        assert json.loads(captured.out)["rf"] == 2
+
+
+def test_cli_progress_interrupted(cli_arguments, monkeypatch, capsys):
+    def interrupt(path):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("evospaice.validate.evaluate.load_tree", interrupt)
+    assert main(cli_arguments) == 130
+    captured = capsys.readouterr()
+    assert "Validation interrupted by user" in captured.err
+    assert "100%" not in captured.err
 
 
 def tree(text):
