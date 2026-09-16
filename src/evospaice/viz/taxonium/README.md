@@ -30,6 +30,11 @@ When a node is selected, its **Branch length** is included in Taxonium's
 metadata details. The value is the immediate Newick edge length from that node
 to its parent, not its cumulative distance from the root.
 
+The default pruned tree is enriched with species names from
+`data/pruned.taxonomy.tsv`. This lookup is generated from
+`unified_taxonomic_tree.tre.txt`; it does not replace the displayed reference
+tree. Process IDs absent from the unified tree simply have no species value.
+
 The browser downloads the pinned Taxonium and React modules from `esm.sh` at
 runtime. Node.js and a local package installation are not required.
 

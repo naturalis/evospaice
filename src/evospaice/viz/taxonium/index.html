@@ -410,6 +410,7 @@
       import Taxonium from "https://esm.sh/taxonium-component@2.1.24?external=react,react-dom";
 
       const treeUrl = "/data/pruned.tre.txt";
+      const taxonomyUrl = "/data/pruned.taxonomy.tsv";
       const fileInput = document.getElementById("tree-file");
       const overlayInput = document.getElementById("overlay-file");
       const sampleDropzone = document.getElementById("sample-dropzone");
@@ -431,6 +432,7 @@
       ];
       let currentTree = null;
       let currentOverlays = [];
+      let taxonomyByNode = new Map();
       let sampleCounter = 0;
       let treeVersion = 0;
 
@@ -639,6 +641,17 @@
         comparisonSummary.dataset.state = state;
       }
 
+      function parseTaxonomyMetadata(tsv) {
+        const lines = tsv.trimEnd().split(/\r?\n/);
+        if (lines.shift() !== "node\tspecies") {
+          throw new Error(`${taxonomyUrl} does not have the expected node and species columns`);
+        }
+        return new Map(lines.map((line) => {
+          const separator = line.indexOf("\t");
+          return [line.slice(0, separator), line.slice(separator + 1)];
+        }));
+      }
+
       function sampleNameFromFilename(selectedFilename) {
         let baseName = selectedFilename.replace(/\.(nwk|newick|tree|tre|txt)$/i, "");
         const names = new Set(currentOverlays.map((sample) => sample.name));
@@ -704,10 +717,10 @@
         };
         let configDict = { defaultColorByField: "None" };
         let initialQuery = {};
+        const mainTips = new Set(extractTipLabels(currentTree.newick));
+        const assignments = new Map();
 
         if (currentOverlays.length) {
-          const mainTips = new Set(extractTipLabels(currentTree.newick));
-          const assignments = new Map();
           const matchedTips = new Set();
           let unmatched = 0;
 
@@ -726,17 +739,6 @@
 
           if (matchedTips.size > 0) {
             const comparisonSearchValue = comparisonValue + "\u200B".repeat(treeVersion + 1);
-            sourceData.metadata = {
-              status: "loaded",
-              filename: "comparison-samples.tsv",
-              filetype: "meta_tsv",
-              data: [
-                "node\tsample\tin_comparison",
-                ...[...assignments].map(
-                  ([label, sampleName]) => `${label}\t${sampleName}\t${comparisonSearchValue}`,
-                ),
-              ].join("\n"),
-            };
             configDict = {
               defaultColorByField: overlayField,
               colorMapping: Object.fromEntries(
@@ -771,6 +773,30 @@
         } else {
           renderSampleChips();
           setComparisonSummary("No samples added");
+        }
+
+        const comparisonSearchValue = currentOverlays.length
+          ? comparisonValue + "\u200B".repeat(treeVersion + 1)
+          : "";
+        const metadataRows = [
+          currentOverlays.length ? "node\tspecies\tsample\tin_comparison" : "node\tspecies",
+        ];
+        mainTips.forEach((node) => {
+          const species = taxonomyByNode.get(node) || "";
+          const sample = assignments.get(node) || "";
+          if (species || sample) {
+            metadataRows.push(currentOverlays.length
+              ? `${node}\t${species}\t${sample}\t${sample ? comparisonSearchValue : ""}`
+              : `${node}\t${species}`);
+          }
+        });
+        if (metadataRows.length > 1) {
+          sourceData.metadata = {
+            status: "loaded",
+            filename: "pruned-taxonomy-and-comparisons.tsv",
+            filetype: "meta_tsv",
+            data: metadataRows.join("\n"),
+          };
         }
 
         treeVersion += 1;
@@ -834,12 +860,19 @@
       }
 
       async function loadDefaultTree() {
-        const response = await fetch(treeUrl);
-        if (!response.ok) {
-          throw new Error(`Could not load ${treeUrl}: HTTP ${response.status}`);
+        const [treeResponse, taxonomyResponse] = await Promise.all([
+          fetch(treeUrl),
+          fetch(taxonomyUrl),
+        ]);
+        if (!treeResponse.ok) {
+          throw new Error(`Could not load ${treeUrl}: HTTP ${treeResponse.status}`);
+        }
+        if (!taxonomyResponse.ok) {
+          throw new Error(`Could not load ${taxonomyUrl}: HTTP ${taxonomyResponse.status}`);
         }
 
-        showTree(await response.text(), "pruned.tre.txt");
+        taxonomyByNode = parseTaxonomyMetadata(await taxonomyResponse.text());
+        showTree(await treeResponse.text(), "pruned.tre.txt");
       }
 
       fileInput.addEventListener("change", async () => {
