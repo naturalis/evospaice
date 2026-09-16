@@ -130,6 +130,8 @@ def test_tip_to_root_mock_depths_and_correlation():
     assert result["rho"] == pytest.approx(-0.4)
     assert result["status"] == "ok"
     assert [row["taxon"] for row in rows] == list("ABCD")
+    assert [row["reference_rank"] for row in rows] == [4, 3, 2, 1]
+    assert [row["inferred_rank"] for row in rows] == [1, 3, 4, 2]
 
 
 @pytest.mark.parametrize("mode,raw", [("rooted", 4), ("unrooted", 2)])
@@ -387,8 +389,8 @@ def test_tip_to_root_identity_scaling_and_order(scale):
     inferred = [(label, value * scale) for label, value in reversed(reference)]
     result, rows = tip_to_root_correlation(reference, inferred, retained_taxa=set("ABC"))
     assert result["rho"] == pytest.approx(1)
-    assert [row["reference_rank"] for row in rows] == [1, 3, 2]
-    assert [row["inferred_rank"] for row in rows] == [1, 3, 2]
+    assert [row["reference_rank"] for row in rows] == [3, 1, 2]
+    assert [row["inferred_rank"] for row in rows] == [3, 1, 2]
 
 
 def test_tip_to_root_ties_match_scipy():
@@ -400,8 +402,8 @@ def test_tip_to_root_ties_match_scipy():
         retained_taxa=set("ABCD"),
     )
     assert result["rho"] == pytest.approx(spearmanr([1, 1, 3, 4], [4, 2, 2, 1]).statistic)
-    assert [row["reference_rank"] for row in rows] == [1.5, 1.5, 3, 4]
-    assert [row["inferred_rank"] for row in rows] == [4, 2.5, 2.5, 1]
+    assert [row["reference_rank"] for row in rows] == [3.5, 3.5, 2, 1]
+    assert [row["inferred_rank"] for row in rows] == [1, 2.5, 2.5, 4]
 
 
 @pytest.mark.parametrize("constant", [("reference",), ("inferred",), ("reference", "inferred")])

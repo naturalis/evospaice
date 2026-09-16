@@ -70,7 +70,8 @@ def tip_to_root_correlation(
         aligned[name] = [lookup[label] for label in sorted(retained_taxa)]
     if len(retained_taxa) < 3:
         raise ValueError("tip-to-root-correlation requires at least three matched tips")
-    ranks = {name: rankdata(values, method="average") for name, values in aligned.items()}
+    ranks = {name: rankdata([-value for value in values], method="average")
+             for name, values in aligned.items()}
     constant = [name for name, values in aligned.items() if min(values) == max(values)]
     rho = None
     if not constant:

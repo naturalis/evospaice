@@ -12,10 +12,17 @@ enabled by default:
   (unrooted) present in only one tree, ignoring lengths, support and internal labels.
   Normalized RF divides by their total count across both trees: 0 means matching
   topology on retained taxa; 1 means no informative relationships shared.
+  Nonbinary trees are supported, but this validator rejects completely unresolved
+  star trees for RF: each tree must retain at least one informative clade or split
+  after taxa alignment.
 * `tip-to-root-correlation` is Spearman's rho of root-to-tip branch-length sums
   for matching taxa, using average ranks for ties. It measures relative depth,
   not topology or pairwise separation: +1 means the same ordering, -1 the reverse.
   No p-value or biological pass/fail threshold is provided.
+
+The correlation table ranks distances in descending order in both trees:
+the largest root-to-tip sum ranks first, with average ranks for ties.
+This reporting convention does not change the correlation score or taxon row order.
 
 ## Run
 
