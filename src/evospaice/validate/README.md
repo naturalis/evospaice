@@ -138,7 +138,7 @@ Build the evaluation table directly from a Newick tree and the source-side
 taxonomy in an MST CSV:
 
 ```bash
-uv run python -m evospaice.validate.evaluation_dataset \
+uv run python -m evospaice.validate.dataset_prep \
   data/pruned.tre \
   data/mst_edges_with_taxonomy.csv \
   --output data/evaluation_dataset.csv
@@ -251,7 +251,7 @@ For Python callers:
 ```python
 from pathlib import Path
 
-from evospaice.validate.evaluation_dataset import build_evaluation_dataset
+from evospaice.validate.dataset_prep import build_evaluation_dataset
 
 summary = build_evaluation_dataset(
     Path("data/pruned.tre"),

@@ -5,8 +5,8 @@ import dendropy
 import pytest
 from dendropy.utility.error import DataParseError
 
-from evospaice.validate import evaluation_dataset
-from evospaice.validate.evaluation_dataset import (
+from evospaice.validate import dataset_prep
+from evospaice.validate.dataset_prep import (
     MST_COLUMNS,
     OUTPUT_COLUMNS,
     DatasetSummary,
@@ -322,7 +322,7 @@ def test_concurrent_output_is_not_overwritten(inputs, monkeypatch):
         Path(destination).write_text("concurrent output", encoding="utf-8")
         raise FileExistsError("output appeared during processing")
 
-    monkeypatch.setattr(evaluation_dataset.os, "link", competing_writer)
+    monkeypatch.setattr(dataset_prep.os, "link", competing_writer)
     with pytest.raises(FileExistsError, match="output appeared"):
         build_evaluation_dataset(newick, mst_csv, output)
 

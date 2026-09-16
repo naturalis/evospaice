@@ -136,7 +136,7 @@ specified in [`data/README.md`](data/README.md).
 Create a matched-leaf table directly from a Newick tree and an MST taxonomy CSV:
 
 ```bash
-uv run python -m evospaice.validate.evaluation_dataset \
+uv run python -m evospaice.validate.dataset_prep \
   data/pruned.tre data/mst_edges_with_taxonomy.csv \
   --output data/evaluation_dataset.csv
 ```
