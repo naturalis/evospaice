@@ -2,15 +2,17 @@
 
 Draws the reference and inferred trees as side-by-side dendrograms, color-coded
 by shared / inferred-only / reference-only splits, plus a tip-to-root rank
-correlation scatter plot. Reads the Newick inputs and the `--output-dir` a
-prior `evospaice validate` run already wrote (`validation.json` and
-`tip_to_root_correlation.csv`), and writes one HTML file with no external
-dependencies (fonts are the only network fetch, from Google Fonts).
+correlation scatter plot. The only input is a prior `evospaice validate
+--output-dir <dir>` run: topology is reconstructed entirely from that run's
+`node_lengths.csv` (which already records every node's parent, so the full
+tree structure doesn't need to be re-parsed from the original Newick files),
+labels are canonicalized via `taxa.csv`, summary stats come from
+`validation.json`, and the scatter plot reads `tip_to_root_correlation.csv`.
+Writes one HTML file with no external dependencies (fonts are the only
+network fetch, from Google Fonts).
 
 Run as a script, e.g.:
-    python -m evospaice.viz.validation_report \\
-        --reference tests/data/reference_tree_large_mock.nwk \\
-        --inferred tests/data/embedding_tree_large_mock.nwk \\
+    python -m evospaice.validate.visualization.validation_report \\
         --results-dir results/validation-mock-large2 \\
         --output results/validation-mock-large2/report.html
 """
@@ -23,8 +25,6 @@ import html
 import json
 from pathlib import Path
 
-import dendropy
-
 LEAF_GAP = 24
 TOP_MARGIN = 24
 BOTTOM_MARGIN = 24
@@ -33,11 +33,67 @@ LEFT_MARGIN = 16
 LABEL_GAP = 8
 
 
-def _height(node: dendropy.Node) -> int:
-    children = node.child_nodes()
-    if not children:
+class Node:
+    """One node of a tree reconstructed from `node_lengths.csv`."""
+
+    __slots__ = ("node_id", "label", "leaf", "parent", "children")
+
+    def __init__(self, node_id: str, label: str | None, leaf: bool):
+        self.node_id = node_id
+        self.label = label
+        self.leaf = leaf
+        self.parent: Node | None = None
+        self.children: list[Node] = []
+
+    def is_leaf(self) -> bool:
+        return self.leaf
+
+    def preorder(self):
+        yield self
+        for child in self.children:
+            yield from child.preorder()
+
+    def leaves(self):
+        if self.leaf:
+            yield self
+        else:
+            for child in self.children:
+                yield from child.leaves()
+
+
+def load_tree(rows: list[dict], label_by_node_id: dict[str, str]) -> Node:
+    """Reconstruct one tree's structure from its `node_lengths.csv` rows.
+
+    Each row already carries `node_id` and `parent_id`, so this is a direct
+    parent-link reconstruction — no Newick parsing involved. `label_by_node_id`
+    supplies canonical (post-alignment) tip labels, keyed the same way rows
+    are (`"{node_id}"`, disambiguated by tree elsewhere), falling back to each
+    row's own `original_label` when a node id isn't in that mapping.
+    """
+    nodes: dict[str, Node] = {}
+    for row in rows:
+        is_leaf = row["node_kind"] == "tip"
+        label = label_by_node_id.get(row["node_id"], row["original_label"] or None)
+        nodes[row["node_id"]] = Node(row["node_id"], label, is_leaf)
+    root = None
+    for row in rows:
+        node = nodes[row["node_id"]]
+        parent_id = row["parent_id"]
+        if parent_id == "":
+            root = node
+        else:
+            parent = nodes[parent_id]
+            parent.children.append(node)
+            node.parent = parent
+    if root is None:
+        raise ValueError("no root node (empty parent_id) found in node_lengths rows for this tree")
+    return root
+
+
+def _height(node: Node) -> int:
+    if not node.children:
         return 0
-    return 1 + max(_height(c) for c in children)
+    return 1 + max(_height(c) for c in node.children)
 
 
 def _mean_y(ys: list[float]) -> float:
@@ -47,25 +103,25 @@ def _mean_y(ys: list[float]) -> float:
 class TreeLayout:
     """x/y pixel coordinates for every node of one tree, given a fixed leaf order."""
 
-    def __init__(self, tree: dendropy.Tree, leaf_order: list[str]):
-        self.tree = tree
+    def __init__(self, root: Node, leaf_order: list[str]):
+        self.root = root
         order_index = {label: i for i, label in enumerate(leaf_order)}
-        self.max_height = _height(tree.seed_node)
-        self.x: dict[int, float] = {}
-        self.y: dict[int, float] = {}
+        self.max_height = _height(root)
+        self.x: dict[str, float] = {}
+        self.y: dict[str, float] = {}
 
-        def visit(node: dendropy.Node) -> float:
+        def visit(node: Node) -> float:
             node_height = _height(node)
             x_level = self.max_height - node_height
-            self.x[id(node)] = LEFT_MARGIN + x_level * X_UNIT
+            self.x[node.node_id] = LEFT_MARGIN + x_level * X_UNIT
             if node.is_leaf():
-                y = TOP_MARGIN + order_index[node.taxon.label] * LEAF_GAP
+                y = TOP_MARGIN + order_index[node.label] * LEAF_GAP
             else:
-                y = _mean_y([visit(c) for c in node.child_nodes()])
-            self.y[id(node)] = y
+                y = _mean_y([visit(c) for c in node.children])
+            self.y[node.node_id] = y
             return y
 
-        visit(tree.seed_node)
+        visit(root)
 
     @property
     def width(self) -> float:
@@ -76,22 +132,22 @@ class TreeLayout:
         return TOP_MARGIN + (len(self.y) and max(self.y.values()) - TOP_MARGIN) + BOTTOM_MARGIN
 
 
-def informative_splits(tree: dendropy.Tree) -> dict[frozenset[str], dendropy.Node]:
+def informative_splits(root: Node) -> dict[frozenset[str], Node]:
     """Map each non-trivial split's leaf set to the node whose branch defines it."""
-    n = len(tree.leaf_nodes())
+    n = sum(1 for _ in root.leaves())
     splits = {}
-    for node in tree.preorder_node_iter():
-        if node.parent_node is None:
+    for node in root.preorder():
+        if node.parent is None:
             continue
-        leaves = frozenset(leaf.taxon.label for leaf in node.leaf_iter())
+        leaves = frozenset(leaf.label for leaf in node.leaves())
         if 1 < len(leaves) < n:
             splits[leaves] = node
     return splits
 
 
 def render_tree_svg(
-    layout: TreeLayout, leaf_order: list[str], status: dict[int, str], colors: dict[str, str],
-    split_labels: dict[int, str],
+    layout: TreeLayout, leaf_order: list[str], status: dict[str, str], colors: dict[str, str],
+    split_labels: dict[str, str],
 ) -> str:
     max_label_len = max((len(label) for label in leaf_order), default=1)
     label_space = max_label_len * 7 + LABEL_GAP + 6
@@ -99,26 +155,25 @@ def render_tree_svg(
     view_h = layout.height
 
     parts = []
-    tree = layout.tree
+    root = layout.root
 
-    def edge_status(node: dendropy.Node) -> str:
-        return status.get(id(node), "structural")
+    def edge_status(node: Node) -> str:
+        return status.get(node.node_id, "structural")
 
     # structural verticals: at each internal node's x, span its children's y range
-    for node in tree.preorder_node_iter():
-        children = node.child_nodes()
-        if len(children) < 2:
+    for node in root.preorder():
+        if len(node.children) < 2:
             continue
-        cx = layout.x[id(node)]
-        ys = [layout.y[id(c)] for c in children]
+        cx = layout.x[node.node_id]
+        ys = [layout.y[c.node_id] for c in node.children]
         parts.append(
             f'<line x1="{cx:.1f}" y1="{min(ys):.1f}" x2="{cx:.1f}" y2="{max(ys):.1f}" '
             f'stroke="{colors["structural"]}" stroke-width="1.5"/>'
         )
 
     # root stub
-    root_x = layout.x[id(tree.seed_node)]
-    root_y = layout.y[id(tree.seed_node)]
+    root_x = layout.x[root.node_id]
+    root_y = layout.y[root.node_id]
     parts.append(
         f'<line x1="{root_x - 12:.1f}" y1="{root_y:.1f}" x2="{root_x:.1f}" y2="{root_y:.1f}" '
         f'stroke="{colors["muted"]}" stroke-width="1.5"/>'
@@ -126,17 +181,16 @@ def render_tree_svg(
 
     # branches: for every non-root node, a horizontal segment from parent.x to node.x at node.y
     leaf_edges, colored_edges = [], []
-    for node in tree.preorder_node_iter():
-        if node.parent_node is None:
+    for node in root.preorder():
+        if node.parent is None:
             continue
-        px = layout.x[id(node.parent_node)]
-        nx = layout.x[id(node)]
-        ny = layout.y[id(node)]
+        px = layout.x[node.parent.node_id]
+        nx = layout.x[node.node_id]
+        ny = layout.y[node.node_id]
         if node.is_leaf():
             leaf_edges.append((px, nx, ny))
         else:
-            st = edge_status(node)
-            colored_edges.append((px, nx, ny, st))
+            colored_edges.append((px, nx, ny, edge_status(node)))
 
     for px, nx, ny in leaf_edges:
         parts.append(
@@ -153,54 +207,52 @@ def render_tree_svg(
             parts.append(f'<circle cx="{px:.1f}" cy="{ny:.1f}" r="3" fill="{color}"/>')
 
     # split labels for non-shared splits
-    for node in tree.preorder_node_iter():
-        if id(node) not in split_labels:
+    for node in root.preorder():
+        if node.node_id not in split_labels:
             continue
-        px = layout.x[id(node.parent_node)]
-        nx = layout.x[id(node)]
-        ny = layout.y[id(node)]
+        px = layout.x[node.parent.node_id]
+        nx = layout.x[node.node_id]
+        ny = layout.y[node.node_id]
         color = colors.get(edge_status(node), colors["structural"])
         mid = (px + nx) / 2
         parts.append(
             f'<text class="clade-label" fill="{color}" x="{mid:.1f}" y="{ny - 6:.1f}" '
-            f'text-anchor="middle">{html.escape(split_labels[id(node)])}</text>'
+            f'text-anchor="middle">{html.escape(split_labels[node.node_id])}</text>'
         )
 
     # leaf labels
-    for leaf in tree.leaf_node_iter():
-        lx = layout.x[id(leaf)]
-        ly = layout.y[id(leaf)]
+    for leaf in root.leaves():
+        lx = layout.x[leaf.node_id]
+        ly = layout.y[leaf.node_id]
         parts.append(
             f'<text class="leaf-label" x="{lx + LABEL_GAP:.1f}" y="{ly + 4:.1f}">'
-            f'{html.escape(leaf.taxon.label)}</text>'
+            f'{html.escape(leaf.label)}</text>'
         )
 
     body = "\n          ".join(parts)
     return f'<svg viewBox="0 0 {view_w:.1f} {view_h:.1f}" role="img" aria-label="Dendrogram">\n          {body}\n        </svg>'
 
 
-def build_tree_section(
-    ref_tree: dendropy.Tree, inf_tree: dendropy.Tree, leaf_order: list[str], colors: dict[str, str],
-) -> tuple[str, dict]:
-    ref_splits = informative_splits(ref_tree)
-    inf_splits = informative_splits(inf_tree)
+def build_tree_section(ref_root: Node, inf_root: Node, leaf_order: list[str], colors: dict[str, str]) -> tuple[str, dict]:
+    ref_splits = informative_splits(ref_root)
+    inf_splits = informative_splits(inf_root)
     shared_keys = set(ref_splits) & set(inf_splits)
     ref_only_keys = set(ref_splits) - set(inf_splits)
     inf_only_keys = set(inf_splits) - set(ref_splits)
 
     ref_status, inf_status, ref_labels, inf_labels = {}, {}, {}, {}
     for key in shared_keys:
-        ref_status[id(ref_splits[key])] = "shared"
-        inf_status[id(inf_splits[key])] = "shared"
+        ref_status[ref_splits[key].node_id] = "shared"
+        inf_status[inf_splits[key].node_id] = "shared"
     for key in ref_only_keys:
-        ref_status[id(ref_splits[key])] = "reference_only"
-        ref_labels[id(ref_splits[key])] = ", ".join(sorted(key))
+        ref_status[ref_splits[key].node_id] = "reference_only"
+        ref_labels[ref_splits[key].node_id] = ", ".join(sorted(key))
     for key in inf_only_keys:
-        inf_status[id(inf_splits[key])] = "inferred_only"
-        inf_labels[id(inf_splits[key])] = ", ".join(sorted(key))
+        inf_status[inf_splits[key].node_id] = "inferred_only"
+        inf_labels[inf_splits[key].node_id] = ", ".join(sorted(key))
 
-    ref_layout = TreeLayout(ref_tree, leaf_order)
-    inf_layout = TreeLayout(inf_tree, leaf_order)
+    ref_layout = TreeLayout(ref_root, leaf_order)
+    inf_layout = TreeLayout(inf_root, leaf_order)
     ref_svg = render_tree_svg(ref_layout, leaf_order, ref_status, colors, ref_labels)
     inf_svg = render_tree_svg(inf_layout, leaf_order, inf_status, colors, inf_labels)
 
@@ -404,38 +456,60 @@ def clade_rows(clades: list[list[str]]) -> str:
     )
 
 
+def _read_csv(path: Path) -> list[dict]:
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--reference", type=Path, required=True)
-    parser.add_argument("--inferred", type=Path, required=True)
     parser.add_argument("--results-dir", type=Path, required=True, help="Output dir from `evospaice validate`.")
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True, help="Path to write the HTML report.")
     parser.add_argument("--title", default="Validation Report")
     args = parser.parse_args(argv)
 
     validation = json.loads((args.results_dir / "validation.json").read_text())
-    with open(args.results_dir / "tip_to_root_correlation.csv", newline="") as f:
-        corr_rows = list(csv.DictReader(f))
+    corr_rows = _read_csv(args.results_dir / "tip_to_root_correlation.csv")
+    node_rows = _read_csv(args.results_dir / "node_lengths.csv")
+    taxa_rows = _read_csv(args.results_dir / "taxa.csv")
 
-    namespace = dendropy.TaxonNamespace()
-    ref_tree = dendropy.Tree.get(path=str(args.reference), schema="newick", taxon_namespace=namespace)
-    inf_tree = dendropy.Tree.get(path=str(args.inferred), schema="newick", taxon_namespace=namespace)
-    leaf_order = [leaf.taxon.label for leaf in ref_tree.leaf_node_iter()]
+    # node_lengths.csv stores each tip's pre-alignment label; taxa.csv maps that
+    # back to the canonical (post `--taxon-map`) name tip_to_root_correlation.csv
+    # and the split diagrams should both use, keyed by tree so a label reused
+    # across trees doesn't collide.
+    canonical_by_tree_label: dict[tuple[str, str], str] = {
+        (row["tree"], row["label"]): row["taxon"] for row in taxa_rows if row["retained"] == "True"
+    }
 
-    tree_section, counts = build_tree_section(ref_tree, inf_tree, leaf_order, PALETTE)
+    def rows_for(tree_name: str) -> list[dict]:
+        return [r for r in node_rows if r["tree"] == tree_name]
+
+    def label_map_for(tree_name: str) -> dict[str, str]:
+        return {
+            r["node_id"]: canonical_by_tree_label.get((tree_name, r["original_label"]), r["original_label"])
+            for r in node_rows if r["tree"] == tree_name and r["node_kind"] == "tip"
+        }
+
+    ref_root = load_tree(rows_for("reference"), label_map_for("reference"))
+    inf_root = load_tree(rows_for("inferred"), label_map_for("inferred"))
+    leaf_order = [leaf.label for leaf in ref_root.leaves()]
+
+    tree_section, counts = build_tree_section(ref_root, inf_root, leaf_order, PALETTE)
     scatter_svg = build_scatter_svg(corr_rows, PALETTE)
 
     topo = validation["topology"]
     rho = validation.get("tip_to_root_correlation", {}).get("rho")
     tip_count = validation.get("tip_to_root_correlation", {}).get("compared_tip_count", len(corr_rows))
+    inferred_path = validation.get("inputs", {}).get("inferred", {}).get("path", "?")
+    reference_path = validation.get("inputs", {}).get("reference", {}).get("path", "?")
 
     page = PAGE_TEMPLATE.format(
         title=html.escape(args.title),
         eyebrow=html.escape(f"Topology validation &middot; {validation.get('mode', '')} mode"),
         heading="Where the inferred tree agrees with the reference &mdash; and where it doesn&rsquo;t",
         lede=(
-            f"Comparing <code>{html.escape(args.inferred.name)}</code> (inferred) against "
-            f"<code>{html.escape(args.reference.name)}</code> (reference) across "
+            f"Comparing <code>{html.escape(Path(inferred_path).name)}</code> (inferred) against "
+            f"<code>{html.escape(Path(reference_path).name)}</code> (reference) across "
             f"{validation.get('retained_taxa', len(leaf_order))} shared taxa."
         ),
         rf=topo["rf"], rf_pct=f"{topo['rf_normalized'] * 100:.1f}%", denom=topo["rf_denominator"],
@@ -444,7 +518,7 @@ def main(argv: list[str] | None = None) -> int:
         tree_section=tree_section, scatter_svg=scatter_svg,
         inferred_only_rows=clade_rows(counts["inferred_only_clades"]),
         reference_only_rows=clade_rows(counts["reference_only_clades"]),
-        inferred_path=str(args.inferred), reference_path=str(args.reference), results_dir=str(args.results_dir),
+        inferred_path=inferred_path, reference_path=reference_path, results_dir=str(args.results_dir),
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

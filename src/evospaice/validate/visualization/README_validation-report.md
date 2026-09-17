@@ -9,17 +9,18 @@ externally (Google Fonts).
 
 ## Contents
 
-- **`validation_report.py`**: CLI script. Reads the two Newick inputs plus
-  the `validation.json` and `tip_to_root_correlation.csv` that
-  `evospaice validate --output-dir <dir>` already wrote, and produces one
-  HTML file.
+- **`validation_report.py`**: CLI script. Its only input is a prior
+  `evospaice validate --output-dir <dir>` run — it doesn't take the
+  original Newick files. Tree topology is reconstructed entirely from that
+  run's `node_lengths.csv`, which already records every node's parent, so
+  there's nothing to re-parse; labels are canonicalized via `taxa.csv`;
+  summary stats come from `validation.json`; the scatter plot reads
+  `tip_to_root_correlation.csv`.
 
 ## Running
 
 ```bash
 python -m evospaice.validate.visualization.validation_report \
-  --reference tests/data/reference_tree_large_mock.nwk \
-  --inferred tests/data/embedding_tree_large_mock.nwk \
   --results-dir results/validation-mock-large2 \
   --output results/validation-mock-large2/report.html \
   --title "Clade Divergence Map"
@@ -27,23 +28,26 @@ python -m evospaice.validate.visualization.validation_report \
 
 | Flag | Required | Description |
 | --- | --- | --- |
-| `--reference` | yes | Reference tree (Newick) — same file passed to `evospaice validate --reference`. |
-| `--inferred` | yes | Inferred tree (Newick) — same file passed to `evospaice validate --inferred`. |
-| `--results-dir` | yes | The `--output-dir` a prior `evospaice validate` run wrote to. Must contain `validation.json` and `tip_to_root_correlation.csv`. |
-| `--output` | yes | Path to write the HTML report. |
+| `--results-dir` | yes | The `--output-dir` a prior `evospaice validate` run wrote to. Must contain `validation.json`, `node_lengths.csv`, `taxa.csv` and `tip_to_root_correlation.csv`. |
+| `--output` | yes | Path to write the HTML report. Always explicit — there is no default output location. |
 | `--title` | no (default `Validation Report`) | Browser-tab title. |
 
 Run `evospaice validate` first — this script only renders what's already
-on disk, it doesn't recompute anything.
+on disk, it doesn't recompute anything and doesn't touch the original tree
+files at all.
 
 ## What it does, step by step
 
-1. **Loads both trees into one shared `TaxonNamespace`** (`dendropy`), so
-   the same taxon label means the same object in both trees.
-2. **Fixes a leaf order** from the reference tree's own traversal order,
-   and uses that same vertical order for both dendrogram panels — so a
-   branch that lines up at a different height between the two panels is
-   visibly a disagreement.
+1. **Reconstructs both trees' structure from `node_lengths.csv`** — every
+   row already has `node_id`/`parent_id`, so building the tree is a direct
+   parent-link walk, no Newick re-parsing. Tip labels come from `taxa.csv`'s
+   canonical (post-alignment) name rather than `node_lengths.csv`'s own
+   `original_label`, so a run made with `--taxon-map` still labels
+   consistently across both panels and the scatter plot.
+2. **Fixes a leaf order** from the reference tree's own traversal order (as
+   reconstructed in step 1), and uses that same vertical order for both
+   dendrogram panels — so a branch that lines up at a different height
+   between the two panels is visibly a disagreement.
 3. **Lays out each tree** with a small recursive algorithm: a leaf's `x`
    is fixed at the tree's max depth (all leaves flush right); an internal
    node's `x` is set by how many splits separate it from the deepest leaf

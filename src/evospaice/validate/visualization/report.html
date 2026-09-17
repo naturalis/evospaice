@@ -1,0 +1,291 @@
+<title>Clade Divergence Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#F3F6F0; --surface:#FFFFFF; --surface-alt:#EAF0E6; --ink:#1E2B22; --muted:#56695C; --border:#D6E1D0;
+    --agree:#3B7A4E; --agree-soft:#E4F1E7; --inferred:#2569A0; --inferred-soft:#E3EEF7;
+    --refonly:#B15A1E; --refonly-soft:#F7E9DC;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12180F; --surface:#1B2318; --surface-alt:#20291C; --ink:#E7EDE3; --muted:#9CAD97; --border:#33402D;
+      --agree:#72C287; --agree-soft:rgba(114,194,135,0.14); --inferred:#74B6EB; --inferred-soft:rgba(116,182,235,0.14);
+      --refonly:#E49A54; --refonly-soft:rgba(228,154,84,0.16);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12180F; --surface:#1B2318; --surface-alt:#20291C; --ink:#E7EDE3; --muted:#9CAD97; --border:#33402D;
+    --agree:#72C287; --agree-soft:rgba(114,194,135,0.14); --inferred:#74B6EB; --inferred-soft:rgba(116,182,235,0.14);
+    --refonly:#E49A54; --refonly-soft:rgba(228,154,84,0.16);
+  }
+  * { box-sizing: border-box; }
+  body{ background:var(--bg); color:var(--ink); font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+        padding-inline:20px; padding-block:40px; }
+  .page{ max-width:960px; margin-inline:auto; display:flex; flex-direction:column; gap:32px; }
+  .eyebrow{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px; letter-spacing:0.08em;
+            text-transform:uppercase; color:var(--muted); }
+  h1{ font-family:"Source Serif 4", Georgia, serif; font-weight:700; font-size:clamp(26px, 4vw, 36px);
+      line-height:1.15; margin:8px 0 0; text-wrap:balance; }
+  .lede{ max-width:64ch; color:var(--muted); font-size:15px; line-height:1.6; margin-top:10px; }
+  .lede code{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:0.92em; background:var(--surface-alt);
+              padding:1px 5px; border-radius:4px; color:var(--ink); }
+  .stats{ display:grid; grid-template-columns:repeat(6, 1fr); gap:1px; background:var(--border);
+          border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .stat{ background:var(--surface); padding:14px 10px; display:flex; flex-direction:column; gap:4px; }
+  .stat .n{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums;
+            font-size:21px; font-weight:500; }
+  .stat .lbl{ font-size:11px; color:var(--muted); line-height:1.35; }
+  .stat.agree .n{ color:var(--agree); } .stat.inf .n{ color:var(--inferred); } .stat.ref .n{ color:var(--refonly); }
+  @media (max-width: 720px){ .stats{ grid-template-columns:repeat(3, 1fr); } }
+  section h2{ font-family:"Source Serif 4", Georgia, serif; font-size:19px; font-weight:600; margin:0 0 4px; }
+  section .sub{ color:var(--muted); font-size:13.5px; margin:0 0 16px; max-width:62ch; line-height:1.5; }
+  .legend{ display:flex; flex-wrap:wrap; gap:18px; font-size:13px; color:var(--muted); margin-bottom:18px; }
+  .legend .item{ display:flex; align-items:center; gap:7px; }
+  .legend .swatch{ width:18px; height:3px; border-radius:2px; flex:none; }
+  .legend .swatch.agree{ background:var(--agree); } .legend .swatch.inf{ background:var(--inferred); }
+  .legend .swatch.ref{ background:var(--refonly); }
+  .trees{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width: 720px){ .trees{ grid-template-columns:1fr; } }
+  .tree-panel{ background:var(--surface); border:1px solid var(--border); border-radius:12px;
+               padding:18px 16px 14px; }
+  .tree-panel .cap{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:11px; letter-spacing:0.04em;
+                     text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+  .tree-panel svg{ width:100%; height:auto; display:block; overflow:visible; }
+  .leaf-label{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:11px; fill:var(--ink); }
+  .clade-label{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:9px; }
+  .scatter-panel{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;
+                   display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .scatter-panel svg{ max-width:360px; width:100%; height:auto; }
+  .axis-label{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:10px; fill:var(--muted); }
+  .scatter-label{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:9.5px; fill:var(--ink); }
+  .rho-note{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px; color:var(--muted); }
+  .rho-note strong{ color:var(--ink); font-size:14px; }
+  .diverge{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width: 720px){ .diverge{ grid-template-columns:1fr; } }
+  .diverge .col{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .diverge .col h3{ font-size:13px; font-weight:600; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .diverge .col h3 .dot{ width:9px; height:9px; border-radius:50%; flex:none; }
+  .diverge .col.inf h3 .dot{ background:var(--inferred); } .diverge .col.ref h3 .dot{ background:var(--refonly); }
+  .clade-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:8px 0;
+              border-top:1px solid var(--border); font-size:13px; }
+  .clade-row:first-of-type{ border-top:none; }
+  .clade-row .taxa{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px; }
+  .clade-row .n{ color:var(--muted); font-size:11px; white-space:nowrap; }
+  footer{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:11.5px; color:var(--muted);
+          line-height:1.7; border-top:1px solid var(--border); padding-top:16px; }
+  footer .path{ color:var(--ink); }
+</style>
+<div class="page">
+  <header>
+    <div class="eyebrow">Topology validation &amp;middot; unrooted mode</div>
+    <h1>Where the inferred tree agrees with the reference &mdash; and where it doesn&rsquo;t</h1>
+    <p class="lede">Comparing <code>embedding_tree_large_mock.nwk</code> (inferred) against <code>reference_tree_large_mock.nwk</code> (reference) across 14 shared taxa.</p>
+  </header>
+  <div class="stats">
+    <div class="stat rf"><div class="n">5</div><div class="lbl">RF distance</div></div>
+    <div class="stat rf"><div class="n">23.8%</div><div class="lbl">normalized (5/21)</div></div>
+    <div class="stat agree"><div class="n">8</div><div class="lbl">shared splits</div></div>
+    <div class="stat inf"><div class="n">2</div><div class="lbl">inferred&#8209;only</div></div>
+    <div class="stat ref"><div class="n">3</div><div class="lbl">reference&#8209;only</div></div>
+    <div class="stat"><div class="n">0.719</div><div class="lbl">tip&#8209;to&#8209;root &rho;</div></div>
+  </div>
+  <section>
+    <h2>Topology side by side</h2>
+    <p class="sub">Same taxa, same vertical order in both panels &mdash; a branch that lines up at a different height marks a disagreement.</p>
+    <div class="legend">
+      <div class="item"><span class="swatch agree"></span> shared split</div>
+      <div class="item"><span class="swatch inf"></span> only in inferred</div>
+      <div class="item"><span class="swatch ref"></span> only in reference</div>
+    </div>
+    
+    <div class="trees">
+      <div class="tree-panel">
+        <div class="cap">Inferred &middot; 10 informative splits</div>
+        <svg viewBox="0 0 217.0 360.0" role="img" aria-label="Dendrogram">
+          <line x1="16.0" y1="60.0" x2="16.0" y2="324.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="76.0" y1="36.0" x2="76.0" y2="84.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="24.0" x2="136.0" y2="48.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="72.0" x2="136.0" y2="96.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="76.0" y1="132.0" x2="76.0" y2="228.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="120.0" x2="136.0" y2="144.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="216.0" x2="136.0" y2="240.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="76.0" y1="180.0" x2="76.0" y2="276.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="168.0" x2="136.0" y2="192.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="264.0" x2="136.0" y2="288.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="312.0" x2="136.0" y2="336.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="4.0" y1="198.0" x2="16.0" y2="198.0" stroke="#56695C" stroke-width="1.5"/>
+          <line x1="136.0" y1="24.0" x2="196.0" y2="24.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="48.0" x2="196.0" y2="48.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="72.0" x2="196.0" y2="72.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="96.0" x2="196.0" y2="96.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="120.0" x2="196.0" y2="120.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="144.0" x2="196.0" y2="144.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="216.0" x2="196.0" y2="216.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="240.0" x2="196.0" y2="240.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="168.0" x2="196.0" y2="168.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="192.0" x2="196.0" y2="192.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="264.0" x2="196.0" y2="264.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="288.0" x2="196.0" y2="288.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="312.0" x2="196.0" y2="312.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="136.0" y1="336.0" x2="196.0" y2="336.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="16.0" y1="60.0" x2="76.0" y2="60.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="76.0" y1="36.0" x2="136.0" y2="36.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="76.0" y1="84.0" x2="136.0" y2="84.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16.0" y1="180.0" x2="76.0" y2="180.0" stroke="#2569A0" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="16.0" cy="180.0" r="3" fill="#2569A0"/>
+          <line x1="76.0" y1="132.0" x2="136.0" y2="132.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="76.0" y1="228.0" x2="136.0" y2="228.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16.0" y1="228.0" x2="76.0" y2="228.0" stroke="#2569A0" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="16.0" cy="228.0" r="3" fill="#2569A0"/>
+          <line x1="76.0" y1="180.0" x2="136.0" y2="180.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="76.0" y1="276.0" x2="136.0" y2="276.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16.0" y1="324.0" x2="136.0" y2="324.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <text class="clade-label" fill="#2569A0" x="46.0" y="174.0" text-anchor="middle">E, F, I, J</text>
+          <text class="clade-label" fill="#2569A0" x="46.0" y="222.0" text-anchor="middle">G, H, K, L</text>
+          <text class="leaf-label" x="204.0" y="28.0">A</text>
+          <text class="leaf-label" x="204.0" y="52.0">B</text>
+          <text class="leaf-label" x="204.0" y="76.0">C</text>
+          <text class="leaf-label" x="204.0" y="100.0">D</text>
+          <text class="leaf-label" x="204.0" y="124.0">E</text>
+          <text class="leaf-label" x="204.0" y="148.0">F</text>
+          <text class="leaf-label" x="204.0" y="220.0">I</text>
+          <text class="leaf-label" x="204.0" y="244.0">J</text>
+          <text class="leaf-label" x="204.0" y="172.0">G</text>
+          <text class="leaf-label" x="204.0" y="196.0">H</text>
+          <text class="leaf-label" x="204.0" y="268.0">K</text>
+          <text class="leaf-label" x="204.0" y="292.0">L</text>
+          <text class="leaf-label" x="204.0" y="316.0">M</text>
+          <text class="leaf-label" x="204.0" y="340.0">N</text>
+        </svg>
+      </div>
+      <div class="tree-panel">
+        <div class="cap">Reference &middot; 11 informative splits</div>
+        <svg viewBox="0 0 277.0 360.0" role="img" aria-label="Dendrogram">
+          <line x1="16.0" y1="60.0" x2="16.0" y2="288.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="36.0" x2="136.0" y2="84.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="24.0" x2="196.0" y2="48.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="72.0" x2="196.0" y2="96.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="132.0" x2="136.0" y2="180.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="120.0" x2="196.0" y2="144.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="168.0" x2="196.0" y2="192.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="76.0" y1="252.0" x2="76.0" y2="324.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="136.0" y1="228.0" x2="136.0" y2="276.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="216.0" x2="196.0" y2="240.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="264.0" x2="196.0" y2="288.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="196.0" y1="312.0" x2="196.0" y2="336.0" stroke="#D6E1D0" stroke-width="1.5"/>
+          <line x1="4.0" y1="168.0" x2="16.0" y2="168.0" stroke="#56695C" stroke-width="1.5"/>
+          <line x1="196.0" y1="24.0" x2="256.0" y2="24.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="48.0" x2="256.0" y2="48.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="72.0" x2="256.0" y2="72.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="96.0" x2="256.0" y2="96.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="120.0" x2="256.0" y2="120.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="144.0" x2="256.0" y2="144.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="168.0" x2="256.0" y2="168.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="192.0" x2="256.0" y2="192.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="216.0" x2="256.0" y2="216.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="240.0" x2="256.0" y2="240.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="264.0" x2="256.0" y2="264.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="288.0" x2="256.0" y2="288.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="312.0" x2="256.0" y2="312.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="196.0" y1="336.0" x2="256.0" y2="336.0" stroke="#56695C" stroke-width="1.2"/>
+          <line x1="16.0" y1="60.0" x2="136.0" y2="60.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="136.0" y1="36.0" x2="196.0" y2="36.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="136.0" y1="84.0" x2="196.0" y2="84.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16.0" y1="156.0" x2="136.0" y2="156.0" stroke="#B15A1E" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="16.0" cy="156.0" r="3" fill="#B15A1E"/>
+          <line x1="136.0" y1="132.0" x2="196.0" y2="132.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="136.0" y1="180.0" x2="196.0" y2="180.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16.0" y1="288.0" x2="76.0" y2="288.0" stroke="#B15A1E" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="16.0" cy="288.0" r="3" fill="#B15A1E"/>
+          <line x1="76.0" y1="252.0" x2="136.0" y2="252.0" stroke="#B15A1E" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="76.0" cy="252.0" r="3" fill="#B15A1E"/>
+          <line x1="136.0" y1="228.0" x2="196.0" y2="228.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="136.0" y1="276.0" x2="196.0" y2="276.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="76.0" y1="324.0" x2="196.0" y2="324.0" stroke="#3B7A4E" stroke-width="2.5" stroke-linecap="round"/>
+          <text class="clade-label" fill="#B15A1E" x="76.0" y="150.0" text-anchor="middle">E, F, G, H</text>
+          <text class="clade-label" fill="#B15A1E" x="46.0" y="282.0" text-anchor="middle">I, J, K, L, M, N</text>
+          <text class="clade-label" fill="#B15A1E" x="106.0" y="246.0" text-anchor="middle">I, J, K, L</text>
+          <text class="leaf-label" x="264.0" y="28.0">A</text>
+          <text class="leaf-label" x="264.0" y="52.0">B</text>
+          <text class="leaf-label" x="264.0" y="76.0">C</text>
+          <text class="leaf-label" x="264.0" y="100.0">D</text>
+          <text class="leaf-label" x="264.0" y="124.0">E</text>
+          <text class="leaf-label" x="264.0" y="148.0">F</text>
+          <text class="leaf-label" x="264.0" y="172.0">G</text>
+          <text class="leaf-label" x="264.0" y="196.0">H</text>
+          <text class="leaf-label" x="264.0" y="220.0">I</text>
+          <text class="leaf-label" x="264.0" y="244.0">J</text>
+          <text class="leaf-label" x="264.0" y="268.0">K</text>
+          <text class="leaf-label" x="264.0" y="292.0">L</text>
+          <text class="leaf-label" x="264.0" y="316.0">M</text>
+          <text class="leaf-label" x="264.0" y="340.0">N</text>
+        </svg>
+      </div>
+    </div>
+    
+  </section>
+  <section>
+    <h2>Tip-to-root rank correlation</h2>
+    <p class="sub">Each tip's root-to-tip branch-length sum, ranked within its own tree (raw sums can be in different units between trees, so ranks are what Spearman &rho; actually compares). Points on the dashed diagonal agree exactly.</p>
+    <div class="scatter-panel">
+      <svg viewBox="0 0 342 332" role="img" aria-label="Tip-to-root rank correlation scatter plot">
+          <line x1="36" y1="296" x2="296" y2="296" stroke="#56695C" stroke-width="1"/>
+          <line x1="36" y1="36" x2="36" y2="296" stroke="#56695C" stroke-width="1"/>
+          <line x1="36" y1="296" x2="296" y2="36" stroke="#D6E1D0" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="166.0" y="322" text-anchor="middle" class="axis-label">reference rank (root&#8594;tip distance)</text>
+          <text x="-166.0" y="12" text-anchor="middle" class="axis-label" transform="rotate(-90)">inferred rank</text>
+          <circle cx="296.0" cy="36.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="303.0" y="39.0" class="scatter-label">A</text>
+          <circle cx="276.0" cy="56.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="283.0" y="59.0" class="scatter-label">B</text>
+          <circle cx="56.0" cy="276.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="63.0" y="279.0" class="scatter-label">C</text>
+          <circle cx="36.0" cy="296.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="43.0" y="299.0" class="scatter-label">D</text>
+          <circle cx="256.0" cy="116.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="263.0" y="119.0" class="scatter-label">E</text>
+          <circle cx="236.0" cy="136.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="243.0" y="139.0" class="scatter-label">F</text>
+          <circle cx="216.0" cy="236.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="223.0" y="239.0" class="scatter-label">G</text>
+          <circle cx="196.0" cy="256.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="203.0" y="259.0" class="scatter-label">H</text>
+          <circle cx="176.0" cy="76.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="183.0" y="79.0" class="scatter-label">I</text>
+          <circle cx="156.0" cy="96.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="163.0" y="99.0" class="scatter-label">J</text>
+          <circle cx="96.0" cy="196.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="103.0" y="199.0" class="scatter-label">K</text>
+          <circle cx="76.0" cy="216.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="83.0" y="219.0" class="scatter-label">L</text>
+          <circle cx="136.0" cy="156.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="143.0" y="159.0" class="scatter-label">M</text>
+          <circle cx="116.0" cy="176.0" r="4.5" fill="#2569A0" fill-opacity="0.85"/>
+          <text x="123.0" y="179.0" class="scatter-label">N</text>
+        </svg>
+      <div class="rho-note">Spearman &rho; = <strong>0.719</strong> across 14 matched tips</div>
+    </div>
+  </section>
+  <section>
+    <h2>Where they diverge</h2>
+    <p class="sub">The non-shared splits from the diagram above, spelled out.</p>
+    <div class="diverge">
+      <div class="col inf">
+        <h3><span class="dot"></span>Only in the inferred tree</h3>
+        <div class="clade-row"><span class="taxa">{E, F, I, J}</span><span class="n">4 taxa</span></div>
+        <div class="clade-row"><span class="taxa">{G, H, K, L}</span><span class="n">4 taxa</span></div>
+      </div>
+      <div class="col ref">
+        <h3><span class="dot"></span>Only in the reference tree</h3>
+        <div class="clade-row"><span class="taxa">{E, F, G, H}</span><span class="n">4 taxa</span></div>
+        <div class="clade-row"><span class="taxa">{I, J, K, L}</span><span class="n">4 taxa</span></div>
+        <div class="clade-row"><span class="taxa">{I, J, K, L, M, N}</span><span class="n">6 taxa</span></div>
+      </div>
+    </div>
+  </section>
+  <footer>
+    <div>inferred: <span class="path">tests/data/embedding_tree_large_mock.nwk</span></div>
+    <div>reference: <span class="path">tests/data/reference_tree_large_mock.nwk</span></div>
+    <div>source: <span class="path">results/validation-mock-large2</span></div>
+  </footer>
+</div>
