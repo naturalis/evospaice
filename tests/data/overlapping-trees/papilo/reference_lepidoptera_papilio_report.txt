@@ -1,0 +1,25 @@
+evospaice reference tree pruning report
+================================================
+Input tree:      data/reference_lepidoptera_overlap.tre
+Metadata file:   data/papilio_ids.tsv
+Output tree:     data/reference_lepidoptera_papilio.tre
+
+Tip counts
+------------------------------------------------
+Tips in input tree:                        61381
+Tips in metadata:                          146
+Overlap (kept in both):                    51 (0.1% of input tree, 34.9% of metadata)
+Dropped from input tree:            61330
+Dropped from metadata:              95
+
+Example metadata IDs missing from tree:
+  ABOLD047-16
+  ACML1235-18
+  ACML1236-18
+  AGIRI026-17
+  AGIRI053-17
+  ALEXO096-21
+  ALEXO115-21
+  ANICT1855-11
+  ANICT1858-11
+  ANICT1867-11
