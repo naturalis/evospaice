@@ -117,11 +117,12 @@ def representative_summaries(
         root = clades[encoded["taxonRoots"][taxon]]
         point = represent(vectors, list(map(str, data.ids[indices])), root, method, Counter())
         norm = float(np.linalg.norm(point))
+        raw_norm = float(np.linalg.norm(raw_mean))
         summaries[taxon] = {
             "norm": norm,
             "cosineToRawMean": float(np.clip(
-                1 - (point @ raw_mean) / (norm * np.linalg.norm(raw_mean)), 0, 2,
-            )),
+                1 - (point @ raw_mean) / (norm * raw_norm), 0, 2,
+            )) if raw_norm > 0 else None,
         }
         if method == "medoid":
             record = int(np.flatnonzero(np.all(vectors == point, axis=1))[0])

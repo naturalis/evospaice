@@ -213,7 +213,7 @@ function methodNote(side,method){
     readout.append(element("p",(method==="frechet"?"Unit-sphere representative norm: ":"Raw-vector representative mean / point norm: ")+length(summary.norm)));
     if(summary.medoidId)readout.append(element("p","Actual representative record: "+summary.medoidId));
     if(summary.covarianceTrace!==undefined)readout.append(element("p","Sample covariance trace: "+length(summary.covarianceTrace)+" raw-vector units²"));
-    if(summary.cosineToRawMean!==undefined)readout.append(element("p","Cosine deviation from this taxon's raw arithmetic mean: "+length(summary.cosineToRawMean)));
+    if(summary.cosineToRawMean!==undefined)readout.append(element("p","Cosine deviation from this taxon's raw arithmetic mean: "+(summary.cosineToRawMean===null?"undefined (raw arithmetic mean is zero)":length(summary.cosineToRawMean))));
     readout.append(element("p","These are descriptive representative summaries, not biological quality scores."));
   }else readout.append(element("p","Observed record endpoint: the stored vector itself, or a zero-covariance point mass for W2. No taxon mean is fitted here."));
   note.append(readout);

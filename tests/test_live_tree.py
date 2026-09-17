@@ -353,6 +353,28 @@ def test_http_routes_security_and_actual_compute(server):
     assert request(server, "GET", "/live.js")[0] == 200
 
 
+def test_medoid_with_zero_raw_mean_serves_valid_json_and_html(server):
+    server.state.data = live.Dataset(
+        np.array(["positive", "negative"]), np.array([[1., 0.], [-1., 0.]]),
+        np.array([["Order", "Family", "Genus", "Species"]] * 2), {"retained": 2},
+    )
+    args = parameters(server.state, methods=["medoid"])
+    status, _, body = request(server, "POST", "/api/jobs", json.dumps(args))
+    assert status == 202
+    finished = wait_job(server.state, json.loads(body))
+    assert finished["status"] == "succeeded", finished
+    status, _, body = request(server, "GET", finished["resultUrl"])
+    assert status == 200
+    result = json.loads(body)
+    summaries = result["trees"]["medoid"]["representatives"]
+    assert all(summary["cosineToRawMean"] is None for summary in summaries.values())
+    assert all(summary["medoidId"] == "positive" for summary in summaries.values())
+    assert len([n for n in result["trees"]["medoid"]["nodes"] if not n["children"]]) == 2
+    status, _, html = request(server, "GET", finished["viewUrl"])
+    assert status == 200 and b"undefined (raw arithmetic mean is zero)" in html
+    json.dumps(result, allow_nan=False)
+
+
 def test_remote_binding_is_refused_and_cli_dispatch(capsys):
     with pytest.raises(ValueError, match="127.0.0.1"):
         LiveServer(("0.0.0.0", 1234), LiveState(CONFIG))
