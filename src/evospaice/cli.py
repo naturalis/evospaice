@@ -1,6 +1,7 @@
 """Command-line entry point for evospaice.
 
-The ``validate`` subcommand computes RF and tip-to-root correlation. Other track subcommands
+The ``tree`` subcommands build and evaluate bottom-up trees. The ``validate``
+subcommand computes RF and tip-to-root correlation. Other track subcommands
 remain placeholders until their implementations are connected.
 
 Run it with ``uv run evospaice`` (or ``uv run evospaice --help``).
@@ -41,7 +42,18 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="track", metavar="<track>")
     for name, help_text in TRACKS.items():
         subparser = subparsers.add_parser(name, help=help_text)
-        if name == "validate":
+        if name == "tree":
+            tree_commands = subparser.add_subparsers(dest="tree_command", metavar="<command>")
+            tree_commands.add_parser(
+                "build", help="Build a taxonomy-constrained bottom-up centroid tree."
+            )
+            tree_commands.add_parser(
+                "compare", help="Compare all five survey representation strategies."
+            )
+            tree_commands.add_parser(
+                "evaluate", help="Evaluate a bottom-up tree against a reference."
+            )
+        elif name == "validate":
             from evospaice.validate.evaluate import build_parser as build_validate_parser
 
             build_validate_parser(subparser)
@@ -55,6 +67,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         from evospaice.validate.evaluate import main as validate_main
 
         return validate_main(arguments[1:])
+    if len(arguments) >= 2 and arguments[0] == "tree":
+        command, command_arguments = arguments[1], arguments[2:]
+        if command == "build":
+            from evospaice.tree.centroid import main as build_tree_main
+
+            return build_tree_main(command_arguments)
+        if command == "compare":
+            from evospaice.tree.compare_representations import main as compare_main
+
+            return compare_main(command_arguments)
+        if command == "evaluate":
+            from evospaice.validate.whole_tree import main as evaluate_main
+
+            return evaluate_main(command_arguments)
     parser = build_parser()
     args = parser.parse_args(arguments)
     if not args.track:

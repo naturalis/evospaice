@@ -8,6 +8,7 @@ import gc
 import json
 import logging
 import sys
+from collections.abc import Sequence
 from importlib.metadata import version
 from pathlib import Path
 from time import perf_counter
@@ -218,7 +219,7 @@ def run(
     return report
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--inferred", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
@@ -228,7 +229,7 @@ def main() -> int:
     parser.add_argument("--anchors", type=int, default=128)
     parser.add_argument("--neighbors", type=int, default=10)
     parser.add_argument("--seed", type=int, default=42)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         report = run(

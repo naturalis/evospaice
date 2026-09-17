@@ -10,6 +10,7 @@ import logging
 import platform
 import sys
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
@@ -432,7 +433,7 @@ def run(
     return report
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--embeddings", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -458,7 +459,7 @@ def main() -> int:
     parser.add_argument("--pairs", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--source-uri")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         report = run(
