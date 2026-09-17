@@ -1,4 +1,4 @@
-"""Simple taxonomy-constrained NJ baseline with sequence-weighted mean vectors."""
+"""Taxonomy-constrained NJ across order/family/genus/species with five representations."""
 
 from __future__ import annotations
 
@@ -25,6 +25,13 @@ from scipy.stats import pearsonr, spearmanr
 
 from evospaice.contracts.validators import UNKNOWN_SPECIES_VALUES
 from evospaice.ingest.tsv2newick import NULL_VALUES
+from evospaice.tree.representations import (
+    METHODS,
+    Representation,
+    gaussian,
+    represent,
+    representative_distances,
+)
 from evospaice.validate.compare import (
     leaf_labels,
     load_tree,
@@ -55,6 +62,13 @@ class Dataset:
 class Subtree:
     root: Clade
     centroid: np.ndarray
+    records: int
+
+
+@dataclass
+class RepresentedSubtree:
+    root: Clade
+    representative: Representation
     records: int
 
 
@@ -230,30 +244,82 @@ def graft_nj(
 
 def build_tree(
     data: Dataset, max_children: int = 512, nj_backend: str = "biopython",
+    *, method: str = "centroid", max_representative_records: int | None = None,
+    start_rank: int = 0, root_name: str | None = None,
 ) -> tuple[Tree, dict]:
+    """Resolve all selected ranks; start_rank supports the genus comparison wrapper."""
+    if method not in METHODS:
+        raise ValueError(f"Unknown representation: {method}")
     if nj_backend not in NJ_BACKENDS:
         raise ValueError(f"Unknown NJ backend: {nj_backend}")
     if max_children < 2:
         raise ValueError("max_children must be at least two")
+    if max_representative_records is not None and max_representative_records < 1:
+        raise ValueError("max_representative_records must be positive")
+    if start_rank not in range(len(RANKS) + 1):
+        raise ValueError("start_rank must be between zero and four")
+    count = len(data.ids)
+    if (not count or data.ids.shape != (count,) or data.taxonomy.shape != (count, len(RANKS))
+            or data.embeddings.ndim != 2 or data.embeddings.shape[0] != count
+            or data.embeddings.shape[1] == 0):
+        raise ValueError("Dataset requires records, vectors, and four taxonomy columns")
+    if (not np.isfinite(data.embeddings).all()
+            or np.any(np.linalg.norm(data.embeddings, axis=1) == 0)):
+        raise ValueError("Selected embeddings contain non-finite or zero vectors")
+    if len(set(map(str, data.ids))) != count:
+        raise ValueError("Selected record IDs are not unique")
     diagnostics: Counter = Counter()
 
-    def visit(indices: list[int], depth: int, name: str) -> Subtree:
+    def visit(indices: list[int], depth: int, name: str) -> RepresentedSubtree:
+        if max_representative_records is not None and len(indices) > max_representative_records:
+            raise ValueError(
+                f"{name} has {len(indices)} descendants, exceeding "
+                f"--max-representative-records={max_representative_records}"
+            )
         if depth == len(RANKS):
+            if len(indices) > max_children:
+                raise ValueError(
+                    f"{name} has {len(indices)} children, exceeding --max-children={max_children}"
+                )
             children = [
-                Subtree(Clade(name=str(data.ids[i]), branch_length=0.0), data.embeddings[i], 1)
+                RepresentedSubtree(
+                    Clade(name=str(data.ids[i]), branch_length=0.0),
+                    gaussian(data.embeddings[i:i + 1]) if method == "wasserstein"
+                    else data.embeddings[i], 1,
+                )
                 for i in indices
             ]
         else:
             groups: dict[str, list[int]] = {}
             for i in indices:
                 groups.setdefault(str(data.taxonomy[i, depth]), []).append(i)
+            if len(groups) > max_children:
+                raise ValueError(
+                    f"{name} has {len(groups)} children, exceeding --max-children={max_children}"
+                )
             children = [
                 visit(group, depth + 1, f"{RANKS[depth]}:{label}")
                 for label, group in sorted(groups.items())
             ]
-        return combine(name, children, diagnostics, max_children, nj_backend)
+        if method == "centroid":
+            result = combine(
+                name, [Subtree(c.root, c.representative, c.records) for c in children],
+                diagnostics, max_children, nj_backend,
+            )
+            return RepresentedSubtree(result.root, result.centroid, result.records)
+        distances = representative_distances([c.representative for c in children], method)
+        root = graft_nj(
+            name, [c.root for c in children], distances, diagnostics, max_children, nj_backend,
+        )
+        representative = represent(
+            data.embeddings[indices], list(map(str, data.ids[indices])), root, method, diagnostics,
+        )
+        return RepresentedSubtree(root, representative, len(indices))
 
-    result = visit(list(range(len(data.ids))), 0, "butterfly_centroid_baseline")
+    name = root_name or (
+        "butterfly_centroid_baseline" if method == "centroid" else f"taxonomy_{method}_baseline"
+    )
+    result = visit(list(range(count)), start_rank, name)
     if diagnostics["negative_edges_clamped"]:
         LOGGER.warning(
             "Clamped %d negative NJ edges to zero", diagnostics["negative_edges_clamped"]
@@ -307,15 +373,14 @@ def tree_pair_distances(tree, ids: np.ndarray, pairs: list[tuple[int, int]]) -> 
 
 
 def distance_metrics(target: np.ndarray, predicted: np.ndarray) -> dict:
-    if float(target @ target) == 0:
-        raise ValueError("Normalized stress is undefined for all-zero target distances")
+    norm = float(np.linalg.norm(target))
     error = predicted - target
     variable = len(target) > 1 and np.ptp(target) > 0 and np.ptp(predicted) > 0
     return {
         "pairs": len(target),
-        "normalized_stress": float(np.linalg.norm(error) / np.linalg.norm(target)),
-        "mean_signed_error": float(error.mean()),
-        "p90_absolute_error": float(np.quantile(np.abs(error), 0.9)),
+        "normalized_stress": float(np.linalg.norm(error) / norm) if norm else None,
+        "mean_signed_error": float(error.mean()) if len(error) else None,
+        "p90_absolute_error": float(np.quantile(np.abs(error), 0.9)) if len(error) else None,
         "pearson": float(pearsonr(target, predicted).statistic) if variable else None,
         "spearman": float(spearmanr(target, predicted).statistic) if variable else None,
     }
@@ -334,26 +399,36 @@ def run(
     reference: Path | None = None, families: tuple[str, ...] | None = BUTTERFLY_FAMILIES,
     max_children: int = 512, pair_limit: int = 5000, seed: int = 42,
     source_uri: str | None = None, nj_backend: str = "biopython",
+    *, method: str = "centroid", max_representative_records: int | None = None,
 ) -> dict:
     started = perf_counter()
     if output.exists():
         raise FileExistsError(f"{output} already exists; choose a new output directory")
+    if pair_limit < 1:
+        raise ValueError("pair_limit must be positive")
     selected = set(match_ids.read_text().splitlines()) if match_ids is not None else None
     data = load_embeddings(embeddings, families, selected)
     LOGGER.info("Selected %d real records: %s", len(data.ids), data.coverage)
-    tree, diagnostics = build_tree(data, max_children, nj_backend)
+    tree, diagnostics = build_tree(
+        data, max_children, nj_backend, method=method,
+        max_representative_records=max_representative_records,
+    )
     LOGGER.info("Tree assembled in %.2f seconds; writing and evaluating", perf_counter() - started)
-    if families is None:
+    if families is None and method == "centroid":
         tree.root.name = "taxonomy_centroid_baseline"
     output.mkdir(parents=True)
-    tree_path = output / "centroid.nwk"
+    tree_path = output / f"{method}.nwk"
     Phylo.write(tree, tree_path, "newick", format_branch_length="%1.12g")
     inferred = load_tree(tree_path)
     if leaf_labels(inferred) != set(data.ids):
         raise ValueError("Serialized tree leaves differ from the selected record IDs")
-    pairs = sampled_pairs(len(data.ids), pair_limit, seed)
+    pairs = sampled_pairs(len(data.ids), pair_limit, seed) if len(data.ids) > 1 else []
     unit = data.embeddings / np.linalg.norm(data.embeddings, axis=1, keepdims=True)
-    target = np.array([np.clip(1 - unit[a] @ unit[b], 0, 2) for a, b in pairs])
+    cosine = np.array([np.clip(1 - unit[a] @ unit[b], 0, 2) for a, b in pairs])
+    target = (
+        np.array([np.linalg.norm(data.embeddings[a] - data.embeddings[b]) for a, b in pairs])
+        if method == "wasserstein" else cosine
+    )
     predicted = tree_pair_distances(inferred, data.ids, pairs)
     evaluation = distance_metrics(target, predicted)
     by_rank = {}
@@ -373,11 +448,17 @@ def run(
             "complete_taxonomy_required": True,
             "match_ids": str(match_ids) if match_ids is not None else None,
             "max_children": max_children,
+            "max_representative_records": max_representative_records,
         },
         "algorithm": {
-            "representative": "arithmetic mean of all raw stored descendant vectors",
-            "propagation": "child centroids weighted by their descendant record counts",
-            "distance": "cosine", "local_resolution": "Neighbor-Joining",
+            "method": method,
+            "representative": (
+                "arithmetic mean of all raw stored descendant vectors" if method == "centroid"
+                else METHODS[method]["description"]
+            ),
+            "propagation": METHODS[method]["propagation"],
+            "distance": METHODS[method]["distance"], "units": METHODS[method]["units"],
+            "ranks": list(RANKS), "local_resolution": "Neighbor-Joining",
             "nj_backend": nj_backend,
             "nj_backend_version": version("scikit-bio" if nj_backend == "skbio" else "biopython"),
             "rooting": "midpoint convention, not a biological root",
@@ -392,9 +473,19 @@ def run(
             for depth, rank in enumerate(RANKS)
         },
         "diagnostics": diagnostics, "sample_seed": seed,
-        "evaluation": {"embedding_distance": evaluation, "by_first_differing_rank": by_rank},
+        "evaluation": {
+            "embedding_distance": evaluation, "by_first_differing_rank": by_rank,
+            "target_distance": "euclidean" if method == "wasserstein" else "cosine",
+            "units": METHODS[method]["units"],
+            "undefined_metrics": "null for no pairs, constant correlations, or zero target norm",
+        },
         "evaluation_scope": "descriptive sampled-pair fit, not a held-out generalization test",
     }
+    if method == "wasserstein":
+        cross_geometry = distance_metrics(cosine, predicted)
+        report["evaluation"]["cosine_comparison"] = {
+            key: cross_geometry[key] for key in ("pairs", "pearson", "spearman")
+        } | {"raw_magnitude_comparable": False, "reason": "W2 and cosine have different units"}
     if reference is not None:
         LOGGER.info("Loading the independent reference tree")
         reference_tree = load_tree(reference)
@@ -448,7 +539,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--all-families", action="store_true",
         help="Include every family in the input; complete taxonomy is still required",
     )
-    parser.add_argument("--max-children", type=int, default=512)
+    parser.add_argument(
+        "--max-children", type=int, default=512,
+        help="Maximum children in any local NJ problem; reject oversized taxa (default: 512)",
+    )
+    parser.add_argument(
+        "--method", choices=METHODS, default="centroid",
+        help="Representation at every rank: centroid (raw mean, default), medoid "
+             "(exact cosine medoid), weighted (full-subtree GSC), wasserstein "
+             "(raw Gaussian W2), frechet (intrinsic spherical fit). Writes METHOD.nwk.",
+    )
+    parser.add_argument(
+        "--max-representative-records", type=int,
+        help="Optional descendant count cap per representation, including the full root; "
+             "no default cap. Does not bound Gaussian/Frechet runtime or dimension.",
+    )
     parser.add_argument(
         "--nj-backend", choices=NJ_BACKENDS, default="biopython",
         help=(
@@ -467,8 +572,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             None if args.all_families else tuple(args.families),
             args.max_children, args.pairs, args.seed, args.source_uri,
             args.nj_backend,
+            method=args.method, max_representative_records=args.max_representative_records,
         )
-    except (OSError, ValueError, ImportError) as problem:
+    except (OSError, ValueError, ImportError, RuntimeError) as problem:
         print(f"error: {problem}", file=sys.stderr)
         return 1
     print(json.dumps({

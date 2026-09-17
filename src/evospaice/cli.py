@@ -45,13 +45,19 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "tree":
             tree_commands = subparser.add_subparsers(dest="tree_command", metavar="<command>")
             tree_commands.add_parser(
-                "build", help="Build a taxonomy-constrained bottom-up centroid tree."
+                "build", help="Build a full-taxonomy tree with one of five representations."
             )
             tree_commands.add_parser(
                 "compare", help="Compare all five survey representation strategies."
             )
             tree_commands.add_parser(
                 "evaluate", help="Evaluate a bottom-up tree against a reference."
+            )
+            tree_commands.add_parser(
+                "explore", help="Create an offline five-method hierarchy explorer in memory."
+            )
+            tree_commands.add_parser(
+                "live", help="Run a localhost merging lab with authenticated live Azure data."
             )
         elif name == "validate":
             from evospaice.validate.evaluate import build_parser as build_validate_parser
@@ -81,6 +87,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             from evospaice.validate.whole_tree import main as evaluate_main
 
             return evaluate_main(command_arguments)
+        if command == "explore":
+            from evospaice.tree.explore import main as explore_main
+
+            return explore_main(command_arguments)
+        if command == "live":
+            from evospaice.tree.live import main as live_main
+
+            return live_main(command_arguments)
     parser = build_parser()
     args = parser.parse_args(arguments)
     if not args.track:
