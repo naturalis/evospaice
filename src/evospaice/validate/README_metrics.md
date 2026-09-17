@@ -150,32 +150,6 @@ uv run --no-sync python -m pytest tests/test_validate.py
 The [validation tests](../../../tests/test_validate.py) cover mock depths and scores,
 metric selection, undefined correlation, alignment and invalid inputs.
 
-## Whole-tree algorithm review
-
-`whole_tree.py` adds the survey's broader static evaluation pass for a bottom-up
-tree and a reference tree on their exact shared record-ID cohort:
-
-```bash
-uv run python -m evospaice.validate.whole_tree \
-  --inferred results/bottom-up/centroid.nwk \
-  --reference data/pruned.tre.txt \
-  --embeddings /path/to/embeddings.npz \
-  --pairs 50000 \
-  --anchors 128 \
-  --neighbors 10 \
-  --seed 42 \
-  --output-dir results/bottom-up-validation
-```
-
-It reports exact unrooted RF, sampled topology-only Kendall-Colijn distance,
-taxonomic purity, embedding/path fidelity, and exact k-nearest-neighbor
-preservation for sampled anchors. Outputs include an offline dashboard,
-machine-readable JSON and TSV tables, and matched Newick trees.
-
-Sampled metrics are descriptive rather than held out. Bootstrap support,
-feature-noise perturbation, and subsampling invariance require replicate tree
-rebuilds and are explicitly reported as not computed.
-
 ## References
 
 * [DendroPy tree comparisons](https://jeetsukumaran.github.io/DendroPy/library/treecompare.html)
