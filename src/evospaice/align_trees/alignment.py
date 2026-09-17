@@ -39,7 +39,7 @@ def read_ids(metadata_path: Path, id_column: str = "id") -> set[str]:
 
 def tree_tip_labels(tree_path: Path) -> set[str]:
     """Return the set of leaf taxon labels in a Newick tree file."""
-    tree = dendropy.Tree.get(path=str(tree_path), schema="newick")
+    tree = dendropy.Tree.get(path=str(tree_path), schema="newick", preserve_underscores=True)
     return {leaf.taxon.label for leaf in tree.leaf_node_iter()}
 
 
