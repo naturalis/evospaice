@@ -3,6 +3,13 @@ local on-demand distance block, assign branch lengths, and carry one
 representative up. All five survey representations build one connected tree
 through **species, genus, family, order, and the common root**.
 
+The standalone scripts added separately on `main` remain available:
+[unified bottom-up construction](README_bottom_up.md),
+[unsupervised NJ construction](README_unsupervised_nj.md), and
+[subtree extraction](README_small_subtree.md). The configurable five-method
+CLI and explorers described below use `centroid.py` and `representations.py`;
+they do not replace those scripts or their rooting conventions.
+
 ## Live localhost merging lab
 
 ```bash
