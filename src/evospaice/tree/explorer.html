@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="data:,">
+<title>Butterfly merging lab · Five bottom-up representations</title>
+<style>
+:root{--paper:#e9f2f7;--ink:#142f43;--muted:#48697d;--orange:#bd5c27;--teal:#087e87;--white:#f6fbff;--line:#bccfdc;--soft:#93aebf}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select{font:inherit;color:inherit}button,select{cursor:pointer}button,select,input{background:var(--white);border:1px solid var(--line);border-radius:5px;min-height:40px;padding:7px 11px}
+button:hover{border-color:var(--teal);background:#fff}button:disabled{opacity:.5;cursor:default}a{color:var(--teal)}:focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+header,main,footer{max-width:1440px;margin:auto;padding:24px 38px}header{padding-bottom:15px}.eyebrow,.micro,th{font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.09em;text-transform:uppercase}
+.eyebrow{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding-bottom:14px}
+h1,h2,h3,p{margin:0}h1{font:500 clamp(32px,4.5vw,58px)/1.08 Optima,Candara,"Trebuchet MS",sans-serif;letter-spacing:-.035em;margin:24px 0 12px}
+.intro{max-width:760px;font-size:16px;color:var(--muted)}.cohort{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px}.cohort strong{font:500 24px/1 Optima,Candara,sans-serif;margin-right:6px}.cohort span{font-size:12px;color:var(--muted)}
+main{padding-top:12px}nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}nav button{min-height:32px;padding:4px 9px;font-size:13px}nav button[aria-current]{background:var(--ink);color:var(--white)}
+.workspace{border:1px solid var(--line);border-radius:12px;background:var(--white);overflow:hidden}.controls{padding:20px 24px;border-bottom:1px solid var(--line)}
+.location{display:flex;align-items:start;justify-content:space-between;gap:16px}.location h2{font:500 28px/1.2 Optima,Candara,sans-serif}.location p{color:var(--muted);margin-top:6px}
+.search{position:relative;min-width:260px}.search label{display:block;margin-bottom:4px}.search input{width:100%}.results{position:absolute;z-index:4;top:100%;right:0;width:min(440px,80vw);max-height:360px;overflow:auto;background:white;border:1px solid var(--line);box-shadow:0 10px 24px #142f4320;padding:8px;border-radius:7px}.results:empty{display:none}.results button{display:block;text-align:left;width:100%;margin:4px 0;font-size:13px}.results p{padding:8px}
+.view-controls{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin-top:20px}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:12px;color:var(--muted)}.check{display:flex;gap:6px;align-items:center;font-size:12px}.check input{min-height:auto}
+.method-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:16px 24px}.method-row .field:last-child{text-align:right;align-items:end}.method-row select{width:min(100%,320px);font-weight:600}.left-color{color:var(--orange)}.right-color{color:var(--teal)}.versus{font:12px ui-monospace,monospace;color:var(--muted)}
+.comparison{padding:10px 24px;border-block:1px solid var(--line);display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap;font-size:13px;background:var(--paper)}.comparison strong{font-weight:650}.legend{color:var(--muted);font-size:12px}
+.canvas-scroll{max-height:650px;overflow:auto;position:relative;scrollbar-color:var(--soft) var(--paper)}#specimens{display:block;width:100%;min-width:850px}#specimens text{font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink)}#specimens .tip{cursor:pointer}#specimens .tip:hover text,#specimens .tip:focus text{fill:var(--teal);font-weight:bold}.tip:focus{outline:none}.tip:focus rect{stroke:var(--orange);stroke-width:2}
+.edge{fill:none;stroke:var(--soft);stroke-width:1.25}.edge.unique.left{stroke:var(--orange);stroke-width:2}.edge.unique.right{stroke:var(--teal);stroke-width:2}.match{stroke:var(--line);stroke-width:.7;fill:none}.selected-tip rect{fill:#dcecf3}.axis{font:11px ui-monospace,monospace!important;fill:var(--muted)!important}
+.notice{padding:15px 24px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}.empty{padding:50px 30px;text-align:center;color:var(--muted)}[hidden]{display:none!important}
+.mobile-hint{display:none}.representative-readout{background:var(--white);padding:12px 14px;border-left:2px solid var(--line);margin:12px 0;font-size:13px}.representative-readout p{margin:3px 0}
+.inspection{display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:25px;padding:20px 24px;border-top:1px solid var(--line)}.inspection h3{font-size:15px;margin-bottom:5px}.inspection p{font-size:13px;color:var(--muted)}.table-scroll{overflow:auto;max-height:240px}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--muted);position:sticky;top:0;background:var(--white)}td,th{padding:6px 10px;border-bottom:1px solid var(--line)}td button{min-height:26px;padding:2px 6px;font-size:12px;text-align:left}td:not(:first-child){font-variant-numeric:tabular-nums}
+.downloads{display:flex;gap:8px;flex-wrap:wrap;padding:14px 24px;border-top:1px solid var(--line)}.downloads button{font-size:12px}.downloads label{font-size:12px;align-self:center}.downloads select{font-size:12px}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:28px 0}.method-note{border-top:3px solid var(--orange);padding-top:16px}.method-note.right{border-color:var(--teal)}.method-note h3{font:500 22px Optima,Candara,sans-serif}.formula{font:14px/1.8 ui-monospace,SFMono-Regular,monospace;padding:12px 0;overflow-wrap:anywhere}.method-note p{font-size:13px;color:var(--muted);margin:7px 0}.method-note details{font-size:12px;margin-top:12px}
+.protocol{border-top:1px solid var(--line);padding:22px 0;display:grid;grid-template-columns:1fr 1fr;gap:32px}.protocol h2{font:500 24px Optima,Candara,sans-serif;margin-bottom:12px}.protocol p,.protocol li{font-size:13px;color:var(--muted)}.protocol ul{padding-left:18px}.protocol details{margin-top:12px}.protocol summary{cursor:pointer}.provenance{white-space:pre-wrap;word-break:break-word;max-height:420px;overflow:auto;font:11px/1.6 ui-monospace,monospace;background:var(--white);padding:14px}.source-link{overflow-wrap:anywhere;font-size:12px}
+footer{font-size:12px;color:var(--muted);border-top:1px solid var(--line)}#status{min-height:20px;font-size:12px;color:var(--teal);padding-top:8px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:700px){header,main,footer{padding:18px 16px}.eyebrow{font-size:9px}.cohort{gap:14px}.cohort strong{font-size:20px}.controls{padding:16px}.location{flex-direction:column}.search{width:100%;min-width:0}.method-row{padding:12px;gap:8px;grid-template-columns:1fr 1fr}.versus{display:none}.method-row .field:last-child{text-align:left;align-items:stretch}.method-row select{font-size:12px;padding:6px;width:100%}.inspection,.notes,.protocol{grid-template-columns:1fr}.inspection{padding:16px}.view-controls{gap:10px}.comparison{padding:10px 16px}.canvas-scroll{max-height:520px}.notes{gap:20px}.downloads{padding:12px}.notice{padding:12px}.location h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+@media(max-width:700px){.mobile-hint{display:block;padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}}
+body.live-result header{display:none}body.live-result main{padding-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow"><span>Lepidoptera / embedding specimen lab</span><span>Five representations · one fixed cohort</span></div>
+  <h1>Where representatives branch.</h1>
+  <p class="intro">Follow records upward into species, genera, families and order. Compare what changes when the same descendants are represented in five different ways—not five different datasets.</p>
+  <div class="cohort" id="cohort"></div>
+</header>
+<main>
+  <nav id="breadcrumbs" aria-label="Taxonomic breadcrumb"></nav>
+  <section class="workspace" aria-label="Synchronized hierarchy comparison">
+    <div class="controls">
+      <div class="location">
+        <div><div class="micro" id="rank-label"></div><h2 id="selected-label"></h2><p id="selected-summary"></p></div>
+        <div class="search"><label for="search" class="micro">Find a taxon or record</label><input id="search" type="search" placeholder="Family, genus, species or record ID" autocomplete="off" aria-controls="search-results"><div class="results" id="search-results" aria-label="Search results"></div></div>
+      </div>
+      <div class="view-controls">
+        <button id="up">↑ Step upward</button>
+        <div class="field"><label for="frontier">Collapse tips at</label><select id="frontier"></select></div>
+        <div class="field"><label for="view-mode">Horizontal layout</label><select id="view-mode"><option value="topology">Topology only · equal edges</option><option value="length">Branch lengths · separate scales</option></select></div>
+        <label class="check"><input id="matching" type="checkbox" checked> Link matching tips (≤120)</label>
+      </div>
+    </div>
+    <div class="method-row">
+      <div class="field"><label class="left-color" for="left-method">Left specimen</label><select id="left-method"></select></div>
+      <span class="versus" aria-hidden="true">same descendants ↔ different summaries</span>
+      <div class="field"><label class="right-color" for="right-method">Right specimen</label><select id="right-method"></select></div>
+    </div>
+    <div class="comparison"><strong id="comparison-score" aria-live="polite"></strong><span class="legend">Gray: shared split · orange / teal: method-only split</span></div>
+    <p class="mobile-hint">Scroll the tree sideways to see both specimens. The table below offers the same taxon navigation.</p>
+    <div class="canvas-scroll" tabindex="0" aria-label="Tree canvas. Scroll to see all tips; use the table below for keyboard navigation.">
+      <svg id="specimens" role="img" aria-label="Two mirrored, synchronized branching specimens"></svg>
+      <div id="empty-view" class="empty" hidden></div>
+    </div>
+    <p class="notice" id="view-notice"></p>
+    <div class="inspection">
+      <div><h3>Inspect the merging boundary</h3><p id="inspection-copy"></p><p>Lengths below are the actual incoming edges of the displayed tips, not pairwise representative distances. Hover a branch for its own length; select a tip to drill down. The current root’s incoming edge is excluded.</p></div>
+      <div class="table-scroll"><table><thead><tr><th>Child / record</th><th>Records</th><th id="left-length">Left edge</th><th id="right-length">Right edge</th></tr></thead><tbody id="tip-table"></tbody></table></div>
+    </div>
+    <div class="downloads">
+      <label for="export-method">Export method</label><select id="export-method"></select>
+      <button id="download-selected">Download selected subtree</button><button id="download-full">Download full tree</button><button id="download-provenance">Download provenance</button>
+    </div>
+  </section>
+  <p id="status" role="status"></p>
+  <section class="notes" aria-label="Selected method mathematics"><article class="method-note" id="left-note"></article><article class="method-note right" id="right-note"></article></section>
+  <section class="protocol">
+    <div><h2>A comparison, not an ancestry claim.</h2><ul>
+      <li id="computation-mode">These are precomputed full-cohort trees. Controls reveal existing results; they do not refit representatives or run live NJ.</li>
+      <li>Each parent resolves its child representatives using neighbor joining, then grafts each complete child subtree. Taxonomy constrains grouping; embeddings resolve within that constraint.</li>
+      <li>Negative NJ edges are clamped to zero before midpoint rooting. Midpoint is a display/build convention, not biological ancestry. All-zero connectors retain their NJ root; unary edges are zero.</li>
+      <li>Cosine dissimilarity and Gaussian W2 have different units. Branch-length views use independent scales. Grafted paths may overcount original embedding distances.</li>
+      <li>Split differences are exact unrooted Robinson–Foulds (RF) on the visible, collapsed tips. Trivial splits are excluded; complementary root splits are counted once. Zero-length resolved splits are retained. This is not accuracy, calibration, or comparison against a biological reference.</li>
+    </ul></div>
+    <div><h2>The specimen ledger.</h2><p id="provenance-summary"></p><p id="source-link" class="source-link"></p><details><summary>Source, filtering, checksums & computation</summary><pre class="provenance" id="provenance"></pre></details><p id="storage-note" style="margin-top:14px">This self-contained file makes no network requests and contains no embedding vectors or credentials. Open it after an authenticated download. Newick exports retain all records, regardless of display collapse.</p></div>
+  </section>
+  <noscript>This explorer needs JavaScript. Enable it locally to navigate the precomputed trees; no network connection is required.</noscript>
+</main>
+<footer>Bottom-up merging lab / Experimental embedding geometry · No reference tree supplied · Offline by design</footer>
+<script id="explorer-data" type="application/json">/* EXPLORER_DATA */ null</script>
+<script>
+"use strict";
+const DATA=JSON.parse(document.getElementById("explorer-data").textContent);
+const MAX_TIPS=600;
+const FORMULAS={
+  centroid:["μ = (Σᵢ xᵢ) / n","A raw-vector arithmetic mean. At a parent, child means are weighted by record counts, not equally by the number of children."],
+  medoid:["x* = argminₓᵢ Σⱼ (1 − uᵢ · uⱼ)","Choose one actual descendant record, searching all descendants—not just child medoids. Unit vectors u are used for the cosine objective; first input record wins numerical ties."],
+  weighted:["wᵢ ∝ Σₑ∈path(i) ℓₑ / nₑ ; μ = Σᵢ wᵢ xᵢ","GSC gives a record weight from the whole grafted descendant subtree: each edge contributes length divided by its descendant count. Normalize weights; all-zero lengths use uniform weights. The incoming parent edge is excluded."],
+  wasserstein:["W₂² = ‖μ₁−μ₂‖² + tr(Σ₁+Σ₂) − 2‖A₁ᵀA₂‖*","Represent all raw descendants by their mean and unbiased sample covariance Σ = AAᵀ. The star denotes nuclear norm (sum of singular values). Exact QR factor compression preserves covariance; no regularization or rank truncation. Singletons are point masses, so record distances are Euclidean."],
+  frechet:["μ = argmin‖μ‖=1 Σᵢ arccos(uᵢ · μ)²","Fit an intrinsic mean on normalized descendant vectors using deterministic Riemannian descent. Angular distance is the fitting objective only; NJ still uses cosine. A stationary solution is not a guaranteed global minimum. Antipodal ambiguity or nonconvergence causes a build error."]
+};
+const $=id=>document.getElementById(id);
+function element(tag,text,attrs={}){const node=document.createElement(tag);if(text!==null)node.textContent=text;for(const [key,value]of Object.entries(attrs))node.setAttribute(key,value);return node}
+function svgElement(tag,attrs={},text){const n=document.createElementNS("http://www.w3.org/2000/svg",tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n}
+function number(value){return Number(value).toLocaleString("en-US")}
+function length(value){return value===0?"0":Number(value).toPrecision(5)}
+function hideSpecimens(hidden){$("specimens").toggleAttribute("hidden",hidden)}
+function pathLabel(id){const labels=[];for(let i=id;i!==null;i=DATA.taxa[i].parent)labels.push(DATA.taxa[i].label);return labels.reverse().join(" / ")}
+function initialTaxon(){return DATA.computation?.initialTaxon??(DATA.taxa[0].children.length===1?DATA.taxa[0].children[0]:0)}
+let selected=initialTaxon(),lastViews=null;
+function rootFor(method,id){return DATA.trees[method].taxonRoots[id]}
+function buildView(method,id,frontier){
+  const tree=DATA.trees[method], result={nodes:[],tips:[],splits:new Set(),max:0};
+  function walk(source,parent,distance,depth){
+    const raw=tree.nodes[source],taxon=raw.taxon, index=result.nodes.length;
+    const tip=taxon!==null&&(DATA.taxa[taxon].depth>=frontier||!raw.children.length);
+    const node={source,taxon,parent,children:[],length:parent===null?0:raw.length,distance,depth,tip};
+    result.nodes.push(node);
+    if(tip){result.tips.push(node);return index}
+    for(const child of raw.children)node.children.push(walk(child,index,distance+tree.nodes[child].length,depth+1));
+    return index;
+  }
+  walk(rootFor(method,id),null,0,0);
+  if(result.tips.length>MAX_TIPS)return result;
+  const ids=result.tips.map(n=>n.taxon).sort((a,b)=>a-b),bit=new Map(ids.map((id,i)=>[id,1n<<BigInt(i)]));
+  const all=(1n<<BigInt(ids.length))-1n;
+  for(let i=result.nodes.length-1;i>=0;i--){
+    const n=result.nodes[i];
+    n.bits=n.tip?bit.get(n.taxon):n.children.reduce((v,c)=>v|result.nodes[c].bits,0n);
+    n.count=n.tip?1:n.children.reduce((v,c)=>v+result.nodes[c].count,0);
+    if(n.parent!==null&&n.count>1&&n.count<ids.length-1){
+      const complement=all^n.bits;n.split=(n.bits<complement?n.bits:complement).toString();result.splits.add(n.split);
+    }
+    n.sortKey=n.tip?DATA.taxa[n.taxon].label:n.children.map(c=>result.nodes[c].sortKey).sort()[0];
+    n.children.sort((a,b)=>result.nodes[a].sortKey.localeCompare(result.nodes[b].sortKey));
+  }
+  let row=0;
+  function position(index){const n=result.nodes[index];if(n.tip)n.y=65+row++*25;else{n.children.forEach(position);n.y=n.children.reduce((s,c)=>s+result.nodes[c].y,0)/n.children.length}}
+  position(0);result.tips.sort((a,b)=>a.y-b.y);
+  result.max=Math.max(...result.nodes.map(n=>$("view-mode").value==="length"?n.distance:n.depth));
+  return result;
+}
+function splitDifference(a,b){
+  let common=0;for(const split of a)if(b.has(split))common++;
+  return {rf:a.size+b.size-2*common,common,left:a.size-common,right:b.size-common};
+}
+function resetFrontier(){
+  const current=DATA.taxa[selected];$("frontier").replaceChildren();
+  const ranks=["cohort","order","family","genus","species","record"];
+  for(let depth=current.depth+1;depth<=5;depth++)$("frontier").append(element("option",ranks[depth]+(depth===current.depth+1?" · direct children":""),{value:depth}));
+  $("frontier").disabled=current.depth===5;
+}
+function navigate(id){
+  selected=id;resetFrontier();$("search").value="";$("search-results").replaceChildren();
+  $("status").textContent="Showing "+pathLabel(id);render();document.querySelector(".canvas-scroll").scrollTop=0;
+}
+function renderBreadcrumbs(){
+  const chain=[];for(let i=selected;i!==null;i=DATA.taxa[i].parent)chain.push(i);
+  $("breadcrumbs").replaceChildren();
+  chain.reverse().forEach((id,index)=>{
+    if(index)$("breadcrumbs").append(element("span","›",{"aria-hidden":"true"}));
+    const b=element("button",DATA.taxa[id].label,id===selected?{"aria-current":"location"}:{});
+    b.onclick=()=>navigate(id);$("breadcrumbs").append(b);
+  });
+}
+function drawSpecimens(left,right){
+  const svg=$("specimens"),height=Math.max(300,110+left.tips.length*25);
+  svg.replaceChildren();svg.setAttribute("viewBox",`0 0 1200 ${height}`);svg.style.height="auto";
+  svg.append(svgElement("title",{},"Full connector topology at the selected collapse rank. Orange and teal mark nonshared unrooted splits."));
+  if($("matching").checked&&left.tips.length<=120){
+    const rightY=new Map(right.tips.map(n=>[n.taxon,n.y]));
+    left.tips.forEach(n=>svg.append(svgElement("path",{d:`M565,${n.y} C592,${n.y} 608,${rightY.get(n.taxon)} 635,${rightY.get(n.taxon)}`,class:"match"})));
+  }
+  for(const [side,view,other,method]of [["left",left,right,$("left-method").value],["right",right,left,$("right-method").value]]){
+    const mirror=side==="right",unit=DATA.methods[method].units;
+    const x=n=>{const d=$("view-mode").value==="length"?n.distance:n.depth;return mirror?1170-(view.max?d/view.max:0)*320:30+(view.max?d/view.max:0)*320};
+    svg.append(svgElement("text",{x:mirror?1170:30,y:24,"text-anchor":mirror?"end":"start",class:"axis"},$("view-mode").value==="length"?`0 → ${length(view.max)} ${unit}`:"Equal edge spacing · no distance scale"));
+    for(const n of view.nodes){
+      if(n.parent!==null){
+        const parent=view.nodes[n.parent],unique=n.split&&!other.splits.has(n.split);
+        const edge=svgElement("path",{d:`M${x(parent)},${parent.y} V${n.y} H${x(n)}`,class:`edge ${unique?"unique":""} ${side}`});
+        edge.append(svgElement("title",{},`${DATA.methods[method].label}: edge ${length(n.length)} ${unit}${n.taxon!==null?" · "+DATA.taxa[n.taxon].label:" · NJ connector"}${unique?" · method-only split":""}`));svg.append(edge);
+      }
+      if(n.tip){
+        // Dashed alignment guides are not edges and carry no branch length.
+        const tipX=mirror?850:350;
+        if(Math.abs(tipX-x(n))>1)svg.append(svgElement("line",{x1:x(n),x2:tipX,y1:n.y,y2:n.y,stroke:"#bccfdc","stroke-dasharray":"2 4"}));
+        const taxon=DATA.taxa[n.taxon],group=svgElement("g",{class:"tip",tabindex:"0",role:"button","aria-label":`${taxon.label}, ${taxon.records} records. Open ${taxon.rank}.`});
+        group.append(svgElement("rect",{x:mirror?637:355,y:n.y-11,width:208,height:23,rx:3,fill:"transparent"}));
+        const label=taxon.label.length>29?taxon.label.slice(0,27)+"…":taxon.label;
+        group.append(svgElement("text",{x:mirror?840:360,y:n.y+4,"text-anchor":mirror?"end":"start"},label));
+        group.append(svgElement("title",{},`${pathLabel(n.taxon)} · ${taxon.records} records`));
+        group.onclick=()=>navigate(n.taxon);group.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();navigate(n.taxon)}};
+        svg.append(group);
+      }
+    }
+  }
+}
+function methodNote(side,method){
+  const m=DATA.methods[method],note=$(side+"-note");note.replaceChildren();
+  note.append(element("div",m.units,{class:"micro"}),element("h3",m.label),element("div",FORMULAS[method][0],{class:"formula"}),element("p",FORMULAS[method][1]),element("p",m.description));
+  const summary=DATA.trees[method].representatives?.[selected],readout=element("div",null,{class:"representative-readout"});
+  readout.append(element("strong","Selected "+DATA.taxa[selected].rank+": "+DATA.taxa[selected].label));
+  if(summary){
+    readout.append(element("p",(method==="frechet"?"Unit-sphere representative norm: ":"Raw-vector representative mean / point norm: ")+length(summary.norm)));
+    if(summary.medoidId)readout.append(element("p","Actual representative record: "+summary.medoidId));
+    if(summary.covarianceTrace!==undefined)readout.append(element("p","Sample covariance trace: "+length(summary.covarianceTrace)+" raw-vector units²"));
+    if(summary.cosineToRawMean!==undefined)readout.append(element("p","Cosine deviation from this taxon's raw arithmetic mean: "+(summary.cosineToRawMean===null?"undefined (raw arithmetic mean is zero)":length(summary.cosineToRawMean))));
+    readout.append(element("p","These are descriptive representative summaries, not biological quality scores."));
+  }else readout.append(element("p","Observed record endpoint: the stored vector itself, or a zero-covariance point mass for W2. No taxon mean is fitted here."));
+  note.append(readout);
+  const details=element("details",null);details.append(element("summary",`${DATA.computation?.live?"Selected-clade live":"Full-cohort"} build: ${m.seconds.toFixed(2)} s · ${number(m.diagnostics.negative_edges_clamped||0)} negative edges clamped`),element("pre",JSON.stringify(m.diagnostics,null,2),{class:"provenance"}));note.append(details);
+}
+function renderTable(left,right){
+  const tbody=$("tip-table");tbody.replaceChildren();
+  if(!left||left.tips.length>MAX_TIPS)return;
+  const rightByTaxon=new Map(right.tips.map(n=>[n.taxon,n]));
+  [...left.tips].sort((a,b)=>DATA.taxa[a.taxon].label.localeCompare(DATA.taxa[b.taxon].label)).forEach(n=>{
+    const t=DATA.taxa[n.taxon],row=element("tr",null),cell=element("td",null),button=element("button",t.label);
+    button.onclick=()=>navigate(n.taxon);cell.append(button);row.append(cell,element("td",number(t.records)),element("td",length(n.length)),element("td",length(rightByTaxon.get(n.taxon).length)));tbody.append(row);
+  });
+}
+function render(){
+  renderBreadcrumbs();const taxon=DATA.taxa[selected],leftMethod=$("left-method").value,rightMethod=$("right-method").value;
+  $("rank-label").textContent=taxon.rank+" / selected merging boundary";$("selected-label").textContent=taxon.label;
+  $("selected-summary").textContent=`${number(taxon.records)} descendant record${taxon.records===1?"":"s"} · ${number(taxon.children.length)} direct ${taxon.depth===4?"record vectors":"child representatives"}`;
+  $("up").disabled=taxon.parent===null;
+  $("inspection-copy").textContent=taxon.depth===4?"At a species boundary, tips are individual record vectors (point masses for W2), not species representatives.":"Taxon tips stand for all their descendant records. Each method fits those descendants using its own rule. Expanding deeper reveals already-grafted child connectors; it does not refit this parent.";
+  $("left-length").textContent="Left · "+DATA.methods[leftMethod].units;$("right-length").textContent="Right · "+DATA.methods[rightMethod].units;
+  methodNote("left",leftMethod);methodNote("right",rightMethod);
+  if(taxon.depth===5){
+    hideSpecimens(true);$("empty-view").hidden=false;$("empty-view").textContent="One observed record. There are no child representatives to merge here. Step upward to inspect its species connector.";
+    $("comparison-score").textContent="Record endpoint · no local split comparison";$("view-notice").textContent="This record remains present in every computed tree.";renderTable(null,null);lastViews=null;return;
+  }
+  const frontier=Number($("frontier").value),left=buildView(leftMethod,selected,frontier),right=buildView(rightMethod,selected,frontier);lastViews={left,right};
+  if(left.tips.length>MAX_TIPS||right.tips.length>MAX_TIPS){
+    hideSpecimens(true);$("empty-view").hidden=false;$("empty-view").textContent=`This view contains ${number(left.tips.length)} tips, above the explicit ${MAX_TIPS}-tip display limit. Choose a shallower collapse rank or drill into a smaller taxon. No records were dropped from computation or exports.`;
+    $("comparison-score").textContent="View not expanded · no partial tree shown";$("view-notice").textContent="Display limit only. All computed records are retained in this result.";renderTable(null,null);return;
+  }
+  hideSpecimens(false);$("empty-view").hidden=true;
+  const diff=splitDifference(left.splits,right.splits);
+  $("comparison-score").textContent=`${number(left.tips.length)} ${frontier===5?"record tips":"taxon representatives"} · unrooted RF ${diff.rf} · ${diff.common} shared / ${diff.left} left-only / ${diff.right} right-only splits`;
+  const hiddenRecords=frontier<5?`These tips summarize all ${number(taxon.records)} selected descendant records; internal descendants are collapsed, not sampled.`:"Every descendant record is displayed.";
+  $("view-notice").textContent=hiddenRecords+" "+($("view-mode").value==="length"?"Independent horizontal scales; dotted tip-alignment guides are not branches.":"Topology-only default: equal horizontal edge spacing; branch lengths are not encoded.")+(left.tips.length>120?" Matching-tip links are hidden above 120 tips to avoid unreadable crossings.":" Matching links are identifiers, not evolutionary connections.");
+  drawSpecimens(left,right);renderTable(left,right);
+}
+function runSearch(){
+  const query=$("search").value.trim().toLocaleLowerCase(),results=$("search-results");results.replaceChildren();
+  if(!query)return;
+  const matches=DATA.taxa.map((t,id)=>({t,id})).filter(({t})=>t.label.toLocaleLowerCase().includes(query));
+  results.append(element("p",matches.length?`${number(matches.length)} matches${matches.length>30?" · showing first 30; refine your search":""}`:"No matching taxa or record IDs. Try a shorter name."));
+  for(const{t,id}of matches.slice(0,30)){const b=element("button",`${t.label} · ${t.rank} · ${number(t.records)} records — ${pathLabel(t.parent??0)}`);b.onclick=()=>navigate(id);results.append(b)}
+}
+function newick(method,taxon){
+  const tree=DATA.trees[method],start=rootFor(method,taxon),parts=[],stack=[{index:start,closing:false,root:true}];
+  const quote=s=>"'"+s.replaceAll("'","''")+"'";
+  while(stack.length){
+    const item=stack.pop();if(typeof item==="string"){parts.push(item);continue}
+    const n=tree.nodes[item.index];
+    if(item.closing){parts.push(")",n.label?quote(n.label):"",":",String(item.root?0:n.length));continue}
+    if(!n.children.length){parts.push(quote(n.label),":",String(item.root?0:n.length));continue}
+    parts.push("(");stack.push({...item,closing:true});
+    for(let i=n.children.length-1;i>=0;i--){stack.push({index:n.children[i],closing:false,root:false});if(i>0)stack.push(",")}
+  }
+  return parts.join("")+";\n";
+}
+function download(content,name,type){
+  const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=element("a",null,{href:url,download:name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$("status").textContent="Downloaded "+name;
+}
+function initialize(){
+  for(const id of ["left-method","right-method","export-method"])for(const[key,m]of Object.entries(DATA.methods))$(id).append(element("option",m.label,{value:key}));
+  const keys=Object.keys(DATA.methods);
+  $("left-method").value=keys.includes("centroid")?"centroid":keys[0];$("right-method").value=keys.includes("wasserstein")?"wasserstein":keys[keys.length-1];
+  for(const[label,value]of [["records",DATA.records],["dimensions",DATA.dimensions],["families",DATA.counts.family],["genera",DATA.counts.genus],["species",DATA.counts.species]]){
+    const item=element("div",null);item.append(element("strong",number(value)),element("span",label));$("cohort").append(item);
+  }
+  const provenance={...DATA.provenance,coverage:DATA.coverage,computation:DATA.computation};
+  $("provenance").textContent=JSON.stringify(provenance,null,2);
+  const selection=DATA.provenance.manifest?.selection;
+  $("provenance-summary").textContent=`${number(DATA.records)} records × ${number(DATA.dimensions)} stored embedding dimensions. All five methods use this exact full cohort. ${selection?"Seed "+selection.seed+". "+selection.policy:"Source filtering is recorded in the ledger."} Full taxonomic paths distinguish repeated labels. No reference-tree intersection or reference accuracy metrics are used by this explorer.`;
+  if(DATA.computation.live){
+    document.body.classList.add("live-result");
+    $("computation-mode").textContent="These results were rebuilt on demand from all selected descendants, not pruned from a precomputed tree. Navigation here reveals this completed run; use Run merges above to refit a different clade or method. Ancestor ranks above the selected clade are unary context, not full-cohort results.";
+    $("provenance-summary").textContent=`${number(DATA.records)} records × ${number(DATA.dimensions)} dimensions · ${keys.length} requested method(s) · newly computed in ${DATA.computation.seconds.toFixed(2)} s. Source loaded ${DATA.provenance.loadedUtc||"from the test fixture"}. Full taxonomic paths distinguish repeated labels.`;
+    $("storage-note").textContent="Azure data and server results stay in memory. This result contains no embedding vectors or credentials. Download buttons explicitly save the computed Newick or provenance to your browser; collapse settings never drop records from exports.";
+    $("download-full").textContent="Download full computed scope";
+    document.querySelector("footer").textContent="Live on localhost / Rebuilt selected descendants · Experimental embedding geometry · No biological ancestry claim";
+  }
+  if(DATA.provenance.subsetPrefix){
+    const url=DATA.provenance.subsetPrefix;
+    // Provenance is displayed as text, never interpreted as executable markup.
+    $("source-link").textContent="Authenticated Azure source: "+url;
+  }
+  $("up").onclick=()=>{const p=DATA.taxa[selected].parent;if(p!==null)navigate(p)};
+  for(const id of ["left-method","right-method","frontier","view-mode","matching"])$(id).onchange=render;
+  $("search").oninput=runSearch;$("search").onkeydown=e=>{if(e.key==="Escape"){$("search-results").replaceChildren();$("search").value=""}if(e.key==="ArrowDown")$("search-results").querySelector("button")?.focus()};
+  $("download-selected").onclick=()=>download(newick($("export-method").value,selected),`${$("export-method").value}-taxon-${selected}.nwk`,"text/plain");
+  $("download-full").onclick=()=>download(newick($("export-method").value,0),`${$("export-method").value}-full-${DATA.records}.nwk`,"text/plain");
+  $("download-provenance").onclick=()=>download(JSON.stringify(provenance,null,2),"merging-provenance.json","application/json");
+  resetFrontier();render();
+}
+try{initialize()}catch(error){$("status").textContent="Unable to render this explorer: "+error.message+". Regenerate the file from the original verified bundle.";$("status").setAttribute("role","alert");console.error(error)}
+</script>
+</body>
+</html>

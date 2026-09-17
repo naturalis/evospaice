@@ -6,23 +6,38 @@ import argparse
 import csv
 import json
 import logging
-from collections import Counter
+from collections.abc import Sequence
 from itertools import combinations
 from pathlib import Path
 
 import numpy as np
 from Bio import Phylo
-from Bio.Phylo.BaseTree import Clade, Tree
-from scipy.spatial.distance import pdist, squareform
+from Bio.Phylo.BaseTree import Tree
+from scipy.spatial.distance import pdist
 
 from evospaice.tree.centroid import (
     BUTTERFLY_FAMILIES,
     Dataset,
+    build_tree,
     distance_metrics,
-    graft_nj,
     load_embeddings,
     sha256,
     tree_pair_distances,
+)
+from evospaice.tree.representations import (
+    METHODS as METHODS,
+)
+from evospaice.tree.representations import (
+    gaussian as gaussian,
+)
+from evospaice.tree.representations import (
+    gaussian_w2 as gaussian_w2,
+)
+from evospaice.tree.representations import (
+    gsc_weights as gsc_weights,
+)
+from evospaice.tree.representations import (
+    spherical_mean as spherical_mean,
 )
 from evospaice.validate.compare import (
     leaf_labels,
@@ -32,163 +47,16 @@ from evospaice.validate.compare import (
     topology_metrics,
 )
 
-METHODS = {
-    "centroid": {
-        "label": "Simple centroid", "units": "Cosine dissimilarity",
-        "description": "Arithmetic mean of raw stored vectors; cosine distances connect species.",
-    },
-    "medoid": {
-        "label": "Medoid", "units": "Cosine dissimilarity",
-        "description": "The real record with the smallest total within-species cosine distance.",
-    },
-    "weighted": {
-        "label": "GSC-weighted centroid", "units": "Cosine dissimilarity",
-        "description": "Each leaf receives the sum of edge length / descendant count on its "
-                       "midpoint-rooted NJ path. Normalized weights average the raw vectors.",
-    },
-    "wasserstein": {
-        "label": "Gaussian / Wasserstein", "units": "W2 in raw vector units",
-        "description": "A mean and unbiased sample covariance per species. Exact Gaussian W2 "
-                       "distances use low-rank factors; singletons have zero covariance. "
-                       "Local leaves use Euclidean distance, the W2 distance between point masses.",
-    },
-    "frechet": {
-        "label": "Spherical Frechet mean", "units": "Cosine dissimilarity",
-        "description": "An intrinsic mean minimizing squared angular distances on the unit sphere. "
-                       "Cosine connectors keep the point-representation comparison consistent.",
-    },
-}
-
-
-def gsc_weights(root: Clade, ids: list[str]) -> tuple[np.ndarray, bool]:
-    counts = {}
-    for node in root.find_clades(order="postorder"):
-        counts[node] = 1 if node.is_terminal() else sum(counts[child] for child in node.clades)
-    values = {}
-    stack = [(root, 0.0)]
-    while stack:
-        node, weight = stack.pop()
-        if node.is_terminal():
-            values[node.name] = weight
-        else:
-            stack.extend(
-                (child, weight + (child.branch_length or 0.0) / counts[child])
-                for child in node.clades
-            )
-    weights = np.array([values[identifier] for identifier in ids])
-    if np.any(weights < 0):
-        raise ValueError("GSC weights require nonnegative branch lengths")
-    zero_total = float(weights.sum()) == 0
-    if zero_total:
-        weights = np.ones(len(ids))
-    return weights / weights.sum(), zero_total
-
-
-def spherical_mean(vectors: np.ndarray, tolerance: float = 1e-10) -> tuple[np.ndarray, int]:
-    unit = vectors / np.linalg.norm(vectors, axis=1, keepdims=True)
-    point = unit.mean(axis=0)
-    if np.linalg.norm(point) < 1e-12:
-        raise ValueError("The spherical mean has no stable initialization (antipodal data)")
-    point /= np.linalg.norm(point)
-    for iteration in range(256):
-        cosine = np.clip(unit @ point, -1, 1)
-        angles = np.arccos(cosine)
-        if np.any(angles > np.pi - 1e-7):
-            raise ValueError("The spherical logarithm is ambiguous at an antipodal point")
-        ratios = np.ones_like(angles)
-        nonzero = angles > 1e-8
-        ratios[nonzero] = angles[nonzero] / np.sin(angles[nonzero])
-        direction = ((unit - cosine[:, None] * point) * ratios[:, None]).mean(axis=0)
-        direction -= (direction @ point) * point
-        norm = np.linalg.norm(direction)
-        if norm < tolerance:
-            return point, iteration
-        objective = float(np.mean(angles**2))
-        step = 1.0
-        for _ in range(40):
-            candidate = np.cos(step * norm) * point + np.sin(step * norm) * direction / norm
-            candidate /= np.linalg.norm(candidate)
-            candidate_objective = float(np.mean(np.arccos(np.clip(unit @ candidate, -1, 1))**2))
-            if candidate_objective <= objective - 1e-4 * step * norm**2:
-                point = candidate
-                break
-            # Near floating-point precision, accept only a numerically stationary step.
-            if abs(candidate_objective - objective) < 1e-14 and step * norm < 1e-8:
-                return candidate, iteration + 1
-            step /= 2
-        else:
-            raise RuntimeError("Spherical-mean line search failed to decrease its objective")
-    raise RuntimeError("Spherical mean did not converge in 256 iterations")
-
-
-def gaussian(vectors: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    center = vectors.mean(axis=0)
-    factor = (
-        (vectors - center).T / np.sqrt(len(vectors) - 1)
-        if len(vectors) > 1 else np.empty((vectors.shape[1], 0))
-    )
-    return center, factor
-
-
-def gaussian_w2(first: tuple, second: tuple) -> float:
-    first_mean, first_factor = first
-    second_mean, second_factor = second
-    trace = float(np.sum(first_factor**2) + np.sum(second_factor**2))
-    cross = first_factor.T @ second_factor
-    nuclear = float(np.linalg.svd(cross, compute_uv=False).sum()) if cross.size else 0.0
-    covariance = trace - 2 * nuclear
-    if covariance < -1e-9 * max(1.0, trace):
-        raise ValueError("Gaussian covariance distance became negative beyond roundoff")
-    return float(np.sqrt(np.sum((first_mean - second_mean)**2) + max(0.0, covariance)))
-
 
 def build_genus(data: Dataset, method: str) -> tuple[Tree, dict]:
+    """Compatibility wrapper around the shared full-depth builder."""
     if method not in METHODS:
         raise ValueError(f"Unknown representation: {method}")
-    genera = set(data.taxonomy[:, 2])
+    genera = {tuple(row[:3]) for row in data.taxonomy}
     if len(genera) != 1:
         raise ValueError("Comparison requires exactly one genus")
-    groups: dict[str, list[int]] = {}
-    for index, species in enumerate(data.taxonomy[:, 3]):
-        groups.setdefault(str(species), []).append(index)
-    diagnostics: Counter = Counter()
-    roots, representatives = [], []
-    for species, indices in sorted(groups.items()):
-        vectors = data.embeddings[indices]
-        ids = list(map(str, data.ids[indices]))
-        metric = "euclidean" if method == "wasserstein" else "cosine"
-        local = np.maximum(pdist(vectors, metric=metric), 0)
-        root = graft_nj(
-            f"species:{species}", [Clade(name=identifier) for identifier in ids],
-            local, diagnostics,
-        )
-        roots.append(root)
-        if method == "centroid":
-            representative = vectors.mean(axis=0)
-        elif method == "medoid":
-            representative = vectors[np.argmin(squareform(local).sum(axis=1))]
-        elif method == "weighted":
-            weights, zero = gsc_weights(root, ids)
-            if zero and len(ids) > 1:
-                diagnostics["gsc_uniform_zero_length_groups"] += 1
-            representative = weights @ vectors
-        elif method == "frechet":
-            representative, iterations = spherical_mean(vectors)
-            diagnostics["frechet_max_iterations"] = max(
-                diagnostics["frechet_max_iterations"], iterations
-            )
-        else:
-            representative = gaussian(vectors)
-        representatives.append(representative)
-    if method == "wasserstein":
-        distances = np.array([gaussian_w2(a, b) for a, b in combinations(representatives, 2)])
-    else:
-        vectors = np.array(representatives)
-        if np.any(np.linalg.norm(vectors, axis=1) == 0):
-            raise ValueError(f"{method} produced a zero representative")
-        distances = np.clip(pdist(vectors, metric="cosine"), 0, 2)
-    root = graft_nj(f"genus:{next(iter(genera))}", roots, distances, diagnostics)
-    return Tree(root=root, rooted=True), dict(diagnostics)
+    return build_tree(data, method=method, start_rank=3,
+                      root_name=f"genus:{next(iter(genera))[2]}")
 
 
 def encode_tree(tree) -> dict:
@@ -268,10 +136,12 @@ def compare(
     summaries = {}
     for name in trees:
         common = distance_metrics(cosine, paths[name])
+        common["raw_magnitude_comparable"] = name not in {"wasserstein", "reference"}
+        if not common["raw_magnitude_comparable"]:
+            for key in ("normalized_stress", "mean_signed_error", "p90_absolute_error"):
+                common[key] = None
         denominator = float(paths[name] @ paths[name])
-        if denominator <= 0:
-            raise ValueError(f"{name} has no positive path distances to compare")
-        scale = max(0.0, float(cosine @ paths[name] / denominator))
+        scale = max(0.0, float(cosine @ paths[name] / denominator)) if denominator > 0 else None
         entry = {
             **(METHODS[name] if name in METHODS else {
                 "label": "Bactria reference", "units": "Reference sequence-distance units",
@@ -286,7 +156,7 @@ def compare(
             "fitted_scale_to_cosine": scale,
             "scale_adjusted_stress": distance_metrics(cosine, paths[name] * scale)[
                 "normalized_stress"
-            ],
+            ] if scale is not None else None,
             "diagnostics": diagnostics.get(name),
         }
         if name != "reference":
@@ -305,6 +175,8 @@ def compare(
             "evaluation": "All selected pairs are descriptive, not held-out validation",
             "scale_adjustment": "One nonnegative scale fitted and evaluated on the same pairs; "
                                 "not biological calibration",
+            "cross_unit_errors": "Raw W2/reference magnitude errors against cosine are null; "
+                                 "only correlations and explicitly fitted scales are comparable",
             "geometry": "Point methods use cosine at all stages; W2 uses raw Euclidean geometry "
                         "at leaves and Gaussian W2 at species connectors",
             "local_trees": "Recomputed per method; identical cosine inputs for point methods, "
@@ -320,25 +192,28 @@ def compare(
     return payload
 
 
-def main() -> None:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--embeddings", type=Path, required=True)
     parser.add_argument("--metadata", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--genus", default="Papilio")
     parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     payload = compare(args.embeddings, args.metadata, args.reference, args.genus, args.output_dir)
     print(f"{payload['genus']}: {payload['records']} records, {payload['species']} species")
     for name, entry in payload["methods"].items():
+        correlation = entry["cosine_comparison"]["spearman"]
+        formatted = f"{correlation:.4f}" if correlation is not None else "undefined"
         print(
             f"{name}: RF vs centroid={entry['rf_to_centroid']['rf']}, "
             f"RF vs reference={entry['rf_to_reference']['rf']}, "
-            f"cosine Spearman={entry['cosine_comparison']['spearman']:.4f}"
+            f"cosine Spearman={formatted}"
         )
     print(f"Comparison: {args.output_dir / 'index.html'}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
