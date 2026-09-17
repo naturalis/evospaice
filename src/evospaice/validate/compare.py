@@ -8,6 +8,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import cast
 
 import dendropy
 from dendropy.calculate import treecompare
@@ -187,7 +188,7 @@ def prepare_trees(
         selected=selected, require_rf=require_rf,
     )
     namespace = dendropy.TaxonNamespace(sorted(common), is_case_sensitive=True)
-    canonical_taxa = {taxon.label: taxon for taxon in namespace}
+    namespace_by_label = {taxon.label: taxon for taxon in namespace}
     working = {}
     for name, original in trees.items():
         tree = original.clone(depth=2)
@@ -198,13 +199,12 @@ def prepare_trees(
                 node.taxon.label = mapping.get(node.taxon.label, node.taxon.label)
         tree.is_rooted = mode == "rooted"
         retain_labels(tree, common)
-        memo = {
-            taxon: canonical_taxa[taxon.label]
-            for taxon in tree.taxon_namespace
-            if taxon.label in canonical_taxa
+        taxon_mapping = {
+            taxon: namespace_by_label[taxon.label]
+            for taxon in tree.taxon_namespace if taxon.label in namespace_by_label
         }
         tree.migrate_taxon_namespace(
-            namespace, unify_taxa_by_label=True, taxon_mapping_memo=memo
+            namespace, unify_taxa_by_label=True, taxon_mapping_memo=taxon_mapping,
         )
         tree.encode_bipartitions()
         working[name] = tree
@@ -225,9 +225,13 @@ def informative_splits(tree: dendropy.Tree) -> set[int]:
 
 
 def split_id(mask: int, tree: dendropy.Tree) -> str:
-    labels = [
-        taxon.label for index, taxon in enumerate(tree.taxon_namespace) if mask & (1 << index)
-    ]
+    labels = []
+    for offset, byte in enumerate(mask.to_bytes((mask.bit_length() + 7) // 8, "little")):
+        while byte:
+            lowest_bit = byte & -byte
+            index = offset * 8 + lowest_bit.bit_length() - 1
+            labels.append(cast(dendropy.Taxon, tree.taxon_namespace[index]).label)
+            byte ^= lowest_bit
     encoded = json.dumps(labels, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()[:20]
 
@@ -243,14 +247,15 @@ def topology_metrics(
             raise ValueError(
                 f"{name} tree must have at least one informative {kind} after taxa alignment"
             )
-    shared = len(first & second)
+    shared_splits = first & second
+    shared = len(shared_splits)
     denominator = len(first) + len(second)
     raw = treecompare.symmetric_difference(inferred, reference, is_bipartitions_updated=True)
     if raw != len(first ^ second):
         raise ValueError("DendroPy RF differs from informative split counts after normalization")
     rows = []
     for mask in sorted(first | second) if include_clades else ():
-        origin = "both" if mask in first & second else "inferred" if mask in first else "reference"
+        origin = "both" if mask in shared_splits else "inferred" if mask in first else "reference"
         rows.append(dict(clade_id=split_id(mask, inferred), origin=origin,
                          size=mask.bit_count()))
     metrics = dict(

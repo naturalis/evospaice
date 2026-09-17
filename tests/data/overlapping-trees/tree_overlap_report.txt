@@ -1,0 +1,12 @@
+evospaice tree alignment report
+================================================
+Tree A:          data/reference_lepidoptera.tre.txt  ->  tests/data/overlapping-trees/reference_lepidoptera_overlap.tre
+Tree B:          tests/data/unified_taxonomic_tree_bottom_up.tre.txt  ->  tests/data/overlapping-trees/unified_taxonomic_tree_bottom_up_overlap.tre
+
+Tip counts
+------------------------------------------------
+Tips in tree A:                            91376
+Tips in tree B:                            100802
+Overlap (kept in both):                    61381 (67.2% of tree A, 60.9% of tree B)
+Dropped from tree A:                29995
+Dropped from tree B:                39421
