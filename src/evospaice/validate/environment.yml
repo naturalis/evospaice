@@ -1,0 +1,12 @@
+name: evospaice-patristic
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python>=3.10
+  - biopython>=1.81
+  - numpy>=1.24
+  - hmmer>=3.3        # provides hmmalign
+  - pigz              # fast decompression of the BCDM tar.gz
+  - tar               # GNU tar; macOS's bsdtar lacks --wildcards

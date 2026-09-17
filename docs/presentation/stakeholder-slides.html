@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EvoSpaice stakeholder presentation: from species counts to evolutionary insight.">
+  <title>EvoSpaice | Stakeholder presentation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --forest: #143d2b;
+      --forest-2: #235c42;
+      --mint: #4dca9c;
+      --mint-soft: #e4f5ed;
+      --gold: #e4ad48;
+      --gold-soft: #fff3d9;
+      --blue: #4b7fa4;
+      --blue-soft: #e8f0f6;
+      --ink: #18231d;
+      --muted: #607068;
+      --paper: #f6f8f4;
+      --white: #ffffff;
+      --line: #d7e1da;
+      --shadow: 0 18px 55px rgba(20, 61, 43, 0.13);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      background: var(--forest);
+      color: var(--ink);
+      font-family: Avenir Next, Avenir, Futura, sans-serif;
+    }
+    button, a { font: inherit; }
+    button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+
+    .deck { width: 100%; height: 100%; position: relative; }
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 24px;
+      padding: 46px 64px 34px;
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(rgba(20, 61, 43, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(20, 61, 43, 0.025) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px);
+      transition: opacity 220ms ease, transform 220ms ease, visibility 220ms;
+    }
+    .slide.active { opacity: 1; visibility: visible; transform: translateY(0); z-index: 2; }
+    .slide.dark {
+      background-color: var(--forest);
+      background-image:
+        radial-gradient(circle at 82% 18%, rgba(77, 202, 156, 0.16), transparent 28%),
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      color: var(--white);
+    }
+
+    .slide-header, .slide-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 750; color: var(--forest); }
+    .dark .brand { color: var(--white); }
+    .brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--mint); color: var(--forest); font-weight: 900; }
+    .section-label { color: var(--muted); font-size: 13px; font-weight: 750; letter-spacing: 1px; text-transform: uppercase; }
+    .dark .section-label { color: #b9d0c3; }
+    .slide-footer { color: var(--muted); font-size: 12px; }
+    .dark .slide-footer { color: #b9d0c3; }
+
+    .content { min-height: 0; display: grid; align-items: center; gap: 34px; }
+    .two-col { grid-template-columns: minmax(300px, 0.8fr) minmax(460px, 1.2fr); }
+    .two-col-even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stack { align-content: center; justify-items: center; text-align: center; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 56px; line-height: 1.04; font-weight: 750; letter-spacing: 0; max-width: 1000px; }
+    h2 { font-size: 42px; line-height: 1.08; font-weight: 750; letter-spacing: 0; max-width: 900px; }
+    h3 { font-size: 20px; line-height: 1.2; font-weight: 750; }
+    .lead { margin-top: 20px; max-width: 760px; font-size: 21px; line-height: 1.5; color: var(--muted); }
+    .dark .lead { color: #d3e1d9; }
+    .kicker { display: inline-block; margin-bottom: 16px; color: var(--forest-2); font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+    .dark .kicker { color: var(--mint); }
+    .accent { color: var(--mint); }
+    .gold { color: var(--gold); }
+    .statement { font-size: 31px; line-height: 1.28; font-weight: 650; max-width: 890px; }
+
+    .visual {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+    }
+    .visual img { display: block; width: 100%; height: 100%; max-height: 570px; object-fit: contain; }
+    .visual.framed { padding: 18px; background: var(--white); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .dark .visual.framed { background: #0f2f21; border-color: rgba(255, 255, 255, 0.15); }
+
+    .scale-number { font-size: 84px; line-height: 0.95; font-weight: 800; color: var(--gold); }
+    .scale-label { margin-top: 12px; font-size: 24px; line-height: 1.25; font-weight: 650; }
+    .equation { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 32px; color: #d3e1d9; font-size: 18px; }
+    .equation strong { color: var(--white); font-size: 30px; }
+
+    .principles { display: grid; gap: 12px; margin-top: 30px; }
+    .principle { display: grid; grid-template-columns: 42px 1fr; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+    .principle:first-child { border-top: 0; }
+    .principle span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--mint-soft); color: var(--forest); font-weight: 800; }
+    .principle p { color: var(--muted); font-size: 17px; line-height: 1.35; }
+    .user-value { margin-top: 26px; padding: 18px 20px; border-left: 5px solid var(--mint); background: var(--mint-soft); }
+    .user-value .kicker { margin-bottom: 8px; }
+    .user-value p { color: var(--forest); font-size: 18px; line-height: 1.4; font-weight: 650; }
+    .ron-schema img { max-height: 520px; }
+
+    .journey { grid-template-columns: minmax(0, 0.95fr) 60px minmax(0, 1.05fr); align-items: stretch; }
+    .sketches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-height: 0; align-items: center; }
+    .sketches figure { min-width: 0; min-height: 0; margin: 0; display: grid; grid-template-rows: auto auto; gap: 8px; }
+    .sketches img { width: 100%; height: auto; max-height: 560px; padding: 6px; object-fit: contain; object-position: center; border: 1px solid var(--line); border-radius: 6px; background: var(--white); box-shadow: var(--shadow); }
+    figcaption { font-size: 12px; color: var(--muted); text-align: center; }
+    .journey-arrow { display: grid; place-items: center; color: var(--forest-2); font-size: 48px; }
+    .architecture-panel { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 22px; align-items: center; padding: 24px; background: var(--white); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .architecture-panel img { width: 100%; max-height: 480px; object-fit: contain; }
+    .route { padding: 15px 0; border-top: 1px solid var(--line); }
+    .route:first-child { border-top: 0; }
+    .route small { display: block; margin-bottom: 4px; color: var(--forest-2); font-weight: 800; letter-spacing: 0.8px; }
+    .route p { color: var(--muted); font-size: 15px; line-height: 1.4; }
+    .text-link { display: inline-flex; margin-top: 18px; color: var(--forest-2); font-weight: 750; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+
+    .proof-grid { display: grid; grid-template-columns: 1.25fr repeat(3, 1fr); gap: 16px; width: 100%; }
+    .metric { min-height: 190px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; background: var(--white); border-top: 5px solid var(--mint); box-shadow: var(--shadow); }
+    .metric.primary { background: var(--forest); color: var(--white); border-color: var(--gold); }
+    .metric-value { font-size: 42px; line-height: 1; font-weight: 800; }
+    .metric-label { margin-top: 12px; color: var(--muted); font-size: 16px; line-height: 1.35; }
+    .metric.primary .metric-label { color: #d3e1d9; }
+    .proof-note { margin-top: 28px; padding: 17px 22px; background: var(--mint-soft); border-left: 5px solid var(--mint); font-size: 18px; font-weight: 650; }
+
+    .product-shot { position: relative; overflow: hidden; padding: 0; }
+    .product-shot img { object-fit: cover; object-position: center; }
+    .decision-list { display: grid; gap: 12px; margin-top: 26px; }
+    .decision { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; color: var(--muted); font-size: 17px; line-height: 1.4; }
+    .decision span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--forest); color: var(--white); font-size: 13px; font-weight: 800; }
+
+    .next { display: grid; gap: 12px; margin-top: 24px; }
+    .next-item { display: flex; align-items: center; gap: 12px; color: #d3e1d9; font-size: 18px; }
+    .next-item::before { content: ""; flex: 0 0 10px; height: 10px; border-radius: 50%; background: var(--gold); }
+    .closing { margin-top: 30px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.2); font-size: 24px; line-height: 1.35; font-weight: 650; }
+
+    .controls { position: fixed; z-index: 20; right: 22px; bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .control { width: 42px; height: 42px; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 50%; background: rgba(20, 61, 43, 0.88); color: var(--white); cursor: pointer; font-size: 20px; }
+    .control:hover { background: var(--forest-2); }
+    .progress { position: fixed; z-index: 20; left: 0; bottom: 0; height: 5px; background: var(--mint); transition: width 220ms ease; }
+    .counter { min-width: 64px; text-align: center; color: var(--white); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+
+    .overview { position: fixed; z-index: 30; inset: 0; display: none; overflow: auto; padding: 34px; background: #e9efeb; }
+    .overview.open { display: block; }
+    .overview-header { max-width: 1180px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: space-between; }
+    .overview-grid { max-width: 1180px; margin: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .thumb { min-height: 190px; padding: 24px; border: 2px solid transparent; border-radius: 8px; background: var(--white); color: var(--ink); text-align: left; cursor: pointer; box-shadow: 0 8px 24px rgba(20, 61, 43, 0.08); }
+    .thumb:hover, .thumb[aria-current="true"] { border-color: var(--mint); }
+    .thumb small { color: var(--forest-2); font-weight: 800; }
+    .thumb strong { display: block; margin-top: 30px; font-size: 22px; line-height: 1.2; }
+
+    @media (max-width: 900px) {
+      .slide { padding: 28px 24px 24px; gap: 16px; overflow-y: auto; }
+      .content, .two-col, .two-col-even, .journey { grid-template-columns: 1fr; align-content: start; }
+      h1 { font-size: 42px; }
+      h2 { font-size: 34px; }
+      .lead { font-size: 18px; }
+      .visual { min-height: 300px; }
+      .journey-arrow { transform: rotate(90deg); min-height: 55px; }
+      .architecture-panel { grid-template-columns: 150px 1fr; }
+      .proof-grid { grid-template-columns: repeat(2, 1fr); }
+      .overview-grid { grid-template-columns: 1fr; }
+      .controls { right: 12px; bottom: 12px; }
+    }
+
+    @media (max-width: 560px) {
+      .slide { padding: 22px 18px 72px; }
+      h1 { font-size: 36px; }
+      h2 { font-size: 30px; }
+      .statement { font-size: 25px; }
+      .slide-header .section-label { display: none; }
+      .proof-grid, .sketches, .architecture-panel { grid-template-columns: 1fr; }
+      .metric { min-height: 150px; }
+      .scale-number { font-size: 62px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .progress { transition: none; }
+    }
+
+    @media print {
+      html, body { overflow: visible; background: white; }
+      .deck { height: auto; }
+      .slide { position: relative; width: 100%; height: 100vh; opacity: 1; visibility: visible; transform: none; page-break-after: always; }
+      .controls, .progress, .overview { display: none !important; }
+      * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-live="polite">
+    <section class="slide active dark" data-title="The decision blind spot" aria-hidden="false">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">The problem</span></header>
+      <div class="content two-col-even">
+        <div>
+          <span class="kicker">A biodiversity decision blind spot</span>
+          <h1>Species counts hide what is <span class="accent">hardest to replace.</span></h1>
+          <p class="lead">Two sites can each contain ten species, yet one can hold far more unique evolutionary history. A count ranks them equally.</p>
+        </div>
+        <div class="visual"><img src="../../images/same-count-different-value.svg" alt="Two sites with ten species each, one containing close relatives and the other distant lineages"></div>
+      </div>
+      <footer class="slide-footer"><span>Value: reveal which losses remove the most irreplaceable history.</span><span>01</span></footer>
+    </section>
+
+    <section class="slide" data-title="The missing capability" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">The missing capability</span></header>
+      <div class="content two-col">
+        <div>
+          <span class="kicker">Identification is not comparison</span>
+          <h2>We can identify millions of species. We cannot compare their <span class="gold">evolutionary value</span> at the same scale.</h2>
+          <p class="lead">EvoSpaice tests whether a scalable DNA reference tree can close that gap and improve biodiversity prioritization.</p>
+        </div>
+        <div class="visual"><img src="../../images/hypothesis-proof.svg" alt="The EvoSpaice hypothesis connected to scientific fidelity, scale, and user value"></div>
+      </div>
+      <footer class="slide-footer"><span>The test: scientific fidelity, engineering scale, and decision value.</span><span>02</span></footer>
+    </section>
+
+    <section class="slide dark" data-title="The scale wall" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">The scale wall</span></header>
+      <div class="content two-col-even">
+        <div class="visual"><img src="../../images/phylogentic_tree.png" alt="A large phylogenetic tree shown as a fisheye projection"></div>
+        <div>
+          <span class="kicker">Why the capability is missing</span>
+          <div class="scale-number">24 trillion</div>
+          <div class="scale-label">possible pairs from nearly seven million sequences</div>
+          <div class="equation"><strong>7M</strong><span>sequences</span><span>→</span><strong>24T</strong><span>comparisons</span></div>
+          <p class="lead">Traditional tree building depends on pairwise sequence comparison. At this scale, the global distance matrix is the barrier.</p>
+        </div>
+      </div>
+      <footer class="slide-footer"><span>The problem needs a different computational shape.</span><span>03</span></footer>
+    </section>
+
+    <section class="slide" data-title="The EvoSpaice proposition" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">The proposition</span></header>
+      <div class="content two-col">
+        <div>
+          <span class="kicker">Ron's construction schema</span>
+          <h2>Build one scalable reference tree from bounded local trees.</h2>
+          <p class="lead">Taxonomy defines each group. Embedding distances and Neighbor Joining resolve it. An intact subtree and its representative move upward until one candidate tree remains.</p>
+          <div class="user-value">
+            <span class="kicker">For end users</span>
+            <p>Compare sites or timepoints on one evolutionary scale, reveal unique lineages that species counts miss, and focus monitoring or protection where loss is hardest to replace.</p>
+          </div>
+        </div>
+        <div class="visual framed ron-schema"><img src="../../images/tree-construction-architecture.png" alt="Ron's simplified tree-construction schema: scaffold taxonomy groups, resolve local trees using embedding distances and Neighbor Joining, preserve and summarize each subtree, then join and repeat toward a candidate shared reference tree"></div>
+      </div>
+      <footer class="slide-footer"><span>Bounded tree construction enables evolutionary comparison at scale.</span><span>04</span></footer>
+    </section>
+
+    <section class="slide" data-title="From sketch to architecture" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">From workshop to architecture</span></header>
+      <div class="content journey">
+        <div class="sketches">
+          <figure><img src="../../images/tree-construction-workshop-sketch.png" alt="Workshop sketch exploring local subtree generation and representative selection"><figcaption>Resolve locally · choose a representative</figcaption></figure>
+          <figure><img src="../../images/tree-comparison-workshop-sketch.png" alt="Workshop sketch exploring tree joining and comparison"><figcaption>Join trees · compare structures</figcaption></figure>
+        </div>
+        <div class="journey-arrow" aria-hidden="true">→</div>
+        <div class="architecture-panel">
+          <img src="../../images/tree-construction-architecture.png" alt="Simplified architecture for scaffold, local resolution, representative selection, and recursive merging">
+          <div>
+            <span class="kicker">Explicit experimental routes</span>
+            <div class="route"><small>HYBRID</small><h3>Taxonomy + embeddings</h3><p>Taxonomy constrains each local problem; embeddings resolve relationships within it.</p></div>
+            <div class="route"><small>COMPARATOR</small><h3>Embeddings only</h3><p>A second route tests whether taxonomy improves the generated topology.</p></div>
+            <a class="text-link" href="../architecture/tree-team-flow.html">Open the interactive construction flow →</a>
+          </div>
+        </div>
+      </div>
+      <footer class="slide-footer"><span>A rough idea became a repeatable architecture.</span><span>05</span></footer>
+    </section>
+
+    <section class="slide" data-title="Proof at scale" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">Evidence</span></header>
+      <div class="content stack">
+        <div><span class="kicker">What the team proved</span><h2>The pipeline handles the scale.</h2></div>
+        <div class="proof-grid">
+          <div class="metric primary"><div class="metric-value">6,979,067</div><div class="metric-label">insect DNA records embedded</div></div>
+          <div class="metric"><div class="metric-value">~20 min</div><div class="metric-label">embedding runtime</div></div>
+          <div class="metric"><div class="metric-value">131,914</div><div class="metric-label">species bundles created</div></div>
+          <div class="metric"><div class="metric-value">0</div><div class="metric-label">failed shards or dead letters</div></div>
+        </div>
+        <div class="proof-note">Every record reconciled. Output manifests and checksums matched.</div>
+      </div>
+      <footer class="slide-footer"><span>Engineering scale: demonstrated.</span><span>06</span></footer>
+    </section>
+
+    <section class="slide" data-title="Value for the end user" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">End-user value</span></header>
+      <div class="content two-col">
+        <div>
+          <span class="kicker">From records to a decision</span>
+          <h2>See what changed, what is distinctive, and what is hardest to replace.</h2>
+          <div class="decision-list">
+            <div class="decision"><span>1</span><p>Upload and map samples against one shared reference tree.</p></div>
+            <div class="decision"><span>2</span><p>Compare diversity within a sample and between samples.</p></div>
+            <div class="decision"><span>3</span><p>Prioritize investigation, restoration, or protection.</p></div>
+          </div>
+        </div>
+        <div class="visual framed product-shot"><img src="../../images/end-user-sample-comparison.png" alt="UX concept for comparing two samples against a reference tree with alpha and beta diversity scores"></div>
+      </div>
+      <footer class="slide-footer"><span>One tree becomes a visible, exportable comparison.</span><span>07</span></footer>
+    </section>
+
+    <section class="slide dark" data-title="Evaluate, learn, improve" aria-hidden="true">
+      <header class="slide-header"><div class="brand"><span class="brand-mark">E</span> EvoSpaice</div><span class="section-label">The feedback loop</span></header>
+      <div class="content two-col-even">
+        <div class="visual"><img src="../../images/evaluation-loop.svg" alt="Four-stage evaluation loop: generate, compare, inspect, and improve"></div>
+        <div>
+          <span class="kicker">Built for experimentation</span>
+          <h1>Evaluate.<br><span class="accent">Learn. Improve.</span></h1>
+          <p class="lead">Every experiment can be compared with the same reference using normalized Robinson-Foulds topology and tip to root correlation scores.</p>
+          <div class="next">
+            <div class="next-item">Proven: millions of records can be processed</div>
+            <div class="next-item">Built: repeatable topology and magnitude comparison</div>
+            <div class="next-item">Next: validate new generated trees and one real decision</div>
+          </div>
+          <p class="closing">From counting species to measuring the evolutionary history they represent.</p>
+        </div>
+      </div>
+      <footer class="slide-footer"><span>EvoSpaice · stakeholder readout</span><span>08</span></footer>
+    </section>
+  </main>
+
+  <nav class="controls" aria-label="Slide controls">
+    <button class="control" id="overviewButton" type="button" title="Slide overview" aria-label="Open slide overview">⌘</button>
+    <button class="control" id="previousButton" type="button" title="Previous slide" aria-label="Previous slide">←</button>
+    <span class="counter" id="counter" aria-label="Current slide">1 / 8</span>
+    <button class="control" id="nextButton" type="button" title="Next slide" aria-label="Next slide">→</button>
+  </nav>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <aside class="overview" id="overview" aria-hidden="true">
+    <div class="overview-header"><div><span class="kicker">EvoSpaice</span><h2>Slide overview</h2></div><button class="control" id="closeOverview" type="button" aria-label="Close slide overview">×</button></div>
+    <div class="overview-grid" id="overviewGrid"></div>
+  </aside>
+
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    const counter = document.getElementById('counter');
+    const progress = document.getElementById('progress');
+    const overview = document.getElementById('overview');
+    const overviewGrid = document.getElementById('overviewGrid');
+    let current = Math.max(0, Math.min(slides.length - 1, Number(location.hash.slice(1)) - 1 || 0));
+
+    slides.forEach((slide, index) => {
+      const button = document.createElement('button');
+      button.className = 'thumb';
+      button.type = 'button';
+      button.innerHTML = `<small>${String(index + 1).padStart(2, '0')}</small><strong>${slide.dataset.title}</strong>`;
+      button.addEventListener('click', () => { show(index); toggleOverview(false); });
+      overviewGrid.appendChild(button);
+    });
+
+    function show(index) {
+      current = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => {
+        const active = slideIndex === current;
+        slide.classList.toggle('active', active);
+        slide.setAttribute('aria-hidden', String(!active));
+      });
+      [...overviewGrid.children].forEach((button, buttonIndex) => button.setAttribute('aria-current', String(buttonIndex === current)));
+      counter.textContent = `${current + 1} / ${slides.length}`;
+      progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+      history.replaceState(null, '', `#${current + 1}`);
+      document.title = `${slides[current].dataset.title} | EvoSpaice`;
+    }
+
+    function toggleOverview(open) {
+      overview.classList.toggle('open', open);
+      overview.setAttribute('aria-hidden', String(!open));
+      if (open) overview.querySelector('[aria-current="true"]').focus();
+    }
+
+    document.getElementById('previousButton').addEventListener('click', () => show(current - 1));
+    document.getElementById('nextButton').addEventListener('click', () => show(current + 1));
+    document.getElementById('overviewButton').addEventListener('click', () => toggleOverview(true));
+    document.getElementById('closeOverview').addEventListener('click', () => toggleOverview(false));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') return toggleOverview(false);
+      if (overview.classList.contains('open')) return;
+      if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(current + 1); }
+      if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+      if (event.key === 'Home') show(0);
+      if (event.key === 'End') show(slides.length - 1);
+      if (event.key.toLowerCase() === 'o') toggleOverview(true);
+    });
+    window.addEventListener('hashchange', () => show(Number(location.hash.slice(1)) - 1 || 0));
+    show(current);
+  </script>
+</body>
+</html>

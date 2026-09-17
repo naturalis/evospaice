@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reference tree versus original embeddings</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,sans-serif;color:#203249;background:#f1f5f9}
+*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1500px;margin:auto;padding:20px 26px}
+h1{margin:0 0 8px;font-size:27px}h2{font-size:18px;margin:0 0 8px}p{line-height:1.55;margin:6px 0}
+.muted{color:#5d6e81}.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:16px 0}
+.card,.panel,.toolbar,details{background:white;border:1px solid #d1dce7;border-radius:8px}
+.card{padding:13px}.card strong{display:block;font-size:25px;margin-bottom:3px}.card small{color:#5d6e81}
+.toolbar{padding:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+label{display:flex;gap:7px;align-items:center;font-size:13px}input,select,button{font:inherit;color:inherit}
+select,button{padding:7px;border:1px solid #b6c5d4;border-radius:5px;background:white}
+button{cursor:pointer}button:hover{background:#eef5fb}button:disabled{opacity:.5;cursor:default}
+select:focus-visible,button:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid #50a0cb}
+#focus{max-width:310px}.panel{padding:14px}.plot{position:relative;height:560px;touch-action:none}
+canvas{position:absolute;width:100%;height:100%;left:0;top:0}#overlay{pointer-events:none}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;border:0;padding:0}.legend legend{font-size:13px;font-weight:650;margin-bottom:8px}
+.legend label{font-size:12px;cursor:pointer;padding:6px 9px;border:1px solid #d1dce7;border-radius:5px}
+.legend label.off{opacity:.5;background:#f1f5f9}.legend input{cursor:pointer}.legend button{font-size:12px}
+.color-legend{display:flex;flex-wrap:wrap;gap:8px 16px;max-height:180px;overflow:auto;margin:10px 0}
+.color-legend span{font-size:12px}.taxonomy-coloring #legend .dot{display:none}
+#color-controls[hidden],#color-panel[hidden],#genus-controls[hidden]{display:none}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.controls-note{font-size:13px;margin:8px 0}.pair{margin-top:14px;border-left:4px solid #15806b;padding:12px 16px;background:#f5faf8;min-height:90px}
+.pair strong{font-size:15px}.pair-actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.tables{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-top:16px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px;border-bottom:1px solid #e2e9f0;text-align:left}
+td button{padding:3px 7px}.nowrap{white-space:nowrap}details{padding:14px;margin-top:16px}summary{font-weight:650;cursor:pointer}
+code{overflow-wrap:anywhere}.danger{color:#a94b0c}.status{min-height:20px;font-size:13px}
+footer{font-size:13px;color:#5d6e81;padding-top:0}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(3,1fr)}.tables{grid-template-columns:1fr}.plot{height:490px}}
+@media(max-width:600px){header,main,footer{padding:15px}.cards{grid-template-columns:repeat(2,1fr)}h1{font-size:23px}#focus{max-width:230px}.plot{height:410px}}
+</style>
+</head>
+<body>
+<header>
+<h1 id="chart-title">Reference tree versus original embeddings</h1>
+<p id="chart-question">Does distance along the reference tree track distance in the original embedding space?</p>
+<p class="muted">Direct comparison before building any new tree. No NJ topology, fitted branch lengths or genus centroids enter this analysis.</p>
+<p id="scope-note" class="muted"></p>
+<div class="cards">
+<div class="card"><strong id="matched">...</strong><small>exact matched records available</small></div>
+<div class="card"><strong id="sample">...</strong><small>matched BIN records analyzed</small></div>
+<div class="card"><strong id="count">...</strong><small>pairs in active filter</small></div>
+<div class="card"><strong id="pearson">...</strong><small>Pearson r (linear association)</small></div>
+<div class="card"><strong id="spearman">...</strong><small>Spearman rho (rank association)</small></div>
+<div class="card"><strong id="r2">...</strong><small>R-squared of linear fit</small></div>
+</div>
+<p id="sample-note" class="muted"></p>
+</header>
+<main>
+<div class="toolbar">
+<label>Pair group <select id="group"><option value="all">All relationships</option></select></label>
+<label id="genus-controls" hidden>Within genus <select id="genus"><option value="-1">All genera, including between-genus pairs</option></select></label>
+<label>Focal record <select id="focus"><option value="-1">All analyzed records</option></select></label>
+<label id="color-controls" hidden>Color by <select id="color-by"><option value="relationship">Pair relationship</option><option value="family">Shared family</option><option value="genus">Shared genus</option><option value="species">Shared species</option></select></label>
+<label>Opacity <input id="opacity" type="range" min=".02" max=".5" step=".01" value=".09"></label>
+<label><input id="trend" type="checkbox" checked>Linear fit</label>
+<button id="fit">Fit active data</button>
+<button id="reset">Reset filters</button>
+</div>
+<section class="panel">
+<div class="plot" id="plot">
+<canvas id="scatter" tabindex="0" role="img" aria-label="Scatterplot of reference-tree pair distances against embedding cosine distances"></canvas>
+<canvas id="overlay" aria-hidden="true"></canvas>
+</div>
+<div class="status" id="status" aria-live="polite">Loading embedded pair data...</div>
+<p class="controls-note muted">Wheel to zoom at the pointer; drag to pan; double-click to fit. Hover a point for its records and distances; click to pin it. Overlapping pairs may share a pixel; zoom or select a focal record to separate them.</p>
+<fieldset class="legend" id="legend"><legend>Show relationship groups - select any combination</legend></fieldset>
+<section id="color-panel" hidden><h2>Point colors</h2><p id="color-note" class="muted"></p><div id="color-legend" class="color-legend" aria-label="Point color legend"></div><p class="muted">Legend counts use active pairs, not just the zoomed viewport. Color does not change filters or statistics. Many taxa can have similar colors; inspect a point to identify both records.</p><p id="color-guidance" class="muted"></p></section>
+<div class="pair"><strong id="pair-title">Hover a point to inspect its pair</strong><p id="pair-records"></p><p id="pair-distances" class="muted"></p>
+<div class="pair-actions"><button id="focus-a" disabled>Focus first record</button><button id="focus-b" disabled>Focus second record</button><button id="unpin">Unpin</button></div></div>
+</section>
+<div class="tables">
+<section class="panel"><h2>Correlations by relationship</h2><p class="muted">Full analysis; this table is independent of active filters and zoom.</p><table><thead><tr><th>Pair group</th><th>Pairs</th><th>Pearson r</th><th>Spearman rho</th></tr></thead><tbody id="group-table"></tbody></table></section>
+<section class="panel"><h2>Active filter</h2><p id="fit-equation"></p><p id="metric-reason" class="muted"></p><p>Statistics above use all valid pairs in the active filters, not only the zoomed viewport.</p><p>Different units are expected: the axes are not forced onto a one-to-one scale. The fitted line is a descriptive linear association, not an evolutionary calibration.</p><div class="pair-actions"><button id="download-records">Download sampled records</button><button id="download-pairs">Download up to 5,000 visible pairs</button></div><p class="muted">Complete sample pair arrays are also supplied in <code>pairwise_distances.npz</code> beside this HTML.</p></section>
+</div>
+<details><summary>Sampling, matching and scientific limitations</summary>
+<p id="method"></p>
+<p id="scope-coverage"></p>
+<p>Reference tips and original embeddings are joined by exact record ID. A sampled record is a species-labelled BIN representative, not necessarily a unique species. Repeated species labels remain separate records; pairs between those records are identified separately.</p>
+<p>Reference distances are patristic distances: the sum of branch lengths on the unique path connecting two original reference tips. Embedding distances are cosine distances between their original, L2-normalized vectors. Reference branch-length units are not specified by the source file.</p>
+<p>Only pairs with known reference path lengths are plotted. A missing edge excludes paths crossing it, not every path below it. No unknown distance is replaced by zero in this analysis.</p>
+<p class="danger">Pairs are not independent because they share sampled records. No naive pair-level p-values or confidence intervals are presented. Overall correlation may be dominated by between-family comparisons; inspect the within-genus and within-family filters as well. Correlation alone does not establish phylogenetic accuracy or a causal relationship.</p>
+<p>All plotted points use float64 distances. Encoded data is embedded in this page; it works offline with no network requests or data uploads. Point opacity reveals overlap, but this is a scatterplot, not a statistical density estimate.</p>
+<p id="files" class="muted"></p>
+</details>
+</main>
+<footer><span id="sampling-footer">Uniform record sampling, exhaustive pairs within that sample.</span> Pearson and Spearman correlations are invariant to positive changes of units; cross-unit raw RMSE is intentionally not reported.</footer>
+<script id="scatter-data" type="application/json">__SCATTER_DATA__</script>
+<script>
+"use strict";
+const data=JSON.parse(document.getElementById("scatter-data").textContent);
+const info=data.summary,records=data.records,colors=["#ad4779","#158367","#347ac2","#717f98","#d28c20"];
+const el=id=>document.getElementById(id),fmt=n=>n===null||n===undefined?"Not defined":Number(n).toFixed(4);
+if(info.embedding_model){
+  el("chart-title").textContent="Reference tree versus "+info.embedding_model+" embeddings";
+  el("chart-question").textContent="Does distance along the reference tree track distance in the original "+info.embedding_model+" embedding space?";
+  document.title=el("chart-title").textContent;
+}
+const endian=new Uint8Array(new Uint16Array([1]).buffer)[0]===1;
+function unpack(item){
+  const text=atob(item.base64),bytes=new Uint8Array(text.length);for(let i=0;i<text.length;i++)bytes[i]=text.charCodeAt(i);
+  const C={f64:Float64Array,u16:Uint16Array,u32:Uint32Array,u8:Uint8Array}[item.kind];
+  if(endian||item.kind==="u8")return new C(bytes.buffer);
+  const view=new DataView(bytes.buffer),values=new C(bytes.length/C.BYTES_PER_ELEMENT),get={f64:"getFloat64",u16:"getUint16",u32:"getUint32"}[item.kind];
+  for(let i=0;i<values.length;i++)values[i]=view[get](i*C.BYTES_PER_ELEMENT,true);return values;
+}
+const arrays=Object.fromEntries(Object.entries(data.arrays).map(([k,v])=>[k,unpack(v)]));
+delete data.arrays;
+const x=arrays.reference,y=arrays.embedding,li=arrays.left,ri=arrays.right,groups=arrays.relationship;
+const canvas=el("scatter"),ctx=canvas.getContext("2d"),overlay=el("overlay"),ink=overlay.getContext("2d");
+const allGroups=(1<<info.relationships.length)-1;
+const state={active:[],metrics:null,groupMask:allGroups,view:null,width:0,height:0,picker:null,pinned:null,hover:null,inspected:null,drag:null,frame:false,ready:false,drawn:0};
+const genusMetrics=info.genus_metrics||[],genusCodes=Int32Array.from(records,row=>genusMetrics.findIndex(group=>group.genus===row.genus));
+const colorCache=new Map(),relationshipPalette=info.relationships.map((label,index)=>({label,color:colors[index]}));
+let pointGroups=groups,pointPalette=relationshipPalette;
+if(data.taxonomy_colors){
+  el("color-controls").hidden=false;el("color-panel").hidden=false;
+  el("color-by").value=data.taxonomy_colors.default_mode;
+  el("legend").querySelector("legend").textContent="Filter relationships - independent of point colors";
+}
+function updatePointColors(){
+  if(!data.taxonomy_colors)return;
+  const mode=el("color-by").value;
+  if(mode==="relationship"){pointGroups=groups;pointPalette=relationshipPalette}
+  else{
+    const rank=data.taxonomy_colors.ranks[mode];pointPalette=rank.categories;
+    if(!colorCache.has(mode)){
+      const codes=rank.record_codes,result=new Uint32Array(x.length);
+      for(let i=0;i<x.length;i++){const a=codes[li[i]],b=codes[ri[i]];result[i]=a===0||b===0?0:a===b?a:1}
+      colorCache.set(mode,result);
+    }
+    pointGroups=colorCache.get(mode);
+  }
+  document.body.classList.toggle("taxonomy-coloring",mode!=="relationship");
+  info.relationships.forEach((name,index)=>{el("relationship-"+index).style.accentColor=mode==="relationship"?colors[index]:"#53677d"});
+  const counts=new Uint32Array(pointPalette.length);for(const i of state.active)counts[pointGroups[i]]++;
+  el("color-legend").replaceChildren();
+  pointPalette.forEach((category,index)=>{
+    if(!counts[index])return;
+    const item=document.createElement("span"),dot=document.createElement("i");dot.className="dot";dot.style.background=category.color;
+    item.append(dot,document.createTextNode(category.label+" - "+counts[index].toLocaleString()));el("color-legend").append(item);
+  });
+  el("color-note").textContent=mode==="relationship"?"Each color identifies the relationship between the two records.":"Each point is a pair: color identifies its shared "+mode+". Different taxa are gray; missing taxonomy is light gray. Genus and species identities also require matching, known parent taxa.";
+  el("color-guidance").textContent=mode==="genus"?"For within-genus colors, keep only the same-species and same-genus relationship groups, or use Within genus when available.":mode==="family"?'Hide "Different families" to examine shared-family colors.':mode==="species"?'Select "Same species label (different BINs)" to examine repeated species labels.':"Use the relationship checkboxes to show or hide pair groups.";
+}
+const margin={left:77,right:24,top:25,bottom:67};
+el("matched").textContent=info.filtering.exact_matched_records.toLocaleString();
+el("sample").textContent=records.length.toLocaleString();
+const familyScope=info.scope&&info.scope.family,genusScope=info.scope&&info.scope.genus,scopeDescription=familyScope?"within family "+familyScope+(genusScope?", genus "+genusScope:""):"across the full dataset";
+el("sample-note").textContent=info.sampling.unique_species+" distinct species labels; "+info.sampling.unique_genera+" genus labels; "+info.sampling.unique_families+" family labels. "+(info.sampling.all_matches?"All matches; no subsampling.":"Seed "+info.sampling.seed+".")+" "+info.pairs.sample_pair_count.toLocaleString()+" unordered pairs; "+info.pairs.unresolved_reference_path_count.toLocaleString()+" excluded for unknown reference paths.";
+el("method").textContent=info.filtering.literal_species_None_removed.toLocaleString()+" literal species 'None' rows were excluded before analysis. "+info.filtering.exact_matched_records.toLocaleString()+" exact matched records are available "+scopeDescription+". "+(info.sampling.all_matches?"All matches are included; no random sampling.":"Uniformly sample "+records.length.toLocaleString()+" records without replacement (seed "+info.sampling.seed+").")+" Evaluate every unordered pair within the analyzed records.";
+if(info.sampling.all_matches)el("sampling-footer").textContent="All matched records in the selected scope; exhaustive pairs within those records.";
+if(familyScope){
+  el("scope-note").textContent="Family: "+familyScope+(genusScope?"; genus: "+genusScope:"")+". "+records.length+" records analyzed out of "+info.filtering.scope_eligible_embedding_records+" eligible scoped records; "+info.filtering.exact_matched_records+" match the reference. Select a genus to retain only pairs with both records in that genus.";
+  const absent=info.scope.genus_coverage.filter(row=>row.reference_matched_records===0).map(row=>row.genus);
+  el("scope-coverage").textContent=info.filtering.scope_embedding_records_not_in_reference+" eligible scoped records have no exact reference match. "+(absent.length?"Genera without reference matches: "+absent.join(", ")+".":"Every eligible genus has at least one reference match.")+" Counts are recorded in genus_coverage.csv.";
+}
+el("files").textContent="Embeddings: "+info.input_file+" | Reference: "+info.reference_file;
+function option(parent,value,text){const node=document.createElement("option");node.value=value;node.textContent=text;parent.append(node)}
+if(genusMetrics.length){el("genus-controls").hidden=false;genusMetrics.forEach((group,index)=>option(el("genus"),index,group.genus+" ("+group.record_count+" records)"))}
+info.relationships.forEach((name,index)=>{
+  option(el("group"),index,name);
+  const legend=document.createElement("label"),check=document.createElement("input"),dot=document.createElement("i");
+  check.type="checkbox";check.checked=true;check.id="relationship-"+index;check.dataset.group=String(index);check.style.accentColor=colors[index];
+  check.addEventListener("change",()=>{if(check.checked)state.groupMask|=1<<index;else state.groupMask&=~(1<<index);refresh()});
+  dot.className="dot";dot.style.background=colors[index];legend.append(check,dot,document.createTextNode(name));el("legend").append(legend);
+  const row=document.createElement("tr"),cell=document.createElement("td"),button=document.createElement("button");button.textContent=name;button.addEventListener("click",()=>{state.groupMask=1<<index;refresh()});cell.append(button);row.append(cell);
+  const m=info.metrics[String(index)];for(const value of [m.count.toLocaleString(),fmt(m.pearson),fmt(m.spearman)]){const td=document.createElement("td");td.textContent=value;row.append(td)}el("group-table").append(row);
+});
+option(el("group"),"custom","Custom legend selection");el("group").lastElementChild.disabled=true;
+for(const [label,mask,id] of [["Show all",allGroups,"show-all"],["Hide all",0,"hide-all"]]){const button=document.createElement("button");button.textContent=label;button.id=id;button.addEventListener("click",()=>{state.groupMask=mask;refresh()});el("legend").append(button)}
+records.forEach((row,index)=>option(el("focus"),index,row.species+" ["+row.record_id+"]"));
+function moments(a,b){
+  let mx=0,my=0,xx=0,yy=0,xy=0;
+  for(let i=0;i<a.length;i++){const dx=a[i]-mx,dy=b[i]-my;mx+=dx/(i+1);my+=dy/(i+1);xx+=dx*(a[i]-mx);yy+=dy*(b[i]-my);xy+=dx*(b[i]-my)}
+  return {r:xx>0&&yy>0?Math.max(-1,Math.min(1,xy/Math.sqrt(xx*yy))):null,regression:xx>0?{slope:xy/xx,intercept:my-xy/xx*mx}:null};
+}
+function ranks(values){const order=Array.from(values.keys()).sort((a,b)=>values[a]-values[b]),result=new Float64Array(values.length);let i=0;while(i<order.length){let end=i+1;while(end<order.length&&values[order[end]]===values[order[i]])end++;for(let k=i;k<end;k++)result[order[k]]=(i+end+1)/2;i=end}return result}
+function activeMetrics(){
+  if(Number(el("focus").value)<0){const genus=Number(el("genus").value);return (genus<0?info:genusMetrics[genus]).relationship_selection_metrics[String(state.groupMask)]}
+  if(state.active.length<2)return {count:state.active.length,pearson:null,spearman:null,regression:null,reason:"Fewer than two valid pairs"};
+  const a=Float64Array.from(state.active,i=>x[i]),b=Float64Array.from(state.active,i=>y[i]),m=moments(a,b);
+  return {count:a.length,pearson:m.r,spearman:m.r===null?null:moments(ranks(a),ranks(b)).r,regression:m.regression,reason:m.r===null?"At least one distance array is constant":""};
+}
+function fitView(){
+  let maxX=0,maxY=0;for(const i of state.active){maxX=Math.max(maxX,x[i]);maxY=Math.max(maxY,y[i])}
+  state.view={x0:0,x1:maxX>0?maxX*1.045:1,y0:0,y1:maxY>0?maxY*1.045:1};schedule();
+}
+function refresh(){
+  const focus=Number(el("focus").value),genus=Number(el("genus").value);state.active=[];
+  const selected=[];info.relationships.forEach((name,index)=>{const check=el("relationship-"+index);check.checked=Boolean(state.groupMask&(1<<index));check.parentElement.classList.toggle("off",!check.checked);if(check.checked)selected.push(index)});
+  el("group").value=state.groupMask===allGroups?"all":selected.length===1?String(selected[0]):"custom";
+  for(let i=0;i<x.length;i++)if((state.groupMask&(1<<groups[i]))&&(focus<0||li[i]===focus||ri[i]===focus)&&(genus<0||(genusCodes[li[i]]===genus&&genusCodes[ri[i]]===genus)))state.active.push(i);
+  state.metrics=activeMetrics();state.pinned=null;state.hover=null;state.inspected=null;
+  el("count").textContent=state.active.length.toLocaleString();el("pearson").textContent=fmt(state.metrics.pearson);el("spearman").textContent=fmt(state.metrics.spearman);
+  el("r2").textContent=state.metrics.pearson===null?"Not defined":(state.metrics.pearson**2).toFixed(4);
+  const fit=state.metrics.regression;el("fit-equation").textContent=fit?"Linear fit: embedding distance = "+fit.slope.toPrecision(5)+" x reference distance "+(fit.intercept<0?"- ":"+ ")+Math.abs(fit.intercept).toPrecision(5):"Linear fit not defined for this filter.";
+  el("metric-reason").textContent=state.metrics.reason||"Correlations use original, unscaled distances.";
+  el("pair-title").textContent="Hover a point to inspect its pair";el("pair-records").textContent="";el("pair-distances").textContent="";el("focus-a").disabled=el("focus-b").disabled=true;updatePointColors();fitView();
+}
+function geometry(){return {w:state.width-margin.left-margin.right,h:state.height-margin.top-margin.bottom}}
+function px(value){return margin.left+(value-state.view.x0)/(state.view.x1-state.view.x0)*geometry().w}
+function py(value){return state.height-margin.bottom-(value-state.view.y0)/(state.view.y1-state.view.y0)*geometry().h}
+function inView(i){return x[i]>=state.view.x0&&x[i]<=state.view.x1&&y[i]>=state.view.y0&&y[i]<=state.view.y1}
+function schedule(){state.ready=false;if(state.frame)return;state.frame=true;requestAnimationFrame(()=>{state.frame=false;draw()})}
+function draw(){
+  const rect=el("plot").getBoundingClientRect(),dpr=window.devicePixelRatio||1;state.width=Math.max(320,Math.floor(rect.width));state.height=Math.max(280,Math.floor(rect.height));
+  for(const c of [canvas,overlay]){c.width=Math.round(state.width*dpr);c.height=Math.round(state.height*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ink.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,state.width,state.height);ctx.font="12px system-ui";ctx.lineWidth=1;
+  for(let tick=0;tick<=5;tick++){
+    const xv=state.view.x0+(state.view.x1-state.view.x0)*tick/5,yv=state.view.y0+(state.view.y1-state.view.y0)*tick/5,xx=px(xv),yy=py(yv);
+    ctx.strokeStyle="#e1e8ef";ctx.beginPath();ctx.moveTo(xx,margin.top);ctx.lineTo(xx,state.height-margin.bottom);ctx.moveTo(margin.left,yy);ctx.lineTo(state.width-margin.right,yy);ctx.stroke();
+    ctx.fillStyle="#53677d";ctx.textAlign="center";ctx.fillText(Number(xv.toPrecision(4)).toString(),xx,state.height-margin.bottom+22);ctx.textAlign="right";ctx.fillText(Number(yv.toPrecision(4)).toString(),margin.left-10,yy+4);
+  }
+  ctx.textAlign="center";ctx.fillStyle="#203249";ctx.font="13px system-ui";ctx.fillText("Reference-tree path distance (reference units)",(margin.left+state.width-margin.right)/2,state.height-14);
+  ctx.save();ctx.translate(18,(margin.top+state.height-margin.bottom)/2);ctx.rotate(-Math.PI/2);ctx.fillText("Embedding cosine distance (1 - cosine similarity)",0,0);ctx.restore();
+  state.picker=new Int32Array(state.width*state.height).fill(-1);state.drawn=0;
+  ctx.save();ctx.beginPath();ctx.rect(margin.left,margin.top,geometry().w,geometry().h);ctx.clip();ctx.globalAlpha=Number(el("opacity").value);
+  let last=-1;const radius=state.active.length>10000?1:2;
+  for(const i of state.active){if(!inView(i))continue;const xx=px(x[i]),yy=py(y[i]);if(pointGroups[i]!==last){last=pointGroups[i];ctx.fillStyle=pointPalette[last].color}ctx.fillRect(xx-radius,yy-radius,radius*2,radius*2);state.picker[Math.floor(yy)*state.width+Math.floor(xx)]=i;state.drawn++}
+  ctx.globalAlpha=1;const fit=state.metrics.regression;
+  if(el("trend").checked&&fit){ctx.strokeStyle="#bb3030";ctx.lineWidth=2;ctx.setLineDash([7,4]);ctx.beginPath();ctx.moveTo(px(state.view.x0),py(fit.intercept+fit.slope*state.view.x0));ctx.lineTo(px(state.view.x1),py(fit.intercept+fit.slope*state.view.x1));ctx.stroke();ctx.setLineDash([])}
+  ctx.restore();state.ready=true;highlight();
+  el("status").textContent=state.active.length?state.drawn.toLocaleString()+" points in viewport / "+state.active.length.toLocaleString()+" active pairs. "+(state.pinned===null?"Hover to inspect; click to pin.":"Pair pinned. Unpin to resume hover inspection."):"No valid pairs in this filter.";
+  window.scatterReady=true;
+}
+function highlight(){ink.clearRect(0,0,state.width,state.height);const i=state.pinned===null?state.hover:state.pinned;if(i===null||!inView(i))return;ink.strokeStyle="#092f52";ink.lineWidth=2;ink.beginPath();ink.arc(px(x[i]),py(y[i]),6,0,2*Math.PI);ink.stroke()}
+function nearest(mx,my){if(!state.ready)return null;let best=null,bestDistance=65;for(let yy=Math.max(0,Math.floor(my)-7);yy<=Math.min(state.height-1,Math.floor(my)+7);yy++)for(let xx=Math.max(0,Math.floor(mx)-7);xx<=Math.min(state.width-1,Math.floor(mx)+7);xx++){const i=state.picker[yy*state.width+xx];if(i<0)continue;const distance=(px(x[i])-mx)**2+(py(y[i])-my)**2;if(distance<bestDistance){best=i;bestDistance=distance}}return best}
+function showPair(i){if(i===null)return;state.inspected=i;const a=records[li[i]],b=records[ri[i]];el("pair-title").textContent=a.species+" vs "+b.species;el("pair-records").textContent=a.record_id+" ("+a.bin_id+") | "+b.record_id+" ("+b.bin_id+")";el("pair-distances").textContent="Reference path: "+x[i].toPrecision(8)+" | Embedding cosine distance: "+y[i].toPrecision(8)+" | "+info.relationships[groups[i]];if(data.taxonomy_colors){el("pair-records").textContent+=" | First taxonomy: "+a.family+" > "+a.genus+" > "+a.species+" | Second taxonomy: "+b.family+" > "+b.genus+" > "+b.species;el("pair-distances").textContent+=" | Color: "+pointPalette[pointGroups[i]].label}el("focus-a").disabled=el("focus-b").disabled=false}
+function pointer(event){const box=canvas.getBoundingClientRect();return {x:event.clientX-box.left,y:event.clientY-box.top}}
+canvas.addEventListener("pointerdown",event=>{const p=pointer(event);state.drag={...p,view:{...state.view},moved:false};canvas.setPointerCapture(event.pointerId)});
+canvas.addEventListener("pointermove",event=>{
+  const p=pointer(event);if(state.drag){const dx=p.x-state.drag.x,dy=p.y-state.drag.y;if(Math.hypot(dx,dy)<3&&!state.drag.moved)return;state.drag.moved=true;const start=state.drag.view,sx=dx*(start.x1-start.x0)/geometry().w,sy=dy*(start.y1-start.y0)/geometry().h;state.view={x0:start.x0-sx,x1:start.x1-sx,y0:start.y0+sy,y1:start.y1+sy};schedule();return}
+  if(state.pinned===null){state.hover=nearest(p.x,p.y);showPair(state.hover);highlight()}
+});
+canvas.addEventListener("pointerup",event=>{const p=pointer(event);if(state.drag&&!state.drag.moved){const found=nearest(p.x,p.y);if(found!==null){state.pinned=found;showPair(found);highlight()}}state.drag=null;canvas.releasePointerCapture(event.pointerId)});
+canvas.addEventListener("pointercancel",()=>{state.drag=null});
+canvas.addEventListener("pointerleave",()=>{if(state.pinned===null){state.hover=null;highlight()}});
+canvas.addEventListener("wheel",event=>{
+  event.preventDefault();const p=pointer(event),g=geometry();if(p.x<margin.left||p.x>state.width-margin.right||p.y<margin.top||p.y>state.height-margin.bottom)return;
+  const v=state.view,factor=Math.exp(Math.max(-1,Math.min(1,event.deltaY*.002))),ax=v.x0+(p.x-margin.left)/g.w*(v.x1-v.x0),ay=v.y0+(state.height-margin.bottom-p.y)/g.h*(v.y1-v.y0);
+  if((v.x1-v.x0)*factor<1e-12||(v.y1-v.y0)*factor<1e-12)return;
+  state.view={x0:ax+(v.x0-ax)*factor,x1:ax+(v.x1-ax)*factor,y0:ay+(v.y0-ay)*factor,y1:ay+(v.y1-ay)*factor};schedule();
+},{passive:false});
+canvas.addEventListener("dblclick",fitView);
+el("group").addEventListener("change",()=>{state.groupMask=el("group").value==="all"?allGroups:1<<Number(el("group").value);refresh()});el("focus").addEventListener("change",refresh);
+el("genus").addEventListener("change",refresh);
+el("opacity").addEventListener("input",schedule);el("trend").addEventListener("change",schedule);
+el("color-by").addEventListener("change",()=>{updatePointColors();if(state.inspected!==null)showPair(state.inspected);schedule()});
+el("fit").addEventListener("click",fitView);el("reset").addEventListener("click",()=>{state.groupMask=allGroups;el("focus").value="-1";el("genus").value="-1";refresh()});
+el("unpin").addEventListener("click",()=>{state.pinned=null;highlight()});
+function focusPair(which){const i=state.pinned===null?state.inspected:state.pinned;if(i!==null){el("focus").value=String(which===0?li[i]:ri[i]);refresh()}}
+el("focus-a").addEventListener("click",()=>focusPair(0));el("focus-b").addEventListener("click",()=>focusPair(1));
+function csvCell(value){return '"'+String(value).replaceAll('"','""')+'"'}
+function download(name,rows){const blob=new Blob([rows.map(row=>row.map(csvCell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+el("download-records").addEventListener("click",()=>{const fields=["sample_index","record_id","bin_id","species","genus","family","order"];download("sampled_records.csv",[fields,...records.map(row=>fields.map(key=>row[key]))])});
+el("download-pairs").addEventListener("click",()=>{const rows=[["record_1","species_1","record_2","species_2","reference_distance","embedding_cosine_distance","relationship"]];if(data.taxonomy_colors)rows[0].push("family_1","genus_1","family_2","genus_2","color_by","color_label");for(const i of state.active){if(inView(i)){const a=records[li[i]],b=records[ri[i]],row=[a.record_id,a.species,b.record_id,b.species,x[i],y[i],info.relationships[groups[i]]];if(data.taxonomy_colors)row.push(a.family,a.genus,b.family,b.genus,el("color-by").value,pointPalette[pointGroups[i]].label);rows.push(row);if(rows.length===5001)break}}download("visible_pairs_up_to_5000.csv",rows)});
+let resizing;window.addEventListener("resize",()=>{clearTimeout(resizing);resizing=setTimeout(schedule,120)});
+refresh();
+</script>
+</body>
+</html>

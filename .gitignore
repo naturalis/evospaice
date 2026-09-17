@@ -154,6 +154,7 @@ activemq-data/
 .env
 .envrc
 .venv
+.azure-extensions/
 env/
 venv/
 ENV/
@@ -230,3 +231,6 @@ __marimo__/
 *.npz
 
 results/*
+data/*
+
+.azure-extensions/

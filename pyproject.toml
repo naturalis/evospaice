@@ -19,7 +19,7 @@ version = "0.1.0"
 description = "A scaled reference tree from barcode embeddings: taxonomy gives the shape, embeddings resolve and scale it."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"   # upper bound keeps us on Python versions with faiss-cpu wheels
-license = "CC0-1.0"                 # outputs are public domain; adjust if the code should carry a different licence
+license = "CC0-1.0"                 # Taxonium viewer files carry a separate GPL-3.0-only notice
 authors = [
     { name = "Naturalis Biodiversity Center" },
 ]
