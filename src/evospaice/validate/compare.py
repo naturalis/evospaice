@@ -230,7 +230,9 @@ def split_id(mask: int, tree: dendropy.Tree) -> str:
     return hashlib.sha256(encoded.encode()).hexdigest()[:20]
 
 
-def topology_metrics(inferred: dendropy.Tree, reference: dendropy.Tree) -> tuple[dict, list[dict]]:
+def topology_metrics(
+    inferred: dendropy.Tree, reference: dendropy.Tree, *, include_clades: bool = True,
+) -> tuple[dict, list[dict]]:
     """Compute raw and normalized RF for prepared trees, ignoring lengths."""
     first, second = informative_splits(inferred), informative_splits(reference)
     for name, relationships in (("inferred", first), ("reference", second)):
