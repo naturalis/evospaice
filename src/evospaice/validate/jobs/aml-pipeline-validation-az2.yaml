@@ -1,8 +1,8 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 type: pipeline
 
-display_name: AZ2 tree validation
-description: Compare the bottom-up inferred tree with the pruned reference tree.
+display_name: AZ2 RF and correlation validation
+description: Compare unrooted topology and supplied-root depths on shared AZ2 taxa.
 experiment_name: tree-validation
 
 inputs:
@@ -28,7 +28,8 @@ jobs:
       --inferred ${{inputs.inferred}}
       --mode unrooted
       --taxa-policy intersection
-      --no-rf
+      --rf
+      --tip-to-root-correlation
       --output-dir ${{outputs.results}}
       --overwrite
     inputs:
