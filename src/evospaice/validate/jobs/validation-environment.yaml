@@ -1,3 +1,5 @@
+# unify this environment with the root yaml python packages files
+
 name: evospaice-validation
 channels:
   - conda-forge
