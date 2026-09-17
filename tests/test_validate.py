@@ -1,5 +1,6 @@
 import csv
 import gzip
+import hashlib
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from evospaice.validate.compare import (
     load_tree,
     prepare_trees,
     root_to_node_lengths,
+    split_id,
     tip_to_root_correlation,
     topology_metrics,
 )
@@ -168,7 +170,7 @@ def test_no_rf_skips_topology_and_preserves_results(tmp_path, monkeypatch, capsy
     def unexpected_topology(*args, **kwargs):
         pytest.fail("Correlation-only validation must not prepare topology")
 
-    for method in ("clone", "retain_taxa_with_labels", "migrate_taxon_namespace",
+    for method in ("clone", "retain_taxa", "retain_taxa_with_labels", "migrate_taxon_namespace",
                    "encode_bipartitions"):
         monkeypatch.setattr(dendropy.Tree, method, unexpected_topology)
     output = tmp_path / "correlation"
@@ -237,6 +239,35 @@ def test_rf_known_answer(mode, raw):
     assert not {"precision", "recall"} & result.keys()
     assert all(row["origin"] != "both" for row in rows)
     assert len(coverage) == 8
+
+
+@pytest.mark.parametrize("mask", [0, 1, 0b100000001, (1 << 257) - 1, 1 << 256])
+def test_split_id_preserves_label_hash(mask):
+    namespace = dendropy.TaxonNamespace(
+        ["quote\"", "back\\slash", "caf\u00e9"] + [f"taxon_{index}" for index in range(254)],
+    )
+    original = dendropy.Tree(taxon_namespace=namespace)
+    labels = [taxon.label for index, taxon in enumerate(namespace) if mask & (1 << index)]
+    encoded = json.dumps(labels, ensure_ascii=True, separators=(",", ":"))
+    assert split_id(mask, original) == hashlib.sha256(encoded.encode()).hexdigest()[:20]
+
+
+def test_prepare_trees_uses_namespace_mapping(monkeypatch):
+    original = {"inferred": tree("((a,B),(C,D),E);"),
+                "reference": tree("((A,B),(C,D),F);")}
+    before = {name: source.as_string(schema="newick") for name, source in original.items()}
+
+    def unexpected_lookup(*args, **kwargs):
+        pytest.fail("Aligned taxa must use the namespace mapping without label searches")
+
+    monkeypatch.setattr(dendropy.TaxonNamespace, "require_taxon", unexpected_lookup)
+    monkeypatch.setattr(dendropy.TaxonNamespace, "get_taxa", unexpected_lookup)
+    aligned, _ = prepare_trees(
+        original, mode="unrooted", taxa_policy="intersection", mappings={"inferred": {"a": "A"}},
+    )
+    assert aligned["inferred"].taxon_namespace is aligned["reference"].taxon_namespace
+    assert topology_metrics(aligned["inferred"], aligned["reference"])[0]["rf"] == 0
+    assert {name: source.as_string(schema="newick") for name, source in original.items()} == before
 
 
 @pytest.mark.parametrize("mode", ["rooted", "unrooted"])

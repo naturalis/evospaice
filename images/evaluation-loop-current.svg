@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1040" viewBox="0 0 1440 1040" style="display: block; width: 100%; max-width: 1440px; height: auto;" role="img" aria-labelledby="diagram-title diagram-description">
+  <title id="diagram-title">Current AZ2 tree evaluation and validation loop</title>
+  <desc id="diagram-description">Pair the inferred and reference Newick trees, retain shared taxon labels, compute unrooted Robinson-Foulds distance on pruned topology copies and Spearman correlation using original-root depths, export JSON and CSV evidence, then review before choosing another candidate. The AZ2 run retained 61,381 shared tips, returned normalized RF 0.7943 and correlation 0.1002, and completed validation in 3 hours 4 minutes 16 seconds. Iteration is human-led, with no automatic biological pass or fail.</desc>
+  <defs>
+    <style>
+      text { font-family: Helvetica, Arial, sans-serif; fill: #223a30; letter-spacing: 0; }
+      .eyebrow { font-size: 14px; font-weight: 700; }
+      .heading { font-size: 22px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; }
+      .muted { fill: #52635b; }
+      .mono { font-family: Consolas, "Liberation Mono", monospace; font-size: 17px; }
+      .panel { fill: #ffffff; stroke: #cbd6cf; stroke-width: 1.5; }
+      .flow { fill: none; stroke: #406454; stroke-width: 2; marker-end: url(#arrow); }
+      .tree { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      a text { text-decoration: underline; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9 Z" fill="#406454"/>
+    </marker>
+  </defs>
+
+  <rect width="1440" height="1040" fill="#f7faf8"/>
+  <text class="eyebrow" x="48" y="43">TREE VALIDATION / CURRENT AZ2 WORKFLOW</text>
+  <text class="small muted" x="1392" y="43" text-anchor="end">unrooted + intersection</text>
+  <text x="48" y="89" style="font-family: Georgia, serif; font-size: 38px;">Compare topology. Check depth. Review evidence.</text>
+  <text class="body muted" x="48" y="122">Two complementary measurements on the same shared taxa, with different treatment of roots and branch lengths.</text>
+  <path d="M 48 146 H 1392" stroke="#cbd6cf"/>
+
+  <g id="paired-inputs">
+    <rect class="panel" x="48" y="182" width="284" height="320" rx="8"/>
+    <path d="M 68 183 H 312" stroke="#285b43" stroke-width="3"/>
+    <text class="eyebrow" x="68" y="216">01 / PAIRED INPUTS</text>
+    <g class="tree" stroke="#285b43" transform="translate(70 252)">
+      <path d="M 0 23 H 12 M 12 8 V 39 M 12 8 H 28 M 12 39 H 39 M 28 0 V 17 M 28 0 H 39 M 28 17 H 39"/>
+      <circle cx="41" cy="0" r="3" fill="#285b43"/>
+      <circle cx="41" cy="17" r="3" fill="#285b43"/>
+      <circle cx="41" cy="39" r="3" fill="#285b43"/>
+    </g>
+    <text class="heading" x="130" y="263">Inferred tree</text>
+    <text class="small muted" x="130" y="290">Bottom-up candidate</text>
+    <text class="body" x="130" y="317">100,802 tips</text>
+    <path d="M 68 339 H 312" stroke="#dce4df"/>
+    <g class="tree" stroke="#99536e" transform="translate(70 361)">
+      <path d="M 0 20 H 12 M 12 0 V 32 M 12 0 H 39 M 12 32 H 28 M 28 23 V 41 M 28 23 H 39 M 28 41 H 39"/>
+      <circle cx="41" cy="0" r="3" fill="#99536e"/>
+      <circle cx="41" cy="23" r="3" fill="#99536e"/>
+      <circle cx="41" cy="41" r="3" fill="#99536e"/>
+    </g>
+    <text class="heading" x="130" y="372">Reference tree</text>
+    <text class="small muted" x="130" y="399">Pruned reference</text>
+    <text class="body" x="130" y="426">91,376 tips</text>
+    <text class="small muted" x="68" y="478">Newick + unique taxon labels</text>
+  </g>
+
+  <path class="flow" d="M 332 342 H 374"/>
+
+  <g id="shared-taxa">
+    <rect class="panel" x="376" y="182" width="284" height="320" rx="8"/>
+    <path d="M 396 183 H 640" stroke="#285b43" stroke-width="3"/>
+    <text class="eyebrow" x="396" y="216">02 / MATCH SHARED TAXA</text>
+    <text class="body muted" x="396" y="259">Intersection of tip labels</text>
+    <text x="396" y="313" style="font-size: 44px; font-weight: 700; fill: #285b43;">61,381</text>
+    <text class="body" x="396" y="342">retained in both metrics</text>
+    <path d="M 396 365 H 640" stroke="#dce4df"/>
+    <text class="small muted" x="396" y="393">Excluded from comparison:</text>
+    <text class="body" x="396" y="421">39,421 inferred-only tips</text>
+    <text class="body" x="396" y="447">29,995 reference-only tips</text>
+    <text class="small muted" x="396" y="478">Validate inputs; log exclusions.</text>
+  </g>
+
+  <path class="flow" d="M 660 342 H 702"/>
+
+  <g id="measurements">
+    <rect class="panel" x="704" y="182" width="688" height="320" rx="8"/>
+    <path d="M 724 183 H 1372" stroke="#285b43" stroke-width="3"/>
+    <text class="eyebrow" x="728" y="216">03 / TWO MEASUREMENTS</text>
+    <path d="M 728 245 V 324" stroke="#285b43" stroke-width="4"/>
+    <text class="heading" x="746" y="263">Unrooted RF / topology</text>
+    <text class="body muted" x="746" y="293">Prune topology-only copies to shared taxa.</text>
+    <text class="body muted" x="746" y="320">Compare informative splits; ignore branch lengths.</text>
+    <path d="M 728 349 H 1368" stroke="#dce4df"/>
+    <path d="M 728 372 V 477" stroke="#99536e" stroke-width="4"/>
+    <text class="heading" x="746" y="389">Spearman correlation / depth</text>
+    <text class="body muted" x="746" y="420">Measure branch-length sums on the original trees.</text>
+    <text class="body muted" x="746" y="447">Rank matched tip depths from the supplied roots.</text>
+    <text class="small" x="746" y="474" style="fill: #99536e;">No rerooting; no pruning for depth measurement.</text>
+  </g>
+
+  <path class="flow" d="M 1048 502 V 556"/>
+
+  <g id="evidence">
+    <rect class="panel" x="760" y="558" width="632" height="266" rx="8"/>
+    <text class="eyebrow" x="784" y="594">04 / EVIDENCE &amp; PROVENANCE</text>
+    <text class="mono" x="784" y="633">validation.json</text>
+    <text class="body muted" x="784" y="660">Scores, coverage, input hashes, warnings and provenance</text>
+    <path d="M 784 681 H 1368" stroke="#dce4df"/>
+    <text class="body" x="784" y="711" font-weight="700">CSV evidence</text>
+    <text class="mono muted" x="784" y="742">taxa.csv | clades.csv | node_lengths.csv</text>
+    <text class="mono muted" x="784" y="769">tip_to_root_correlation.csv</text>
+    <text class="small muted" x="784" y="802">Five files published to the Azure ML validation_results output</text>
+  </g>
+
+  <path class="flow" d="M 760 692 H 706"/>
+
+  <g id="review">
+    <rect x="48" y="558" width="656" height="266" rx="8" fill="#eaf2ed" stroke="#bbd0c1" stroke-width="1.5"/>
+    <text class="eyebrow" x="72" y="594">05 / REVIEW &amp; NEXT EXPERIMENT</text>
+    <text class="body" x="72" y="633">Topology: substantial disagreement (normalized RF 0.7943).</text>
+    <text class="body" x="72" y="664">Depth: weak positive association (Spearman rho 0.1002).</text>
+    <text class="body muted" x="72" y="709">Check shared-taxa coverage, root comparability,</text>
+    <text class="body muted" x="72" y="737">tree resolution and reference independence.</text>
+    <text class="body" x="72" y="791" font-weight="700">Choose the next candidate outside the validator.</text>
+  </g>
+
+  <path class="flow" d="M 376 824 V 853 H 24 V 342 H 46" stroke-dasharray="7 6"/>
+  <text class="small muted" x="72" y="885">Human-led iteration: model, distance method or tree-building parameters, with a consistent reference and taxa policy.</text>
+
+  <g id="run-context">
+    <rect x="0" y="916" width="1440" height="124" fill="#173e2b"/>
+    <text class="eyebrow" x="48" y="949" style="fill: #ffffff;">AZ2 RUN SNAPSHOT</text>
+    <text class="body" x="292" y="949" style="fill: #ffffff;">3 h 4 min 16 s logged validation time | RF stage: 85.8% of runtime</text>
+    <text class="body" x="48" y="983" style="fill: #e0ebe4;">Metrics are descriptive, not a biological pass/fail. No p-value or automatic acceptance rule.</text>
+    <a href="https://ml.azure.com/experiments/id/e012299b-de68-4511-9aa2-dbd85973ce26/runs/7583fd8b-2912-4928-86ed-ee85ac2c0825?wsid=/subscriptions/caeead51-e874-4122-ba0e-c3c601c862ca/resourcegroups/rg-ai-seq-h3-hack-e1lkzk/providers/Microsoft.MachineLearningServices/workspaces/mlws-ai-seq-hack-e1lkzk&amp;tid=8cd24984-0aa3-4fc5-b09b-4d6ecfaa58fb" target="_blank" rel="noopener noreferrer">
+      <title>Open the AZ2 evaluate run in Azure Machine Learning</title>
+      <text class="small" x="48" y="1017" style="fill: #d5e5db;">Azure ML run: 7583fd8b-2912-4928-86ed-ee85ac2c0825</text>
+    </a>
+    <a href="../src/evospaice/validate/README_metrics.md">
+      <title>Read the validator's metric definitions and interpretation caveats</title>
+      <text class="small" x="1392" y="1017" text-anchor="end" style="fill: #d5e5db;">Metric definitions and caveats</text>
+    </a>
+  </g>
+</svg>
