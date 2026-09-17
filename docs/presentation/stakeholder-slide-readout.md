@@ -172,12 +172,11 @@ what is distinctive, and what may be hardest to replace.
 ## 7. An evaluation loop for improving the tree
 
 Visual: show a circular four-step loop: `generate`, `compare`, `inspect`, and
-`improve`. Place raw and normalized Robinson-Foulds scores in the center, with
+`improve`. Place normalized Robinson-Foulds scores in the center, with
 several experiment variants feeding into the same reference tree.
 
 EvoSpaice includes evaluation capabilities, not only a generation pipeline.
-Each tree-generation experiment can be compared with a reference tree using raw
-and normalized Robinson-Foulds distance. The evaluator aligns shared leaves,
+Each tree-generation experiment can be compared with a reference tree using normalized Robinson-Foulds and a ranking metric of tip to root distances. The evaluator aligns shared leaves,
 supports rooted and unrooted comparisons, and records which relationships are
 shared, missing, or newly inferred. The
 [tree-evaluation guide](../../src/evospaice/validate/README_metrics.md) documents
@@ -190,8 +189,8 @@ This creates a practical improvement loop:
 3. Compare the results with previous experiments.
 4. Keep the changes that improve tree quality.
 
-The current evaluator measures topology. The next extension is branch-length
-validation: testing whether distances preserve genetic relationships, remain
+The current evaluator measures topology and simple branch-length
+validation. Further work can build on our foundation to further test whether distances preserve genetic relationships, remain
 additive along tree paths, and outperform a k-mer baseline. Together, these
 capabilities turn tree generation into a repeatable, evidence-led experiment
 rather than a one-off result.
