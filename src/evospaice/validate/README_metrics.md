@@ -26,6 +26,13 @@ This reporting convention does not change the correlation score or taxon row ord
 
 ## Run
 
+Required arguments are `--reference` (reference Newick path), `--inferred`
+(inferred Newick path), `--mode` (`rooted` or `unrooted`, controlling RF only)
+and `--output-dir` (report directory, created if needed). `--mode` remains required
+with `--no-rf`. Optional mapping and taxon-selection arguments are explained in
+[Input Rules](#input-rules); reference declarations and JSON metadata are covered
+in [Provenance](#provenance).
+
 From the repository root, run this comparison of the mock
 [reference](../../../tests/data/reference_tree_mock.nwk) and
 [inferred](../../../tests/data/embedding_tree_mock.nwk) fixtures:
@@ -57,8 +64,7 @@ metric results remain on stdout. Percentages mark workflow stages, not elapsed-t
 estimates. RF-enabled runs can spend substantial time preparing large trees between
 the 30% and 40% updates. Completion is reported only after outputs are written.
 
-Disabling both is an input error. `--mode` accepts `rooted` or `unrooted` and
-controls RF only, but remains required even with `--no-rf`. Expected mock results:
+Disabling both metrics is an input error. Expected mock results:
 
 | Mode     | Raw RF | Normalized RF | Tip-to-root-correlation |
 |----------|--------|---------------|-------------------------|
