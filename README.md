@@ -131,31 +131,6 @@ specified in [`data/README.md`](data/README.md).
 
 ---
 
-## Build a tree-evaluation dataset
-
-Create a matched-leaf table directly from a Newick tree and an MST taxonomy CSV:
-
-```bash
-uv run python -m evospaice.validate.dataset_prep \
-  data/pruned.tre data/mst_edges_with_taxonomy.csv \
-  --output data/evaluation_dataset.csv
-```
-
-The CSV keeps only leaves whose IDs match `Source_ID`, in Newick order.
-It combines branch lengths, root distances, and ancestry from the Newick tree
-with family/genus/species from `Source_*` columns. All `Target_*` columns are
-ignored: they refer to a different dataset not stored here.
-Two additional columns contain per-leaf Newick paths: `tree_newick` preserves
-the original leaf and its ancestors with their branch lengths, while
-`taxonomy_newick` contains the source family/genus/species hierarchy with no
-branch lengths. The MST CSV's `Distance` is not a taxonomic edge length and
-is not used.
-Choose a new output path for each run; existing files are never overwritten.
-See the [evaluation dataset documentation](src/evospaice/validate/README.md)
-for input requirements, column definitions, and the Python API.
-
----
-
 ## Prior art
 
 - [barcode-constrained-phylogeny](https://github.com/naturalis/barcode-constrained-phylogeny) — a prior COI attempt. **Lesson:** you can't pick one taxonomic level, solve there, and stitch; it must be recursive.
@@ -170,3 +145,10 @@ for input requirements, column definitions, and the Python API.
 and derived diversity numbers — are released into the public domain
 ([CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)).** Use them for
 anything, no attribution required.
+
+The Taxonium viewer under `src/evospaice/viz/taxonium/` is a separate covered
+work distributed under GPL-3.0-only because it incorporates a modified GPL
+Taxonium component. Its license, notices, complete corresponding source, and
+build instructions are included in that directory. This exception does not
+change the CC0 status of project outputs or the licenses of separate pipeline
+services.

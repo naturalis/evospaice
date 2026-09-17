@@ -15,6 +15,18 @@ obtain: either it forces us to have our result tree use the same IDs, or we have
 BINs. For the former, we also have a [file](pruned.labels.txt) with the leaf labels so that we can generate the corresponding
 embeddings.
 
+`pruned.taxonomy.tsv` maps process IDs to species names for use as viewer
+metadata. It was extracted from the root-level
+`unified_taxonomic_tree.tre.txt`, using each process-ID leaf's nearest quoted
+ancestor as its species. It contains 100,799 mappings; 61,380 of the 91,376
+tips in `pruned.tre.txt` have a matching species (67.17%). Regenerate it from
+the repository root with:
+
+```bash
+PYTHONPATH=src python3 -m evospaice.ingest.taxonomy_metadata \
+    unified_taxonomic_tree.tre.txt data/pruned.taxonomy.tsv
+```
+
 # The Arthropoda BIN tree
 
 `outfile.tre.gz` is a taxonomy-derived tree of every BOLD BIN in phylum
