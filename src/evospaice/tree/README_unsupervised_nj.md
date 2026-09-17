@@ -1,16 +1,17 @@
 # Unsupervised Neighbor-Joining Tree (`unsupervised_nj_tree.py`)
 
 ## Overview
-This script implements a **Purely Unsupervised, Data-Driven NJ Approach**. It completely ignores human taxonomic labels but, unlike the MST script, it generates a mathematically rigorous, full phylogenetic tree using Neighbor-Joining.
+This script implements a **Purely Unsupervised, Data-Driven NJ Approach**. It completely ignores human taxonomic labels but generates a mathematically rigorous, full phylogenetic tree using a bottom-up Neighbor-Joining methodology.
 
 ## How It Works
-Because Neighbor-Joining is computationally intensive ($O(N^3)$), running it directly on 181,000+ sequences is practically impossible. This script uses a fast clustering trick:
+Because Neighbor-Joining is computationally intensive ($O(N^3)$), running it directly on 181,000+ sequences is practically impossible. This script uses a bottom-up hierarchical clustering trick:
 1. **Unsupervised Pseudo-Species (K-Means):** It uses FAISS spherical K-Means to divide the sequence embeddings into a fixed number of mathematically similar clusters (e.g., $K=2000$). These act as data-driven "pseudo-species" centroids.
-2. **Backbone Neighbor-Joining:** It computes a Cosine distance matrix for those 2,000 unsupervised centroids and runs `skbio.tree.nj` (Neighbor-Joining). This builds a complete, unconstrained, bifurcating phylogenetic backbone.
-3. **Sequence Grafting:** Every single sequence in the dataset is then grafted onto its assigned cluster centroid node. The branch length is determined by the sequence's exact Cosine distance from the centroid. The leaf names are set to the exact `source_id` (e.g., `FGMLF272-15`), ensuring compatibility with traditional sequence-based trees.
+2. **Cluster Subtrees (Bottom-Up):** For each cluster, it builds a local sub-tree from the constituent sequence embeddings using Neighbor-Joining.
+3. **Backbone Neighbor-Joining:** It computes a Cosine distance matrix for the 2,000 unsupervised centroids and runs `skbio.tree.nj` (Neighbor-Joining). This builds a complete, unconstrained, bifurcating phylogenetic backbone.
+4. **Subtree Grafting & Rooting:** The local cluster subtrees are grafted onto the corresponding nodes of the backbone. Finally, the entire assembled structure is rooted using midpoint rooting (`.root_at_midpoint()`) to ensure balanced evolutionary distance visualization without branch distortion.
 
 ## Outputs
-- `data/unsupervised_nj_tree.tre.txt` - A fully unconstrained, data-driven Newick tree representing the geometry of the embeddings without human taxonomic bias.
+- `data/unsupervised_nj_tree_midpoint.tre.txt` - A fully unconstrained, data-driven Newick tree representing the geometry of the embeddings without human taxonomic bias, assembled via bottom-up NJ clustering.
 
 ## Use Cases
 - **Comparing Against Taxonomy:** Validating how closely the language model's pure mathematical interpretation of DNA sequence evolution maps to traditional, human-assigned evolutionary trees.
