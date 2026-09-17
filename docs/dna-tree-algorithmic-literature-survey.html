@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bottom-Up Hierarchical Tree Construction from DNA Sequence Embeddings</title>
+    <!-- MathJax for rendering equations cleanly -->
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-accent: #2563eb;
+            --secondary: #0d9488;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #334155;
+            --heading-color: #0f172a;
+            --border: #e2e8f0;
+            --code-bg: #0f172a;
+            --code-text: #f8fafc;
+            --highlight-bg: #f0fdf4;
+            --highlight-border: #10b981;
+            --callout-bg: #eff6ff;
+            --callout-border: #3b82f6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0d9488 100%);
+            color: white;
+            padding: 50px 0;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        header .container {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            margin-bottom: 14px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            line-height: 1.25;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.92;
+            font-weight: 300;
+            margin-bottom: 0;
+            max-width: 850px;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            color: var(--heading-color);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 45px;
+            margin-bottom: 22px;
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: var(--secondary);
+            margin-top: 30px;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .pipeline-diagram {
+            background-color: #0f172a;
+            color: #38bdf8;
+            padding: 28px;
+            border-radius: 10px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.45;
+            margin: 24px 0;
+            border: 1px solid #1e293b;
+            font-size: 0.92rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--heading-color);
+            font-weight: 700;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        code {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 3px 7px;
+            border-radius: 5px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.88em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+            font-size: 0.88rem;
+        }
+
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 24px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            line-height: 1.55;
+            margin: 24px 0;
+            border: 1px solid #1e293b;
+        }
+
+        .math-block {
+            background-color: var(--highlight-bg);
+            border-left: 5px solid var(--highlight-border);
+            padding: 20px 24px;
+            margin: 22px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 1.05rem;
+            overflow-x: auto;
+        }
+
+        .callout {
+            background-color: var(--callout-bg);
+            border-left: 5px solid var(--callout-border);
+            padding: 20px 24px;
+            margin: 22px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-primary { background-color: #dbeafe; color: #1e40af; }
+        .badge-success { background-color: #dcfce7; color: #166534; }
+        .badge-warning { background-color: #fef3c7; color: #92400e; }
+        .badge-danger  { background-color: #fee2e2; color: #991b1b; }
+
+        ul, ol {
+            padding-left: 26px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1>Bottom-Up Hierarchical DNA Tree Construction</h1>
+            <div class="subtitle">A Guided Semi-Supervised Architecture Combining Taxonomic Taxonomy with Continuous DNA Sequence Embeddings</div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Executive Summary -->
+        <div class="card">
+            <h2>Executive Summary</h2>
+            <p>Constructing comprehensive Trees of Life from millions of DNA sequences presents a major computational and biological bottleneck. Traditional alignment-based phylogenetic methods (e.g., Maximum Likelihood via RAxML or Neighbor-Joining on pairwise distance matrices) scale at $\mathcal{O}(N^2)$ to $\mathcal{O}(N^3)$ computational time and require full Multiple Sequence Alignment (MSA), which breaks down across highly divergent or unalignable genomic regions.</p>
+            <p>Conversely, relying purely on established taxonomy (e.g., NCBI Taxonomy, Insect Genome / Barcode Database) fails to capture fine-grained sequence variation, sub-species lineage structure, or newly sequenced unannotated strains. Furthermore, taxonomic classifications frequently contain polyphyletic errors or historical misannotations.</p>
+            <p>This technical proposal details a <strong>Hierarchical Bottom-Up Semi-Guided Architecture</strong>. The core innovation is to anchor global tree topology using known taxonomic ranks while driving fine-grained intra-taxon branching and upward node propagation using high-dimensional sequence embeddings (derived from genomic foundation models such as OmniDNA-20M, Nucleotide Transformer, DNABERT, or HyenaDNA).</p>
+        </div>
+
+        <!-- 1. Conceptual Framework & Algorithmic Formulation -->
+        <div class="card">
+            <h2>1. Conceptual Framework & Architecture</h2>
+            <p>The system operates as a recursive bottom-up tree builder that decomposes a massive global alignment problem into scalable, parallel local sub-problems, propagating synthesized representations up the taxonomic ladder.</p>
+
+            <div class="pipeline-diagram">
+========================================================================================
+                          GLOBAL ROOT (Domain / Life)
+========================================================================================
+                                     ▲
+                                     │  Phase 3: Inter-Taxon Parent Tree Assembly
+                       [ Family / Order Level Nodes ]
+                                     ▲
+                                     │  Phase 2: Upward Node Propagation
+                        [ Genus Level Representatives ]
+                                     ▲
+                                     │  Phase 1: Intra-Taxon Subtree Assembly
+                   [ Species / Strain Subtrees (Local Tree) ]
+                                     ▲
+                                     │  DNA Embeddings: e_i ∈ ℝᵈ
+   [ Sequence 1 ]   [ Sequence 2 ]   [ Sequence 3 ]  ...  [ Sequence m ]
+========================================================================================</div>
+
+            <h3>Mathematical Problem Formulation</h3>
+            <p>Let $\mathcal{S} = \{s_1, s_2, \dots, s_N\}$ be a dataset of $N$ DNA sequences. Each sequence $s_i$ is mapped to a continuous vector $e_i = f_\theta(s_i) \in \mathbb{R}^d$ via a pretrained genomic transformer $f_\theta$. Furthermore, each sequence is associated with a hierarchical taxonomic path $\mathcal{T}(s_i) = [r_1, r_2, \dots, r_K]$ corresponding to taxonomic ranks (e.g., Strain $\rightarrow$ Species $\rightarrow$ Genus $\rightarrow$ Family $\rightarrow$ Order $\rightarrow$ Class $\rightarrow$ Phylum $\rightarrow$ Domain).</p>
+
+            <div class="callout">
+                <strong>Key Architectural Advantage: Computational Complexity Reduction</strong><br>
+                Instead of calculating a single global pairwise distance matrix of size $N \times N$ taking $\mathcal{O}(N^2 \cdot d)$ time, the bottom-up approach partitions sequence processing into $K$ local species clusters of size $m_k \ll N$. The computational cost reduces to $\mathcal{O}\left(\sum_{k=1}^K m_k^2 \cdot d\right)$, yielding speedups of several orders of magnitude while preserving local evolutionary topology.
+            </div>
+
+            <h3>Three-Phase Algorithmic Pipeline</h3>
+            <ol>
+                <li><strong>Phase 1: Intra-Taxon Subtree Resolution (Base Layer)</strong>
+                    <br>For every lowest-level taxon $T_k$ (e.g., Species level), collect all constituent sequence embeddings $S^{(k)} = \{e_1, e_2, \dots, e_{m_k}\}$. Compute a local pairwise distance matrix $D_{ij} = d(e_i, e_j)$ and resolve a fine-grained local phylogenetic tree $L_k$ using Neighbor-Joining (NJ), FastME, or Hierarchical Agglomerative Clustering (HAC).
+                </li>
+                <li><strong>Phase 2: Upward Node Propagation (Representation Synthesis)</strong>
+                    <br>To propagate information from child subtree $L_k$ to its parent node at the next taxonomic rank (e.g., Genus), compute a single synthesized node representation $R_k$. Rather than naive averaging, $R_k$ can be modeled as a point vector (medoid, weighted centroid) or a continuous probability distribution $(\mu_k, \Sigma_k)$.
+                </li>
+                <li><strong>Phase 3: Inter-Taxon Parent Tree Assembly</strong>
+                    <br>At parent rank $P$ containing child representatives $\{R_1, R_2, \dots, R_p\}$, compute inter-taxon distances using the appropriate metric space (e.g., Cosine distance for point vectors, 2-Wasserstein distance for probability distributions). Construct the inter-taxon tree topology and graft the child subtrees $L_k$ onto their corresponding leaves.
+                </li>
+            </ol>
+        </div>
+
+        <!-- 2. Mathematical Formulation of Node Representations -->
+        <div class="card">
+            <h2>2. Comprehensive Node Propagation Strategies</h2>
+            <p>The choice of mathematical object used to represent a resolved subtree $L_k$ when propagating upward directly impacts how downstream parent trees handle variance, sequence noise, and evolutionary drift.</p>
+
+            <h3>2.1 Strategy 1: Simple Centroid Vector</h3>
+            <p>Calculates the arithmetic mean of sequence embeddings within the subtree:</p>
+            <div class="math-block">
+                $$\mu_{\text{centroid}} = \frac{1}{m} \sum_{i=1}^{m} e_i$$
+            </div>
+            <ul>
+                <li><strong>Properties:</strong> Computationally lightweight ($\mathcal{O}(m \cdot d)$). Assumes cluster is unimodal and spherical in Euclidean space.</li>
+                <li><strong>Limitation:</strong> Highly sensitive to extreme sequence outliers. In high-dimensional space, vector averaging causes <em>manifold collapse</em>—pulling the centroid vector into empty feature space off the true sequence manifold.</li>
+            </ul>
+
+            <h3>2.2 Strategy 2: Medoid (Partitioning Around Medoids / PAM)</h3>
+            <p>Selects the actual sequence embedding in the subtree that minimizes the sum of distances to all sibling sequence embeddings:</p>
+            <div class="math-block">
+                $$e_{\text{medoid}} = \arg\min_{e_i \in S^{(k)}} \sum_{j=1}^{m} d(e_i, e_j)$$
+            </div>
+            <ul>
+                <li><strong>Properties:</strong> Fully robust to sequence noise and extreme outliers. Guarantees that the representative vector corresponds to a real biological sequence.</li>
+                <li><strong>Limitation:</strong> Ignores the overall variance spread of the cluster, reducing a diverse taxon to a single point sample.</li>
+            </ul>
+
+            <h3>2.3 Strategy 3: Phylogenetically Weighted Centroid</h3>
+            <p>Weights each sequence embedding $e_i$ inversely proportional to its evolutionary redundancy using Gerstein-Sonnhammer-Chothia (GSC) branch weights or Star Decomposition weights derived from the local tree $L_k$:</p>
+            <div class="math-block">
+                $$\mu_{\text{weighted}} = \sum_{i=1}^{m} w_i e_i \quad \text{where} \quad \sum_{i=1}^{m} w_i = 1$$
+            </div>
+            <ul>
+                <li><strong>Properties:</strong> Mitigates public database sampling bias (e.g., 10,000 sequenced clinical isolates of <em>E. coli</em> O157:H7 vs 2 environmental strains). Overrepresented strains receive smaller weights $w_i$.</li>
+            </ul>
+
+            <h3>2.4 Strategy 4: Distributional Representation (Gaussian / 2-Wasserstein Space)</h3>
+            <p>Represents subtree $L_k$ as a multi-variate continuous probability distribution $\mathcal{N}(\mu_k, \Sigma_k)$, where $\mu_k \in \mathbb{R}^d$ is the mean vector and $\Sigma_k \in \mathbb{R}^{d \times d}$ is the regularized covariance matrix describing intra-taxon genetic variance:</p>
+            <div class="math-block">
+                $$\mu_k = \frac{1}{m} \sum_{i=1}^{m} e_i, \quad \Sigma_k = \frac{1}{m-1} \sum_{i=1}^{m} (e_i - \mu_k)(e_i - \mu_k)^T + \epsilon I_d$$
+            </div>
+            <p>The distance between two child node distributions $\mathcal{N}_1(\mu_1, \Sigma_1)$ and $\mathcal{N}_2(\mu_2, \Sigma_2)$ is calculated using the <strong>2-Wasserstein Distance (Optimal Transport Metric)</strong>:</p>
+            <div class="math-block">
+                $$W_2^2\left(\mathcal{N}_1, \mathcal{N}_2\right) = \|\mu_1 - \mu_2\|_2^2 + \text{Tr}\left(\Sigma_1 + \Sigma_2 - 2 \left(\Sigma_1^{1/2} \Sigma_2 \Sigma_1^{1/2}\right)^{1/2}\right)$$
+            </div>
+            <ul>
+                <li><strong>Properties:</strong> Preserves clade variance. A taxon with high sequence variability maintains a larger Wasserstein footprint, preventing diverse taxa from being compressed into misleadingly small point representations.</li>
+            </ul>
+
+            <h3>2.5 Strategy 5: Fréchet Means on Non-Euclidean Manifolds</h3>
+            <p>If embeddings are normalized onto a unit hypersphere $\mathbb{S}^{d-1}$ (common for Cosine similarity) or mapped to a hyperbolic Poincaré ball $\mathbb{B}^d$ (ideal for hierarchical graphs), Euclidean means pull vectors off the manifold. The Fréchet Mean minimizes manifold geodesic distance $d_{\mathcal{M}}$:</p>
+            <div class="math-block">
+                $$\mu_{\text{Fréchet}} = \arg\min_{p \in \mathcal{M}} \sum_{i=1}^{m} d_{\mathcal{M}}(p, e_i)^2$$
+            </div>
+
+            <h3>Detailed Strategy Comparison Matrix</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Mathematical Form</th>
+                        <th>Complexity</th>
+                        <th>Outlier Robustness</th>
+                        <th>Preserves Variance</th>
+                        <th>Handles Sampling Bias</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Simple Centroid</strong></td>
+                        <td>$\mu \in \mathbb{R}^d$</td>
+                        <td>$\mathcal{O}(m \cdot d)$</td>
+                        <td><span class="badge badge-danger">Low</span></td>
+                        <td>No</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Medoid (PAM)</strong></td>
+                        <td>$e_{\text{medoid}} \in S^{(k)}$</td>
+                        <td>$\mathcal{O}(m^2 \cdot d)$</td>
+                        <td><span class="badge badge-success">High</span></td>
+                        <td>No</td>
+                        <td>Moderate</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Weighted Centroid</strong></td>
+                        <td>$\sum w_i e_i$</td>
+                        <td>$\mathcal{O}(m^2 \cdot d)$</td>
+                        <td><span class="badge badge-primary">Moderate</span></td>
+                        <td>No</td>
+                        <td><span class="badge badge-success">High</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Distributional</strong></td>
+                        <td>$(\mu, \Sigma) \in \mathbb{R}^d \times \mathbb{R}^{d \times d}$</td>
+                        <td>$\mathcal{O}(m \cdot d^2)$</td>
+                        <td><span class="badge badge-primary">Moderate</span></td>
+                        <td><span class="badge badge-success">High</span></td>
+                        <td>Moderate</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fréchet Mean</strong></td>
+                        <td>$p \in \mathcal{M}^d$</td>
+                        <td>Iterative $\mathcal{O}(k \cdot m \cdot d)$</td>
+                        <td><span class="badge badge-success">High</span></td>
+                        <td>No (Point on Manifold)</td>
+                        <td>Moderate</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. Full Implementation & Verification Code -->
+        <div class="card">
+            <h2>3. Complete Python Implementation</h2>
+            <p>The following Python script simulates high-dimensional DNA embeddings across a multi-level taxonomy, extracts representations using <strong>Centroid</strong>, <strong>Medoid</strong>, and <strong>2-Wasserstein Distributional</strong> methods, constructs linkage matrices, and renders side-by-side dendrogram comparisons.</p>
+
+            <div class="code-block">
+<pre><code>import numpy as np
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import pdist, squareform
+from scipy.cluster.hierarchy import linkage, dendrogram
+from sklearn.metrics.pairwise import cosine_distances
+
+# Set random seed for exact reproducibility
+np.random.seed(42)
+d = 32  # Feature dimension (e.g., compressed genomic embedding)
+
+# ---------------------------------------------------------
+# 1. Simulate Multi-Level Taxonomy & Sequence Embeddings
+# ---------------------------------------------------------
+taxonomy = {
+    "Genus_A": {"Species_A1": 6, "Species_A2": 6},
+    "Genus_B": {"Species_B1": 6, "Species_B2": 6},
+    "Genus_C": {"Species_C1": 6, "Species_C2": 6},
+}
+
+sequences = {}
+metadata = []
+seq_idx = 0
+
+for genus, species_dict in taxonomy.items():
+    genus_center = np.random.randn(d)
+    for species, count in species_dict.items():
+        # Species cluster around genus center
+        species_center = genus_center + np.random.randn(d) * 0.5
+        for i in range(count):
+            seq_id = f"seq_{seq_idx:02d}"
+            # Add intra-species variance + deliberate outlier on sequence 0
+            noise = 0.2 if i > 0 else 1.2
+            emb = species_center + np.random.randn(d) * noise
+            sequences[seq_id] = emb
+            metadata.append({"id": seq_id, "genus": genus, "species": species})
+            seq_idx += 1
+
+species_list = sorted(list({m["species"] for m in metadata}))
+
+def get_species_embeddings(metadata, sequences, species_name):
+    seq_ids = [m["id"] for m in metadata if m["species"] == species_name]
+    return np.array([sequences[sid] for sid in seq_ids])
+
+# ---------------------------------------------------------
+# 2. Extract Node Representatives Across Strategies
+# ---------------------------------------------------------
+centroids, medoids, distributions = {}, {}, {}
+
+for sp in species_list:
+    embs = get_species_embeddings(metadata, sequences, sp)
+    
+    # Strategy 1: Centroid
+    centroids[sp] = np.mean(embs, axis=0)
+    
+    # Strategy 2: Medoid (PAM)
+    dist_mat = squareform(pdist(embs, metric="cosine"))
+    medoid_idx = np.argmin(dist_mat.sum(axis=1))
+    medoids[sp] = embs[medoid_idx]
+    
+    # Strategy 3: Distributional Representation (Mean + Regularized Covariance)
+    mu = np.mean(embs, axis=0)
+    sigma = np.cov(embs, rowvar=False) + np.eye(d) * 1e-4
+    distributions[sp] = (mu, sigma)
+
+def wasserstein_2_distance(dist1, dist2):
+    # Computes exact 2-Wasserstein distance between two Gaussian distributions
+    mu1, sigma1 = dist1
+    mu2, sigma2 = dist2
+    mean_diff = np.sum((mu1 - mu2) ** 2)
+    # Matrix trace calculation for covariance term
+    cov_term = np.trace(sigma1 + sigma2 - 2 * np.sqrt(np.abs(sigma1 @ sigma2)))
+    return np.sqrt(max(0.0, mean_diff + cov_term))
+
+# ---------------------------------------------------------
+# 3. Build Inter-Species Pairwise Distance Matrices
+# ---------------------------------------------------------
+def get_condensed_distances(species_list, representations, metric="cosine"):
+    n = len(species_list)
+    condensed = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            sp1, sp2 = species_list[i], species_list[j]
+            if metric == "wasserstein":
+                d_val = wasserstein_2_distance(representations[sp1], representations[sp2])
+            else:
+                d_val = cosine_distances([representations[sp1]], [representations[sp2]])[0, 0]
+            condensed.append(d_val)
+    return np.array(condensed)
+
+dist_centroid = get_condensed_distances(species_list, centroids, metric="cosine")
+dist_medoid = get_condensed_distances(species_list, medoids, metric="cosine")
+dist_wasserstein = get_condensed_distances(species_list, distributions, metric="wasserstein")
+
+# Compute Hierarchical Linkage (UPGMA / Average Linkage)
+Z_centroid = linkage(dist_centroid, method='average')
+Z_medoid = linkage(dist_medoid, method='average')
+Z_wasserstein = linkage(dist_wasserstein, method='average')
+
+# ---------------------------------------------------------
+# 4. Render Comparative Visualizations
+# ---------------------------------------------------------
+fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
+
+dendrogram(Z_centroid, labels=species_list, ax=axes[0], leaf_rotation=45)
+axes[0].set_title("Centroid Vector (Cosine Distance)")
+axes[0].set_ylabel("Tree Height / Distance")
+
+dendrogram(Z_medoid, labels=species_list, ax=axes[1], leaf_rotation=45)
+axes[1].set_title("Medoid Vector (Cosine Distance)")
+
+dendrogram(Z_wasserstein, labels=species_list, ax=axes[2], leaf_rotation=45)
+axes[2].set_title("Distributional (2-Wasserstein Distance)")
+
+plt.tight_layout()
+plt.show()</code></pre>
+            </div>
+        </div>
+
+        <!-- 4. Quality & Evaluation Framework -->
+        <div class="card">
+            <h2>4. Formal Evaluation & Quality Framework</h2>
+            <p>Evaluating the fidelity of a semi-guided hierarchical DNA tree requires measuring three independent validation dimensions: <strong>Biological Accuracy</strong>, <strong>Embedding Metric Fidelity</strong>, and <strong>Structural Robustness</strong>.</p>
+
+            <h3>4.1 Biological & Taxonomic Alignment (Supervised Validation)</h3>
+            <p>Compares the reconstructed embedding tree $T_{\text{eval}}$ against benchmark phylogenies $T_{\text{ref}}$ (e.g., curated Insect genome/barcode dataset or RAxML trees built on core marker genes).</p>
+
+            <ul>
+                <li><strong>Robinson-Foulds (RF) Split Distance:</strong>
+                    Measures the symmetric difference between unrooted splits induced by $T_{\text{eval}}$ vs $T_{\text{ref}}$:
+                    <div class="math-block">
+                        $$\text{RF}(T_{\text{eval}}, T_{\text{ref}}) = |B(T_{\text{eval}}) \setminus B(T_{\text{ref}})| + |B(T_{\text{ref}}) \setminus B(T_{\text{eval}})|$$
+                    </div>
+                    <em>Lower values indicate higher topological congruence. Normalized $\text{nRF} \in [0, 1]$.</em>
+                </li>
+                <li><strong>Normalized Kendall-Colijn Tree Distance:</strong>
+                    Compares tree topology and clade depths by calculating path lengths from leaves to their Most Recent Common Ancestor (MRCA). Unlike RF distance, Kendall-Colijn rewards near-miss topologies.
+                </li>
+                <li><strong>Taxonomic Monophyly Score:</strong>
+                    Evaluates clade purity for every taxon $k$ at rank $R$:
+                    <div class="math-block">
+                        $$\text{Monophyly}(C_k) = \frac{|\text{Leaves in } C_k \text{ belonging to Taxon } k|}{|\text{Total Leaves in Subtree } C_k|}$$
+                    </div>
+                </li>
+            </ul>
+
+            <h3>4.2 Metric Space Fidelity (Unsupervised Validation)</h3>
+            <p>Determines how accurately distances on the discrete tree reflect true continuous distances in embedding space.</p>
+
+            <ul>
+                <li><strong>Cophenetic Correlation Coefficient (CPCC):</strong>
+                    Calculates the Pearson correlation coefficient between pairwise distances in original embedding space $D_{ij} = d(e_i, e_j)$ and cophenetic tree distances $C_{ij}$ (branch height where leaves $i$ and $j$ merge):
+                    <div class="math-block">
+                        $$c = \frac{\sum_{i<j} (D_{ij} - \bar{D})(C_{ij} - \bar{C})}{\sqrt{\sum_{i<j} (D_{ij} - \bar{D})^2 \sum_{i<j} (C_{ij} - \bar{C})^2}}$$
+                    </div>
+                    <em>Target score: $c > 0.85$. Higher correlation proves minimal metric distortion.</em>
+                </li>
+                <li><strong>Hyperbolic Distortion / Metric Stress:</strong>
+                    Measures relative quadratic distortion introduced by embedding graph metrics:
+                    <div class="math-block">
+                        $$\text{Stress} = \frac{\sum_{i < j} \left(d_T(s_i, s_j) - d_{\text{emb}}(e_i, e_j)\right)^2}{\sum_{i < j} d_{\text{emb}}(e_i, e_j)^2}$$
+                    </div>
+                </li>
+                <li><strong>Mean Absolute & Percentage Error (MAE / MAPE):</strong>
+                    Measures direct distance magnitude distortion across sequence pairs:
+                    <div class="math-block">
+                        $$\text{MAE} = \frac{2}{N(N-1)} \sum_{i < j} |d_T(s_i, s_j) - d_{\text{emb}}(e_i, e_j)|$$
+                    </div>
+                </li>
+                <li><strong>$k$-Nearest Neighbor ($k$-NN) Preservation Ratio:</strong>
+                    Measures local neighborhood topology preservation by calculating the overlap of $k$-nearest neighbors in embedding space vs. tree distance:
+                    <div class="math-block">
+                        $$\text{Precision}@k = \frac{1}{N} \sum_{i=1}^N \frac{|\mathcal{N}_{\text{emb}}^k(i) \cap \mathcal{N}_{\text{tree}}^k(i)|}{k}$$
+                    </div>
+                </li>
+            </ul>
+
+            <h3>4.3 Structural Robustness & Stability Metrics</h3>
+            <ul>
+                <li><strong>Bootstrap Support Analysis:</strong> Injects isotropic Gaussian noise $\mathcal{N}(0, \sigma^2 I)$ or embedding feature dropout into the sequence embeddings and re-runs bottom-up assembly $B=100$ times. Node support percentage is calculated per internal branch (equivalent to Felsenstein's bootstrap).</li>
+                <li><strong>Subsampling Invariance:</strong> Randomly drops $10\%$ to $30\%$ of sequences from local species subtrees and measures the stability of parent-level clade assignments using the Rand Index.</li>
+            </ul>
+        </div>
+
+        <!-- 5. Advanced Engineering & Edge Case Handling -->
+        <div class="card">
+            <h2>5. Scalability & Operational Considerations</h2>
+
+            <h3>5.1 High-Dimensional Distance Concentration</h3>
+            <p>In high dimensions ($d \ge 768$), Euclidean distances suffer from concentration of measure (distances between arbitrary pairs become nearly identical). <strong>Recommendation:</strong> Use <strong>Cosine Distance</strong> ($1 - \cos\theta$) or <strong>Normalized Euclidean Distance</strong> on $\ell_2$-normalized vectors.</p>
+
+            <h3>5.2 Sub-Quadratic Scaling with Approximate Nearest Neighbors (ANN)</h3>
+            <p>For lowest-level taxa containing $> 100,000$ sequence isolates, standard pairwise distance calculation becomes slow ($\mathcal{O}(m^2)$). Integrate <strong>HNSW (Hierarchical Navigable Small World)</strong> graphs or <strong>FAISS</strong> indexing to build approximate $k$-NN graphs in $\mathcal{O}(m \log m)$ time prior to local tree linkage.</p>
+
+            <h3>5.3 Soft Hierarchy & Polyphyly Re-annotation</h3>
+            <p>If sequence embedding evidence strongly contradicts existing taxonomy (e.g., a species clade embedding $R_i$ assigned to Genus A is significantly closer in 2-Wasserstein distance to Genus B), the system flags the branch as polyphyletic and offers dynamic re-attachment options.</p>
+        </div>
+
+        
+        <!-- 7. Top-to-Bottom (Divisive) vs. Bottom-Up Framework Comparison -->
+        <div class="card">
+            <h2>7. Top-to-Bottom (Divisive) Approaches & Paradigm Comparison</h2>
+            <p>While the primary architecture described in this specification uses a bottom-up (agglomerative) scheme, tree construction can also be approached from the <strong>top-to-bottom (divisive)</strong> direction. Understanding the trade-offs between these two paradigms is essential when designing large-scale tree-building systems across diverse sequence datasets (such as Insect DNA barcode databases).</p>
+
+            <h3>7.1 Top-to-Bottom (Divisive) Conceptual Formulation</h3>
+            <p>A top-to-bottom approach starts with the entire set of $N$ DNA sequence embeddings $S = \{e_1, e_2, \dots, e_N\}$ at the global domain or order root, and recursively partitions the continuous sequence space downward into finer sub-clades:</p>
+            <ul>
+                <li><strong>Global Partitioning:</strong> Uses global manifold features (e.g., Bisecting $k$-Means, Spectral Bisection on graph Laplacians, or Divisive Analysis / DIANA) to split sequence clusters into major macro-lineages (Order $\rightarrow$ Family).</li>
+                <li><strong>Recursive Downward Decomposition:</strong> Recursively splits each child node downward until reaching species or strain boundaries.</li>
+                <li><strong>Leaf Resolution:</strong> Constructs local subtrees at the leaves once sequence variance falls below a predefined threshold.</li>
+            </ul>
+
+            <h3>7.2 Architectural Trade-Off Comparison</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th>Top-to-Bottom (Divisive)</th>
+                        <th>Bottom-Up (Agglomerative)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Primary Strength</strong></td>
+                        <td>Captures broad global topology and major macro-evolutionary splits across divergent taxa.</td>
+                        <td>Provides maximum resolution and fidelity for fine-grained strain and intra-species variants.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Computational Complexity</strong></td>
+                        <td>$\mathcal{O}(N \log N)$ using fast recursive bisection (e.g., Bisecting $k$-Means).</td>
+                        <td>$\mathcal{O}\left(\sum m_k^2\right)$ partitioned local computations across local species blocks.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Error Propagation Risk</strong></td>
+                        <td><span class="badge badge-danger">High Risk</span>: Misclassification at top-level splits propagates down to all child subtrees.</td>
+                        <td><span class="badge badge-success">Low Risk</span>: Sequence noise and misannotations remain isolated within local child subtrees.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Variance & Outlier Preservation</strong></td>
+                        <td>Isolates distant lineages early; prevents deep ancestral branch distortion.</td>
+                        <td>Requires advanced node representations (e.g., Medoids for noise, 2-Wasserstein for variance).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Best Application Scenario</strong></td>
+                        <td>Mapping unguided global sequence relationships across highly divergent orders/phyla from scratch.</td>
+                        <td>Building high-precision trees anchored by established taxonomy (e.g., Insect barcode datasets).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>7.3 The Hybrid V-Cycle Paradigm</h3>
+            <div class="callout">
+                <strong>Optimal Engineering Compromise: Hybrid Top-Down / Bottom-Up Scheme</strong><br>
+                To combine the global topology optimization of top-down partitioning with the local precision of bottom-up aggregation:
+                <ol>
+                    <li><strong>Top-Down Phase:</strong> Recursively split the dataset into macro-clusters using fast spectral graph cuts or Poincaré hyperbolic embeddings down to the Genus/Species level.</li>
+                    <li><strong>Bottom-Up Phase:</strong> Build exact distance-based subtrees at the leaf level using sequence embeddings (OmniDNA-20M, Nucleotide Transformer, HyenaDNA) and propagate node representations (Medoids, Wasserstein bounds) back upward to refine branch lengths and resolve polyphyly.</li>
+                </ol>
+            </div>
+        </div>
+
+        
+        <!-- 8. Concrete Case Study: Insect Barcode Resolution -->
+        <div class="card">
+            <h2>8. Concrete Case Study: Resolving Cryptic Insect Taxa</h2>
+            <p>To illustrate why a bottom-up approach anchored by an established taxonomic backbone outperforms naive global clustering, consider the challenge of resolving cryptic butterfly subspecies within the genus <em>Heliconius</em> (Order <em>Lepidoptera</em>, Family <em>Nymphalidae</em>).</p>
+
+            <h3>8.1 Biological Context & Objective</h3>
+            <p>Suppose we process $N = 1,000$ DNA barcode sequence embeddings $e_i \in \mathbb{R}^d$ generated by <strong>OmniDNA-20M</strong> from tropical butterfly specimens:</p>
+            <ul>
+                <li><strong>Known Taxonomic Skeleton:</strong> Order <em>Lepidoptera</em> $\rightarrow$ Family <em>Nymphalidae</em> $\rightarrow$ Genus <em>Heliconius</em>.</li>
+                <li><strong>Biological Goal:</strong> Resolve fine-grained genetic variations ($< 0.5\%$ divergence) between morphologically identical sister species (<em>Heliconius erato</em> vs. <em>Heliconius melpomene</em>) and their regional subspecies (e.g., <em>H. erato cyrbia</em> vs. <em>H. erato hydara</em>).</li>
+            </ul>
+
+            <h3>8.2 Step-by-Step Bottom-Up Workflow</h3>
+            <ol>
+                <li><strong>Base Layer Intra-Species Tree Building:</strong> Group sequence embeddings strictly by their lowest trusted species tag (<em>H. erato</em>). Compute a local pairwise cosine distance matrix $D_{ij} = d(e_i, e_j)$ across the $m = 500$ <em>H. erato</em> sequences to resolve sub-species lineage branching.</li>
+                <li><strong>Upward Node Propagation:</strong> Synthesize the resolved <em>H. erato</em> local subtree into a representative <strong>Medoid vector</strong> $e_{\text{medoid}}$ (to reject sequence noise) or a Gaussian distribution $(\mu_{\text{erato}}, \Sigma_{\text{erato}})$ in 2-Wasserstein space to preserve population genetic variance.</li>
+                <li><strong>Parent Genus Attachment:</strong> Compute the Wasserstein inter-taxon distance $W_2\left(\mathcal{N}_{\text{erato}}, \mathcal{N}_{\text{melpomene}}\right)$ to attach sister species subtrees under the parent <em>Heliconius</em> genus node.</li>
+            </ol>
+
+            <div class="callout">
+                <strong>Why Bottom-Up Anchoring Succeeds Here:</strong>
+                <ul>
+                    <li><strong>Localized Error Isolation:</strong> Sequence noise or rare sequencing artifacts remain strictly confined within the local species block and cannot corrupt higher-level order/family topology.</li>
+                    <li><strong>Sub-Species Metric Precision:</strong> High-dimensional embedding resolution is focused locally on small parallel distance matrices ($m_k \ll N$), detecting subtle sub-species genetic signals that would be blurred by coarse global top-down splits.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Strategic Recommendations -->
+        <div class="card">
+            <h2>6. Strategic Implementation Recommendations</h2>
+            <ol>
+                <li><strong>Hybrid Node Propagation:</strong> Use <strong>Medoids</strong> at the lowest species/strain level to eliminate sequence noise and misannotation outliers. Use <strong>2-Wasserstein Distributional Representations</strong> or <strong>Phylogenetically Weighted Centroids</strong> when propagating up to Genus, Family, and Order levels.</li>
+                <li><strong>Pretrained Embedding Sources:</strong> Generate embeddings using zero-shot biological foundation models (e.g., <em>InstaDeep Nucleotide Transformer 2.5B</em> or <em>HyenaDNA</em>) to avoid sequence alignment dependencies.</li>
+                <li><strong>Benchmarking Pipeline:</strong> Validate against Insect DNA barcode / genomic datasets, assessing quality via combined <strong>Robinson-Foulds</strong> and <strong>Cophenetic Correlation (CPCC)</strong> scores.</li>
+            </ol>
+        </div>
+
+        <div class="footer">
+            Bottom-Up Hierarchical DNA Tree Construction Architecture | Technical Specification Document
+        </div>
+
+    </div>
+
+</body>
+</html>

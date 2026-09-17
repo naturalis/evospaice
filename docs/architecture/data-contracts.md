@@ -125,3 +125,41 @@ manifest, counts, dimensions, and checksums.
 - Global `index.faiss` ETag versions deterministic splitter job names.
 - Schema versions appear in JSON manifests.
 - Consumers must not mix files from different source ETag folders.
+
+## Cluster manifest (C1 to C2)
+
+> [!NOTE]
+> Placeholder. This contract is not defined yet. Teams C1 and C2 must agree it
+> during the hack. See [workstreams](../planning/workstreams.md).
+
+How Team C1 hands a partitioned cluster to Team C2 for local tree building. To
+be specified:
+
+- how a cluster's member records are identified (for example `faiss_id` or
+  `record_id` lists).
+- how each cluster's embeddings are provided (Parquet and FAISS, or the tree
+  builder's `.npy` plus records TSV in `src/evospaice/tree/inputs.py`).
+- the taxonomy carried alongside each cluster.
+- the cluster manifest layout and how clusters are enumerated.
+
+## Sub-tree handoff (C2 to C3)
+
+> [!NOTE]
+> Placeholder. This contract is not defined yet. Teams C2 and C3 must agree it
+> during the hack. See [workstreams](../planning/workstreams.md).
+
+How Team C2 hands a resolved local tree to Team C3 for merging and scaling. To
+be specified:
+
+- the local tree serialization (for example Newick with branch lengths).
+- the representative vector carried up for the cluster.
+- the attachment point on the taxonomy backbone.
+- any per-node diagnostics passed with the tree.
+
+## Validation
+
+Reusable checks for the contracts above live in `src/evospaice/contracts/`. They
+validate already-parsed structures (Parquet column sets, manifest objects, Event
+Grid envelopes, species labels) rather than reading files, and are covered by
+`tests/test_contracts.py`.
+

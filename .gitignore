@@ -228,3 +228,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 *.npz
+
+results/*
+data/*
+
+.azure-extensions/
