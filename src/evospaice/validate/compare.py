@@ -124,6 +124,12 @@ def load_tree(
     return trees[0]
 
 
+def retain_labels(tree: dendropy.Tree, labels: set[str]) -> None:
+    """Prune by exact labels while preserving retained path lengths."""
+    taxa = {taxon for taxon in tree.taxon_namespace if taxon.label in labels}
+    tree.retain_taxa(taxa)
+
+
 def align_taxa(
     trees: Mapping[str, dendropy.Tree], *, mode: str, taxa_policy: str = "strict",
     mappings: Mapping[str, Mapping[str, str]] | None = None,
@@ -192,7 +198,7 @@ def prepare_trees(
             if node.is_leaf():
                 node.taxon.label = mapping.get(node.taxon.label, node.taxon.label)
         tree.is_rooted = mode == "rooted"
-        tree.retain_taxa([taxon for taxon in tree.taxon_namespace if taxon.label in common])
+        retain_labels(tree, common)
         taxon_mapping = {
             taxon: namespace_by_label[taxon.label]
             for taxon in tree.taxon_namespace if taxon.label in namespace_by_label
@@ -248,7 +254,7 @@ def topology_metrics(
     if raw != len(first ^ second):
         raise ValueError("DendroPy RF differs from informative split counts after normalization")
     rows = []
-    for mask in sorted(first | second):
+    for mask in sorted(first | second) if include_clades else ():
         origin = "both" if mask in shared_splits else "inferred" if mask in first else "reference"
         rows.append(dict(clade_id=split_id(mask, inferred), origin=origin,
                          size=mask.bit_count()))
