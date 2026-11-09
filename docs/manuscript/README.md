@@ -21,5 +21,7 @@ pandoc docs/manuscript/manuscript.md \
   -o docs/manuscript/manuscript.pdf
 ```
 
+The SVG figure requires `rsvg-convert` on `PATH` so Pandoc can convert it for LaTeX (for example, install the `librsvg2-bin` package on Debian/Ubuntu).
+
 If `xelatex` is not available, replace `--pdf-engine=xelatex` with another installed engine (for example `pdflatex`).
 
