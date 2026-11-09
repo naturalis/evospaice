@@ -13,6 +13,7 @@
 
 ## Documentation specific to the project
 
+- [Preprint manuscript package](manuscript/README.md)
 - [Pipeline architecture](architecture/pipeline-architecture.md)
 - [Operations runbook](operations/operations-runbook.md)
 - [Pipeline data contracts](architecture/data-contracts.md)
