@@ -21,7 +21,6 @@ link-citations: true
 AUTHOR CHECKLIST, remove before submission:
 - Add ORCIDs, and the Microsoft unit and city for each Microsoft author (split affiliation 1 if they differ).
 - Confirm the primer window used for the Lepidoptera BIN-representative embeddings (Section 2.2).
-- Confirm that pairs_strat.tsv was sampled from the taxonomy-constrained tree (Section 2.5).
 - Ask Logambal to confirm that the "Ubuntu" commits (embedding encoders, AML jobs, UMAP/LDA) are hers.
 - Add an archive DOI for the release (Section 6).
 -->
@@ -76,14 +75,14 @@ To show how much agreement the taxonomic constraint alone provides, we built a t
 
 **Topology.** Each tree was pruned to the tips it shares with the reference. We then computed the unrooted Robinson–Foulds (RF) distance [@robinson1981rf], normalised by the total number of informative splits in both pruned trees, using DendroPy [@sukumaran2010dendropy]. RF penalises missing resolution as well as conflicting splits, so we report the number of splits in each tree alongside it. We also report the Spearman correlation between tip-to-root distances in the two trees, for comparison with earlier runs, but we give it little weight because it depends on how each tree is rooted.
 
-**Distances by divergence rank.** We sampled 1,000 tip pairs from the taxonomy-constrained tree, stratified by the depth (in edges) of the pair's last common ancestor so that deep and shallow pairs were equally represented. For each pair we recorded:
+**Distances by divergence rank.** We sampled 1,000 tip pairs from the taxonomy-constrained embedding tree (`patristic_vs_seqdist.py --stratify`), stratified by the depth (in edges) of each pair's last common ancestor on that tree, so that deep and shallow pairs were equally represented. The pairs were therefore drawn from the tree under test and classified by taxonomic rank only afterwards. For each pair we recorded:
 
 1. the patristic distance on the embedding tree;
 2. the Kimura two-parameter (K2P) distance [@kimura1980k2p] between the two full-length BOLD sequences, after aligning them to a profile hidden Markov model of COI-5P with HMMER [@eddy2011hmmer] and using match states only;
 3. an alignment-free *k*-mer distance (exact 12-mer sets, Mash-style transformation of the Jaccard index [@ondov2016mash]);
 4. the patristic distance between the same two tips on the reference tree.
 
-Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
+Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Because sampling spread the pairs evenly over the embedding tree's depths, the embedding-tree distances are evenly spread by construction while the reference and sequence distances are not. This does not bias correlations computed within a rank class, but it does mean that the pooled correlations over all pairs should be read with care. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
 
 ### 2.6 Implementation
 
@@ -147,7 +146,7 @@ These results support a hybrid design that is already common in large-scale phyl
 
 ### 4.5 Limitations
 
-Our evaluation is limited in several ways. The reference tree is not independent of COI or of the taxonomy. The tip-pair analysis rests on 417 pairs, with few pairs in the deeper classes. The pairs were sampled to balance tree depth rather than rank, so the class sizes are uneven. Each experiment used a single model, marker window and random seed. The tree-building methods are simple: we did not use pre-clustering of very large polytomies, least-squares branch-length fitting such as the bottom-up assignment of @wei2024branchlengths, or confidence measures for internal nodes. These might improve the trees but would not remove saturation. Finally, 71% of insect records lack a species name, which limits any method that uses species-level taxonomy as a constraint. Some of our hackathon results, including run-specific outputs and Azure workspace links, depend on transient cloud resources. The numbers reported here are those recorded in the run reports in the repository.
+Our evaluation is limited in several ways. The reference tree is not independent of COI or of the taxonomy. The tip-pair analysis rests on 417 pairs, with few pairs in the deeper classes. This follows directly from how the pairs were drawn: depth in edges on an NJ tree with nested centroid joins does not correspond to taxonomic rank, so stratifying by depth produced uneven rank classes (75, 281, 36 and 25 pairs). Sampling stratified by rank, or drawing pairs from the reference tree, would give a more balanced design. Each experiment used a single model, marker window and random seed. The tree-building methods are simple: we did not use pre-clustering of very large polytomies, least-squares branch-length fitting such as the bottom-up assignment of @wei2024branchlengths, or confidence measures for internal nodes. These might improve the trees but would not remove saturation. Finally, 71% of insect records lack a species name, which limits any method that uses species-level taxonomy as a constraint. Some of our hackathon results, including run-specific outputs and Azure workspace links, depend on transient cloud resources. The numbers reported here are those recorded in the run reports in the repository.
 
 ## 5. Conclusions
 
