@@ -22,8 +22,7 @@ AUTHOR CHECKLIST, remove before submission:
 - Add ORCIDs, and the Microsoft unit and city for each Microsoft author (split affiliation 1 if they differ).
 - Confirm the primer window used for the Lepidoptera BIN-representative embeddings (Section 2.2).
 - Confirm that pairs_strat.tsv was sampled from the taxonomy-constrained tree (Section 2.5).
-- Several commits (embedding encoders, AML embedding jobs, Folmer/Leray UMAP and LDA analysis) were made
-  from an unattributed "Ubuntu" account; assign them in the CRediT statement.
+- Ask Logambal to confirm that the "Ubuntu" commits (embedding encoders, AML jobs, UMAP/LDA) are hers.
 - Add an archive DOI for the release (Section 6).
 -->
 
@@ -176,7 +175,7 @@ Contributions are given using the CRediT taxonomy and are based on the project's
 
 **Dominika Kresa:** Software (primer-window cropping with mismatch tolerance, BIN representative tie-breaking, tree alignment and subtree extraction), Validation (*Papilio* subtree comparison), Visualization (validation report), Writing – review & editing.
 
-**Logambal Madhuanand:** Methodology, Software (taxonomy-constrained and unconstrained tree construction), Investigation, Writing – review & editing.
+**Logambal Madhuanand:** Methodology, Software (embedding encoders and Azure Machine Learning embedding jobs for Omni-DNA and DNABERT-S; taxonomy-constrained and unconstrained tree construction), Investigation, Formal analysis (comparison of Folmer and Leray windows across models), Visualization (UMAP and LDA projections of embeddings), Writing – review & editing.
 
 **Frixos Papadopoulos:** Software (Azure Machine Learning validation pipeline), Validation (validation runs), Visualization, Writing – review & editing.
 
