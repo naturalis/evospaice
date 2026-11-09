@@ -20,3 +20,10 @@ The following files are in here:
 - [pairs_strat.tsv](pairs_strat.tsv) - table with embedding distances (patristic distance)
   versus sequence distances, analytics about the alignment (# of aligned sites) and
   stratification level
+- [rank_stratified.tsv](rank_stratified.tsv), [rank_stratified.txt](rank_stratified.txt),
+  [rank_stratified.png](rank_stratified.png), [rank_stratified.svg](rank_stratified.svg) -
+  the same pairs compared with the Bactria reference tree (`data/pruned.tre.txt`), with a
+  k-mer baseline and each pair's divergence rank (same species, genus, family or
+  different family). Produced by [`rank_stratified.py`](../rank_stratified.py); see the
+  command in that script's docstring. Used for Figure 2 and Table 2 of the manuscript in
+  `docs/manuscript`.

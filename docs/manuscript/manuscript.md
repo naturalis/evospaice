@@ -1,5 +1,5 @@
 ---
-title: "Building external barcode reference trees for longitudinal phylogenetic diversity monitoring"
+title: "How far do DNA barcode embeddings go as phylogenetic distances? Taxonomy-guided tree building from millions of insect COI barcodes"
 author:
   - "Kartik Awasthi^1^"
   - "Guy Bertental^2^"
@@ -11,99 +11,172 @@ author:
   - "Anna Nikahava^1^"
   - "Frixos Papadopoulos^2^"
   - "Ron Shakutai^1^"
-  - "Rutger Vos^3,*^"
+  - "Rutger A. Vos^3,\\*^"
 date: "2026-11-09"
 bibliography: references.bib
 link-citations: true
 ---
 
-^1^ Independent contributor (affiliation not verified in repository metadata)  
-^2^ Microsoft (inferred from commit email domains and project context)  
-^3^ Naturalis Biodiversity Center, Leiden, The Netherlands  
-\* Senior author and corresponding author.
+<!--
+AUTHOR CHECKLIST, remove before submission:
+- Confirm every name, spelling (e.g. Bertental/Bartal), ORCID and affiliation with the person concerned.
+- Confirm whether hackathon participants without commits (e.g. Anna Pershukova, Lidia Pomirleanu,
+  Arno Harteveld) qualify for authorship or acknowledgement, and whether "Anna Nikahava" is the correct name.
+- Fill in the CRediT statement, funding and competing interests below.
+- Confirm the primer window used for the Lepidoptera BIN-representative embeddings (Section 2.2).
+- Confirm that pairs_strat.tsv was sampled from the taxonomy-constrained tree (Section 2.5).
+-->
+
+^1^ [Affiliation to be confirmed]  
+^2^ Microsoft [unit and city to be confirmed]  
+^3^ Naturalis Biodiversity Center, Darwinweg 2, 2333 CR Leiden, The Netherlands  
+\* Corresponding author: rutger.vos@naturalis.nl
 
 ## Abstract
 
-Environmental DNA metabarcoding has made it practical to observe communities at broad spatial and temporal scales, but many analyses still reduce outcomes to species counts or overlap measures that ignore evolutionary distance. Phylogenetic diversity metrics such as Faith's PD and UniFrac provide richer ecological signal, but they require reference trees whose branch lengths are interpretable and stable across repeated analyses [@faith1992pd; @lozupone2005unifrac; @taberlet2012metabarcoding]. In this preprint we describe EvoSpaice, a repository-centered workflow that builds barcode reference trees by combining taxonomic backbone structure with sequence-embedding distances and local tree refinement.
+Phylogenetic diversity metrics need reference trees with meaningful branch lengths, but DNA barcode libraries now hold millions of sequences, far beyond what conventional phylogenetic inference can handle. We asked whether embeddings from DNA language models can stand in for phylogenetic distances at this scale. We embedded 6.98 million cytochrome *c* oxidase subunit I (COI) barcodes of insects from the Barcode of Life Data System with Omni-DNA in about 20 minutes on GPU hardware, without computing a global distance matrix. From DNABERT-S embeddings of Lepidoptera, we then built two trees: one by neighbour-joining constrained by the Linnaean taxonomy, the other by unconstrained k-means clustering followed by neighbour-joining. We compared both with a maximum-likelihood reference tree. On 61,381 shared tips the taxonomy-constrained tree had a normalised Robinson–Foulds distance of 0.79 to the reference, against 0.82 for a tree built from the taxonomy alone. The embeddings raised the share of reference splits recovered from 11% to 20%, but only 21% of the constrained tree's splits occurred in the reference, against 49% for the taxonomy-only tree. The unconstrained tree recovered almost no reference splits (normalised distance ≈ 1.00). On tip pairs stratified by the rank at which they diverge, distances on the embedding tree tracked reference distances among conspecifics (Spearman ρ = 0.62) but only weakly within genera (0.40) and not significantly between families. Simple *k*-mer and Kimura distances outperformed the embedding tree at every rank, and all distances compressed strongly at deeper divergences. Barcode embeddings therefore carry usable phylogenetic signal only at shallow depths. We argue that they are better used for placement and shallow resolution under an independently inferred, dated backbone than for building whole-database trees, and we release all code and outputs openly.
 
-Our primary design claim is operational rather than algorithmic novelty: the tree should exist outside any one multiplexed metabarcoding run, and should therefore be reusable as an external reference for long-term alpha and beta phylogenetic diversity monitoring. Repository evidence shows that large-scale ingest and embedding runs are feasible for insect COI data from BOLD [@ratnasingham2007bold], and that first-pass validation tooling is in place. However, present analyses also show known weaknesses, including distance saturation at deeper divergences and uncertainty in deep branch-length scaling. We therefore report this work as an evolving method with explicit constraints, not as a finalized phylogenetic reference.
+**Keywords:** DNA barcoding, COI, phylogenetic diversity, DNA language models, embeddings, neighbour-joining, large-scale phylogenetics, metabarcoding
 
-## 1. Why external barcode trees are needed for metabarcoding
+## 1. Introduction
 
-The central use case in this project is metabarcoding-based monitoring. In practice, monitoring programs rarely ask only "which taxa are present in one run"; they ask whether ecological communities are changing through time, whether compositional turnover is accelerating, and whether lineage-level diversity is being lost or replaced. Those are inherently comparative questions across many runs, often generated by different batches, primer pools, and local taxon compositions. If each run is interpreted using a run-specific tree, or no tree at all, then phylogenetic diversity trajectories are difficult to compare because the reference frame changes with each run.
+DNA metabarcoding has made it practical to survey communities at broad spatial and temporal scales [@taberlet2012metabarcoding]. Many analyses still summarise those surveys as taxon counts or overlap measures that ignore how distantly related the detected lineages are. Phylogenetic diversity (PD) metrics such as Faith's PD and UniFrac, and phylogenetic generalisations of Hill numbers, capture that relatedness [@faith1992pd; @lozupone2005unifrac; @chao2010phylodiversity]. Applied to environmental sequencing, they can reveal community shifts that richness alone does not [@bik2012deepwater]. These metrics need a reference tree whose branch lengths are interpretable and that stays stable across the many runs of a monitoring programme. In microbial ecology, shared reference phylogenies such as SILVA, GTDB and Greengenes2 provide this [@quast2013silva; @parks2020gtdb; @mcdonald2024greengenes2]. For animal COI barcodes [@hebert2003barcodes], no comparable resource exists, even though the Barcode of Life Data System (BOLD) holds tens of millions of records grouped into Barcode Index Numbers (BINs) [@ratnasingham2007bold; @ratnasingham2013bin].
 
-An external barcode tree addresses this comparability problem by acting as a durable scaffold. Samples can be interpreted against the same reference structure over time, so changes in alpha PD and beta PD are less confounded by changing internal tree construction choices. This is especially relevant for longer-term biodiversity observatories and multi-site surveillance programs, where continuity and interpretability of metrics may matter more than optimization of any single run. Curation-oriented tasks, including flagging outliers or inconsistent records, remain useful side applications, but they are not the main reason this pipeline exists.
+Inferring a tree from millions of single-locus sequences runs into well-known limits. Maximum-likelihood tools such as FastTree 2, IQ-TREE 2 and RAxML-NG scale to large alignments but not comfortably to millions of tips [@price2010fasttree; @minh2020iqtree2; @kozlov2019raxmlng]. Methods built for pandemic-scale data, such as UShER and MAPLE, exploit the very low divergence among viral genomes, which barcodes across a whole class do not share [@turakhia2021usher; @demaio2023maple]. The strategies that have scaled to hundreds of thousands of eukaryotic or microbial taxa share one approach: they constrain or divide the problem. They place sequences on a fixed backbone [@matsen2010pplacer; @barbera2019epang; @balaban2022apples2], refine a backbone tree in many independent subproblems [@balaban2024udance], or graft clade-level analyses onto a taxonomic or synthesis backbone [@antonelli2017supersmart; @smith2018seedplants; @chang2020tact]. For insects specifically, @chesters2017insecttree built a species-level tree from COI and other loci under backbone constraints. Our own earlier pipeline, Bactria, grafted maximum-likelihood family subtrees onto an Open Tree of Life backbone [@hinchliff2015opentree; @vos2023bactria].
 
-This perspective also influences what "success" means. A useful external tree for monitoring does not need to solve all deep phylogenetic uncertainties in one step, but it must be stable enough to support repeated, comparable PD calculations and transparent enough that uncertainty can be communicated. In other words, reproducibility and explicit limitations are as important as maximizing local fit.
+DNA language models offer a different route. Models such as DNABERT-S, Omni-DNA, BarcodeBERT and BarcodeMamba map each sequence to a fixed-length vector in a single pass [@zhou2024dnaberts; @li2025omnidna; @millanarias2023barcodebert; @gao2024barcodemamba]. Nearest-neighbour search over these vectors identifies barcodes about as accurately as BLAST, at a fraction of the cost [@millanarias2023barcodebert]. If distances between embeddings also behaved like evolutionary distances, they could replace the alignment and the all-against-all distance matrix that limit tree building at scale. Nothing guarantees this, however. These models are trained for retrieval or token prediction, not to reproduce distances on a tree, unlike methods such as DEPP and H-DEPP that learn embeddings with an explicit tree-distance objective [@jiang2023depp; @jiang2022hdepp].
 
-## 2. Position relative to current initiatives
+Here we test how far off-the-shelf barcode embeddings can stand in for phylogenetic distances. During a three-day hackathon we built a pipeline that embeds all insect COI records in BOLD, and we used embeddings of Lepidoptera to build trees in two ways: with and without the Linnaean taxonomy as a constraint. We compared both trees with a reference phylogeny, and then compared distances between tip pairs across taxonomic ranks with conventional sequence distances. The pipeline scales comfortably, but the embeddings add little phylogenetic information beyond the genus level. We discuss what this implies for building barcode reference trees.
 
-The strategy behind EvoSpaice is aligned with a broader trend: large comparative projects depend on shared phylogenetic frameworks rather than one-off trees. In microbial ecology, this principle is already well established. Greengenes2, SILVA, and GTDB have each shown that standardized references can improve cross-study comparability and support downstream metrics at scale [@mcdonald2024greengenes2; @quast2013silva; @parks2022gtdb]. EvoSpaice is conceptually similar, but targets high-volume DNA barcode data and explicitly adopts a taxonomy-guided approach in which embeddings provide local geometric information.
+## 2. Methods
 
-At deeper taxonomic scales, barcode signal alone is not expected to be sufficient for robust branch-length calibration. For that reason, synthesis resources such as Open Tree of Life and TimeTree are relevant complements rather than competitors in this context [@hinchliff2015opentree; @kumar2022timetree]. Open Tree can provide externally curated higher-level topology, while TimeTree can contribute time-calibrated constraints for deeper divergences. The practical implication is that a future mature pipeline will likely be hybrid: barcode-heavy where shallow signal is strong, and externally anchored where deep signal is weak.
+![**Workflow and evaluation design.** (A) Records from a BOLD public release are filtered and cropped to a primer window. (B) Each retained record is embedded independently; vectors are indexed rather than turned into a distance matrix. (C) Two tree-building strategies, with and without the Linnaean taxonomy as a constraint. (D) Trees and tip-pair distances are compared with a reference tree, using a taxonomy-only tree as a baseline and the taxonomy scaffold to assign each tip pair a divergence rank.](pipeline-overview.svg){#fig:pipeline width=100%}
 
-## 3. Aims of this project
+### 2.1 Data and filtering
 
-The repository's declared scope is intentionally constrained: an insect-focused COI reference-tree workflow that can run at large scale while remaining transparent and inspectable. The scientific aim is to generate branch-length-bearing trees that are useful for phylogenetic diversity calculations, while the engineering aim is to do so without constructing infeasible global all-by-all distance matrices. To achieve this, the workflow uses taxonomy as global scaffold structure and applies embedding distances in localized reconstruction and scaling steps.
+We used BOLD public data packages in BCDM-TSV format: the 27 March 2026 release for the embedding run and the 30 June 2026 release for the taxonomy scaffold and the Lepidoptera experiments. For the embedding run we kept COI-5P records of class Insecta. Each record was cropped to the Leray window [@leray2013primers], about 313 bp, by searching for the primer, first as an exact IUPAC match and then allowing up to two mismatches. On a sample of 100,000 Arthropoda records, the mismatch-tolerant search reduced the proportion of records without a primer match from 57% to 7%. Records without any match were kept uncropped and flagged. For the tree experiments we used one representative record per BIN of Lepidoptera, choosing representatives within each taxon so that two taxa sharing an identical sequence window were never merged.
 
-A second aim is diagnostic: to determine where embedding distances are trustworthy as phylogenetic distances and where they begin to fail. This includes not only topology comparisons but also behavior of branch lengths across depth strata. A third aim is openness and reproducibility. The project keeps scripts, operational reports, intermediate checks, and validation artifacts in one public repository so that claims can be traced to concrete files rather than narrative summary alone.
+To provide a constraint, a baseline and rank labels, we built a taxonomy scaffold for all Arthropoda BINs in the 30 June release: 17,617,788 of 23,954,047 records, giving 1,138,906 BIN tips under 253,372 named internal nodes. Each BIN was attached to the last common ancestor of the taxa its records were identified as. That placed 4.9% of BINs above the rank of their most specific identification, and 48.8% of BINs attach directly to a family because none of their records were identified further.
 
-## 4. Pipeline overview
+### 2.2 Embedding
 
-The implemented architecture has three linked phases. First, sequence records are ingested and filtered, with marker-window handling and taxonomic constraints applied at data-entry time. Second, retained records are embedded and stored in indexing formats suitable for scalable downstream operations. Third, tree refinement and branch-length assignment proceed in a bottom-up traversal that performs local Neighbor-Joining within taxonomic contexts and applies branch-scaling logic related to the bottom-up assignment framework of Wei and Koslicki [@wei2024branchlengths].
+The insect production run used Omni-DNA-20M [@li2025omnidna] (Hugging Face checkpoint `zehui127/Omni-DNA-20M`, revision `3b64e6a5`). Inputs were truncated to 1,024 tokens and processed in batches of 256. Each record's vector is the attention-mask-weighted mean of the final hidden states (256 dimensions), cast to 32-bit floats and L2-normalised, so that inner products equal cosine similarities. Vectors were written to a FAISS index [@johnson2019faiss] with record metadata in Parquet, and then sharded into one index per species. The Lepidoptera BIN representatives used for tree building were embedded with DNABERT-S [@zhou2024dnaberts] (`zhihan1996/DNABERT-S`) with the same pooling and normalisation. Throughout, the distance between two vectors is the cosine distance 1 − **u**·**v**.
 
-![High-level EvoSpaice pipeline for building an external reference tree.](pipeline-overview.svg)
+### 2.3 Tree construction
 
-A key architectural property is separation between reference construction and sample analysis. The reference-building phase is executed per source release and produces durable artifacts that can later be reused for many independent metabarcoding analyses. This is deliberate: it reduces redundant compute, supports methodological consistency across projects, and makes it easier to interpret year-over-year PD shifts because the background tree is not rebuilt ad hoc for every run.
+**Taxonomy-constrained neighbour-joining.** Using the BOLD species, genus and family assignments, we built the tree from the bottom up. Within each species, we joined the records by neighbour-joining (NJ) [@saitou1987nj] on their pairwise cosine distances, as implemented in scikit-bio. Each species was then represented by the renormalised mean of its record vectors. Species centroids were joined by NJ within each genus, genus centroids within each family, and family centroids into a single backbone. Each level's subtrees were attached at the corresponding nodes of the level above. The assembled tree was rooted once at its midpoint, and the few negative branch lengths that NJ produced were set to zero. The result has 100,802 tips. Above family level (subfamily, tribe, superfamily), the topology is determined by the embeddings alone.
 
-Another practical property is locality of distance computation. Instead of materializing a global pairwise matrix, the workflow computes distances on demand within localized reconstruction contexts. This keeps memory and runtime demands tractable while preserving the ability to inspect where each inferential decision is made.
+**Unconstrained clustering and NJ.** As a contrast without taxonomic input, we partitioned the embeddings into 2,000 clusters with spherical k-means in FAISS (20 iterations). We then built an NJ subtree within each cluster, joined the cluster centroids by NJ into a backbone, attached the cluster subtrees to it and rooted the result at its midpoint (181,078 tips).
 
-## 5. Experiments and implementation status so far
+### 2.4 Reference tree and taxonomy-only baseline
 
-The repository currently provides evidence for both pipeline execution and methodological diagnostics. Operationally, the class-filter and embedding workflow has been run at substantial scale on an insect-focused BOLD-derived input. The recorded production report documents 6,979,067 retained and embedded records, generation of corresponding FAISS and Parquet artifacts, and downstream species-sharded outputs across 131,914 species bundles. This does not by itself validate phylogenetic quality, but it does establish that the core dataflow is executable at the intended order of magnitude.
+As the reference we used the Lepidoptera tree produced by Bactria [@vos2023bactria] (91,376 tips labelled by BOLD process ID). Bactria partitions barcodes by family, infers a maximum-likelihood subtree for each partition from aligned COI with topologically constrained RAxML-NG searches [@kozlov2019raxmlng], and grafts these onto a backbone constrained by Open Tree of Life [@hinchliff2015opentree]. This reference is therefore *not* independent of our inputs: it is based on the same marker and respects much of the same taxonomy. Agreement with it measures consistency with a conventional COI phylogeny under taxonomic constraints, not accuracy against the true history.
 
-The project also includes reconciliation checks that are essential for trust in large-scale processing: manifest consistency, ID-range consistency, and shard-level completion checks. These are important because subtle ID drift or partial output can invalidate biological interpretations even when headline runtimes look successful. In this repository, these checks are explicitly documented in operational reports and not only in code comments.
+To show how much agreement the taxonomic constraint alone provides, we built a taxonomy-only tree. For every reference tip that could be matched to a species (61,380 tips), we placed it in a polytomy under its species, nested in its genus, tribe, subfamily and family as recorded in the scaffold. This tree contains no information from sequences or embeddings.
 
-For tree-level handling, overlap and pruning reports provide visibility into how much taxon intersection is retained in comparative analyses. For example, one overlap report retains 61,381 shared tips from larger source trees, with explicit accounting of dropped tips on both sides. A Papilio-focused subset workflow is also documented as a targeted test case. These results are not final scientific outputs, but they show that the comparison plumbing and subset extraction stages are functioning on nontrivial data slices.
+### 2.5 Evaluation
 
-Validation instrumentation for inferred-versus-reference trees is further developed than in many exploratory repositories. The included validation tools report normalized Robinson-Foulds topology differences and tip-to-root depth correlations, and the transcripted demo reports a case with normalized RF of 23% and tip-depth correlation of 0.7 for one comparison. These are context-specific metrics and should not be over-generalized, but they demonstrate that the project can quantify similarity in interpretable ways.
+**Topology.** Each tree was pruned to the tips it shares with the reference. We then computed the unrooted Robinson–Foulds (RF) distance [@robinson1981rf], normalised by the total number of informative splits in both pruned trees, using DendroPy [@sukumaran2010dendropy]. RF penalises missing resolution as well as conflicting splits, so we report the number of splits in each tree alongside it. We also report the Spearman correlation between tip-to-root distances in the two trees, for comparison with earlier runs, but we give it little weight because it depends on how each tree is rooted.
 
-Finally, stratified distance diagnostics are present in reusable scripts and example outputs. Running the provided diagnostics script on `pairs_strat.tsv` yields Pearson correlation 0.452 and Spearman correlation 0.602 between patristic and sequence distances, with high-patristic bins showing little additional sequence-distance increase. This pattern is central to the current interpretation: the approach is informative at shallow to moderate depth, but presently under-constrained for deeper branch-length calibration.
+**Distances by divergence rank.** We sampled 1,000 tip pairs from the taxonomy-constrained tree, stratified by the depth (in edges) of the pair's last common ancestor so that deep and shallow pairs were equally represented. For each pair we recorded:
 
-Taken together, the evidence supports a cautious feasibility claim. The repository demonstrates that the workflow can run and produce inspectable outputs at scale, while also documenting where current biological interpretation remains uncertain.
+1. the patristic distance on the embedding tree;
+2. the Kimura two-parameter (K2P) distance [@kimura1980k2p] between the two full-length BOLD sequences, after aligning them to a profile hidden Markov model of COI-5P with HMMER [@eddy2011hmmer] and using match states only;
+3. an alignment-free *k*-mer distance (exact 12-mer sets, Mash-style transformation of the Jaccard index [@ondov2016mash]);
+4. the patristic distance between the same two tips on the reference tree.
 
-## 6. Known limitations and failure modes
+Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
 
-The most important present limitation is depth-dependent saturation in barcode-derived distance behavior. In the current COI stratified checks, sequence-distance medians increase with patristic distance in shallower bins and then flatten at larger patristic ranges. In practical terms, this implies that genuinely deep divergences can map to compressed distance values, which then weakens contrast among deep branches. For PD applications this matters directly, because compressed deep branches reduce sensitivity to broad lineage turnover.
+### 2.6 Implementation
 
-A second limitation is model mismatch between distance geometry and branch-length assignment assumptions. Bottom-up branch-length assignment works best when input distances are sufficiently tree-additive. Embedding distances optimized for retrieval may be monotonic but not additively calibrated across all depths. When this occurs, branch assignment can exhibit symptoms such as negative-length pressure (followed by clamping) or smoothing artifacts in internal branches.
+The ingest, embedding and species-splitting steps run as Azure Functions that submit Azure Machine Learning jobs, with infrastructure defined in Terraform. Embedding used A100 GPU nodes (Standard_NC24ads_A100_v4). Tree building and evaluation are Python scripts using NumPy, SciPy, scikit-bio, FAISS and DendroPy. All code, configuration and run reports are in the project repository (Section 6).
 
-Third, local Neighbor-Joining can produce precise-looking binary structure even when the deep signal is weak. Because the algorithm resolves by construction, users can over-interpret high-resolution internal structure unless confidence gating is applied. This is not an implementation bug; it is an inference-risk characteristic that must be handled explicitly in downstream interpretation.
+## 3. Results
 
-Fourth, present outcomes are release- and configuration-dependent. The repository is transparent about this: several validation outputs are explicitly labeled as tied to particular seeds, source snapshots, and parameter choices. That transparency is valuable, but it also means current numbers should be read as evidence from specific runs, not as globally stable performance estimates.
+### 3.1 Embedding at scale
 
-Fifth, taxonomic incompleteness remains substantial in high-volume barcode data. In the documented production run, unknown-species routing remains large, which limits how confidently deep branches can be interpreted when many records are only weakly resolved taxonomically.
+The class filter retained 6,979,067 insect records (3.3 GB of FASTA). The embedding job completed without errors in about 20 minutes, producing a 7.2 GB FAISS index and 346 MB of Parquet metadata. The record count, the count of unique vector identifiers and the identifier range (0 to 6,979,066) all agreed. Splitting by species produced 131,914 species bundles in eight shards with no failures. However, 4,983,941 records (71.4%) carried no species name and went to a single "unknown species" bundle. This share reflects how deeply BOLD records are identified, and it limits any method that relies on species-level taxonomy.
 
-These limitations are not peripheral. They affect the quantity being estimated and therefore how PD values should be interpreted. If deep branches are compressed or uncertain, alpha PD may be underestimated in phylogenetically broad assemblages, and beta PD can become relatively more sensitive to shallow turnover than to deeper lineage replacement.
+### 3.2 Topological agreement with the reference
 
-## 7. Future work
+Table 1 summarises the comparisons. The taxonomy-only baseline, which uses no sequence information, had a normalised RF distance of 0.82 on 61,380 shared tips. It recovered 11.2% of the reference's informative splits, and 48.7% of its own splits occurred in the reference; the remainder are mostly taxa that are not monophyletic in the reference. The taxonomy-constrained tree, on almost the same 61,381 tips, had a normalised RF distance of 0.79. Its four-fold greater resolution raised the share of reference splits recovered to 19.8%, but only 21.4% of its splits occurred in the reference. In other words, the embeddings resolved many nodes the taxonomy leaves open, and most of those resolutions disagree with the reference. The unconstrained tree shared only two informative splits with the reference among 61,600 shared tips. Its tip-to-root distances were uncorrelated with the reference (ρ = −0.004 when rooted as supplied and 0.048 when midpoint-rooted).
 
-The immediate next step is to formalize a hybrid depth strategy rather than force one distance model to serve all scales. Barcode-informed distances should remain primary for shallow and intermediate regions where empirical checks indicate useful signal. At deeper levels, topology should be constrained by external synthesis resources such as Open Tree of Life, and branch-length scaling should be informed by age-calibration resources such as TimeTree [@hinchliff2015opentree; @kumar2022timetree]. This would make explicit what current evidence already suggests: deeper structure should not depend on barcode distances alone.
+: Topological agreement with the Bactria reference tree, after pruning both trees to their shared tips. Tips: shared tips. Tree splits, Ref. splits: informative splits in the tree and in the reference. Recall: shared splits as a proportion of the reference's splits. Precision: shared splits as a proportion of the tree's splits. nRF: normalised Robinson–Foulds distance (0, identical; 1, no shared informative splits). ρ: Spearman correlation of tip-to-root distances. Constrained NJ: taxonomy-constrained neighbour-joining; Unconstrained: spherical k-means followed by neighbour-joining.
 
-Methodologically, this implies depth-aware confidence annotations and potentially depth-aware objective functions during branch assignment. Operationally, it implies versioned releases of reference trees with clear metadata about which branches are barcode-driven and which are externally anchored. Scientifically, it implies that PD estimates can be reported with clearer uncertainty language rather than as single-point values detached from branch-confidence context.
+| Tree | Tips | Tree splits | Ref. splits | Shared | Recall | Precision | nRF | ρ |
+|:----------------|------:|-------:|-------:|------:|------:|-------:|------:|------:|
+| Taxonomy only | 61,380 | 14,043 | 61,377 | 6,844 | 11.2% | 48.7% | 0.819 | n/a |
+| Constrained NJ | 61,381 | 56,718 | 61,378 | 12,146 | 19.8% | 21.4% | 0.794 | 0.100 |
+| Unconstrained | 61,600 | 3,975 | 61,597 | 2 | <0.01% | 0.05% | 1.000 | −0.004 |
 
-Additional work is also needed on benchmarking design. Future experiments should include repeated runs across source releases, controlled perturbation studies for sensitivity to filtering and representative selection, and explicit comparisons between embedding-based and k-mer-based distance regimes under the same reconstruction protocol. These are necessary to move from proof-of-feasibility toward robust methodological guidance.
+### 3.3 Distances across divergence ranks
 
-## 8. Generative AI use disclosure
+On all 1,000 sampled pairs, K2P distance correlated moderately with patristic distance on the embedding tree (Pearson r = 0.45, Spearman ρ = 0.60). The relationship levelled off: across the two highest deciles of embedding-tree distance (0.25 to 1.17), median K2P distance stayed at 0.13 ([Supplementary Figure S1](../../src/evospaice/validate/strat_validate_results/pairs_strat.png)).
 
-Generative AI has been used in this project in both engineering and writing workflows. In software development, the team used an AI-assisted "hypervelocity engineering" approach in which model-assisted coding accelerated implementation, refactoring, and documentation tasks. In manuscript preparation, AI assistance was used for drafting and restructuring text from repository artifacts and explicit author instructions.
+Comparing each distance with the reference tree separates the behaviour of the marker from that of the embeddings (Figure 2, Table 2). Within species, all three distances tracked the reference closely, although the embedding tree did so least well (ρ = 0.62, against 0.92 to 0.94 for the sequence distances). Within genera and within families, K2P and *k*-mer distances still tracked the reference (ρ = 0.67 to 0.76), whereas the embedding tree did so only weakly (ρ = 0.40 to 0.46). Between families, no distance was strongly associated with the reference, and only K2P reached marginal significance (ρ = 0.40, *p* = 0.05). Median distances show the same compression: from same-species to different-family pairs, median reference distance increased about ninefold (0.056 to 0.495), whereas median K2P and *k*-mer distances increased only about threefold (0.048 to 0.161 and 0.051 to 0.154).
 
-This disclosure is intended to be specific rather than symbolic. AI tools can increase throughput and coverage, especially in prototype phases, but they also increase the risk of plausible but incorrect statements and over-smoothed narratives. For that reason, this manuscript should be evaluated against the cited literature and the concrete repository artifacts it references. Claims not grounded in those sources should be treated as hypotheses pending verification.
+![**Distances between tip pairs compared with the reference tree, by divergence rank.** Each point is a pair of Lepidoptera BIN representatives whose tips both occur in the reference tree (n = 417), coloured by the rank at which the pair diverges. (A) K2P distance on HMM-aligned COI. (B) Alignment-free *k*-mer distance (k = 12). (C) Patristic distance on the taxonomy-constrained embedding tree.](../../src/evospaice/validate/strat_validate_results/rank_stratified.png){#fig:ranks width=100%}
 
-## 9. Data, code, supplements, and licensing
+: Spearman correlation between each distance and the reference patristic distance, within classes of divergence rank. All correlations are positive; *p* values in parentheses.
 
-All supplementary materials for the research activity described here are available in this repository (`naturalis/evospaice`), including pipeline scripts, architecture and operations documentation, test fixtures, and validation outputs. This is intentional: the repository serves as both implementation substrate and supplement archive so that methods and claims can be independently inspected.
+| Divergence rank | Pairs | K2P | *k*-mer | Embedding tree |
+|:------------------|-----:|-------------:|-------------:|-------------:|
+| Same species | 75 | 0.94 (<10^−30^) | 0.92 (<10^−30^) | 0.62 (<10^−8^) |
+| Same genus | 281 | 0.76 (<10^−50^) | 0.73 (<10^−40^) | 0.40 (<10^−11^) |
+| Same family | 36 | 0.76 (<10^−6^) | 0.67 (<10^−5^) | 0.46 (0.005) |
+| Different family | 25 | 0.40 (0.05) | 0.20 (0.3) | 0.29 (0.2) |
+| All | 417 | 0.86 | 0.83 | 0.59 |
 
-As documented in the project README, outputs of the main workflow are released as public-domain outputs (CC0 1.0). The manuscript should therefore be interpreted as an open progress report on an ongoing method-development effort. The current evidence supports feasibility and highlights important limitations; it does not yet justify claims of a fully resolved, deeply calibrated, production-grade global barcode phylogeny.
+## 4. Discussion
+
+### 4.1 Embeddings identify sequences but do not measure divergence
+
+The barcode embeddings we used are clearly good identifiers: previous work shows that nearest neighbours in such spaces match BLAST results at the species level [@millanarias2023barcodebert]. As distances, however, they performed worse than a 12-mer Jaccard index at every taxonomic rank we examined, including within species. The likely reason is the training objective. Language models trained for token prediction or retrieval need to place similar sequences close together, but nothing in their training requires the *amount* of separation to reflect the amount of evolutionary change, or the distances to be additive along a tree. Methods designed for that purpose train the embedding directly against distances on a tree [@jiang2023depp; @jiang2022hdepp]. Our results suggest that using a general-purpose model for this task requires either such a training objective or a calibration step, and that agreement with BLAST for identification says little about suitability for estimating branch lengths.
+
+Two features of our design probably made the embedding results worse than the embeddings themselves. First, the distances we evaluated are patristic distances on an NJ tree built from centroids of centroids, so they combine embedding geometry with errors from tree building and from averaging vectors. Second, the tree experiments used DNABERT-S on Lepidoptera rather than the Omni-DNA vectors of the production run. Comparing raw cosine distances from several models, including barcode-specific ones [@millanarias2023barcodebert; @gao2024barcodemamba], on the same rank-stratified pairs is the obvious next experiment, and our scripts support it.
+
+### 4.2 The taxonomy carries the deep structure
+
+The topological comparisons point the same way. Without the taxonomic constraint, the embedding tree recovered essentially none of the reference splits. With it, the embeddings did add correct resolution: the share of reference splits recovered almost doubled compared with the taxonomy alone. They did so at a high cost in precision, however, since most of the added splits conflict with the reference. The structure our trees share with the reference comes mainly from the classification, and the embeddings resolved the polytomies it leaves open, which was the task they were meant to perform, only partly. Part of this agreement is built in, because the reference respects much of the same taxonomy. Conversely, half of the taxonomy-only tree's splits are absent from the reference, a reminder that taxonomic groups in BOLD are often not monophyletic on a COI tree, so a strict taxonomic constraint also imposes errors.
+
+### 4.3 Saturation limits any single-marker distance at depth
+
+The rank-stratified comparison also shows that the problem is not only in the embeddings. Uncorrected and K2P-corrected COI distances compressed roughly threefold relative to the reference between conspecifics and pairs from different families. Between families, they barely tracked the reference at all. This is the expected signature of saturation in a short, fast-evolving protein-coding marker, especially at third codon positions. The reference partly corrects for it with model-based maximum-likelihood branch lengths and a taxonomic backbone. Because the reference is itself inferred from COI, the strong agreement of K2P within species and genera is partly circular. The informative comparison is between the distances on the same pairs: there, the embeddings fell short of simple sequence distances at every rank, and all distances lost most of their signal between families. A whole-database tree whose deep branch lengths come from barcode distances, whether embedded or not, would therefore compress deep branches. That would bias PD towards shallow turnover and underestimate the diversity of phylogenetically broad assemblages.
+
+### 4.4 Implications for barcode reference trees
+
+These results support a hybrid design that is already common in large-scale phylogenetics. Deep topology and branch lengths should come from a backbone that does not rely on barcode distances, such as Open Tree of Life for topology and TimeTree for divergence times [@hinchliff2015opentree; @kumar2022timetree]. Barcodes should resolve and scale only the shallow parts of the tree, roughly within genera, where their signal is strong. uDance builds and updates large trees by refining many small subproblems independently on a backbone [@balaban2024udance], and distance-based placement methods add new sequences to a fixed tree cheaply [@balaban2022apples2]. Both fit this design better than building a whole tree at once. Embeddings remain attractive for the steps that do scale: fast identification, clustering records into the units that subtrees are inferred from, choosing representatives, and placing new metabarcoding reads on an existing tree. Our infrastructure for embedding millions of records in minutes is directly reusable for those purposes. We are now pursuing a design in which per-genus subtrees inferred from sequences are grafted onto a dated backbone.
+
+### 4.5 Limitations
+
+Our evaluation is limited in several ways. The reference tree is not independent of COI or of the taxonomy. The tip-pair analysis rests on 417 pairs, with few pairs in the deeper classes. The pairs were sampled to balance tree depth rather than rank, so the class sizes are uneven. Each experiment used a single model, marker window and random seed. The tree-building methods are simple: we did not use pre-clustering of very large polytomies, least-squares branch-length fitting such as the bottom-up assignment of @wei2024branchlengths, or confidence measures for internal nodes. These might improve the trees but would not remove saturation. Finally, 71% of insect records lack a species name, which limits any method that uses species-level taxonomy as a constraint. Some of our hackathon results, including run-specific outputs and Azure workspace links, depend on transient cloud resources. The numbers reported here are those recorded in the run reports in the repository.
+
+## 5. Conclusions
+
+Off-the-shelf DNA language-model embeddings let us process every insect COI barcode in BOLD in minutes, but they do not on their own yield phylogenetic distances. Within species they track divergence reasonably well. Within genera they do so weakly, and beyond that they add nothing to what the taxonomy already supplies, while the COI marker itself saturates. Reference trees for barcode-based PD should take their deep structure and branch lengths from independent sources and use barcodes, and embeddings where they help, only at shallow depths.
+
+## 6. Data and code availability
+
+All code, infrastructure definitions, run reports, validation outputs and the scripts that generate Tables 1 and 2 and Figure 2 are available at <https://github.com/naturalis/evospaice> [archive DOI to be added on release]. The analyses in Section 3.3 can be reproduced with `src/evospaice/validate/rank_stratified.py`, and the baseline in Table 1 with `src/evospaice/validate/taxonomy_baseline.py` followed by `src/evospaice/validate/evaluate.py`. BOLD public data packages are available from <https://boldsystems.org>. Trees, embeddings and derived outputs are released into the public domain (CC0 1.0). The Taxonium-based viewer in the repository is distributed separately under GPL-3.0.
+
+## Author contributions
+
+[CRediT statement to be completed.]
+
+## Competing interests
+
+[To be completed. Authors employed by Microsoft should be declared, as should the provision of Azure compute for the hackathon.]
+
+## Funding
+
+[To be completed.]
+
+## Use of generative AI
+
+The authors used AI coding assistants to write and refactor parts of the software and documentation, and an AI assistant to help draft and edit this manuscript from the project's code, run reports and the authors' instructions. The authors checked all reported numbers against the repository and take full responsibility for the content.
+
+## Acknowledgements
+
+We thank the BOLD team and the many contributors of public barcode records. [Further acknowledgements to be added.]
 
 # References
