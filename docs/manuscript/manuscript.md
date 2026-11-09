@@ -1,25 +1,25 @@
 ---
 title: "Building external barcode reference trees for longitudinal phylogenetic diversity monitoring"
 author:
-  - "Kartik Awasthi^{1}"
-  - "Guy Bertental^{2}"
-  - "Colin Desmond^{2}"
-  - "Oded Fischler^{2}"
-  - "Victor Heijke^{3}"
-  - "Dominika Kresa^{3}"
-  - "Logambal Madhuanand^{3}"
-  - "Anna Nikahava^{1}"
-  - "Frixos Papadopoulos^{2}"
-  - "Ron Shakutai^{1}"
-  - "Rutger Vos^{3,*}"
+  - "Kartik Awasthi^1^"
+  - "Guy Bertental^2^"
+  - "Colin Desmond^2^"
+  - "Oded Fischler^2^"
+  - "Victor Heijke^3^"
+  - "Dominika Kresa^3^"
+  - "Logambal Madhuanand^3^"
+  - "Anna Nikahava^1^"
+  - "Frixos Papadopoulos^2^"
+  - "Ron Shakutai^1^"
+  - "Rutger Vos^3,*^"
 date: "2026-11-09"
 bibliography: references.bib
 link-citations: true
 ---
 
-^{1} Independent contributor (affiliation not verified in repository metadata)  
-^{2} Microsoft (inferred from commit email domains and project context)  
-^{3} Naturalis Biodiversity Center, Leiden, The Netherlands  
+^1^ Independent contributor (affiliation not verified in repository metadata)  
+^2^ Microsoft (inferred from commit email domains and project context)  
+^3^ Naturalis Biodiversity Center, Leiden, The Netherlands  
 \* Senior author and corresponding author.
 
 ## Abstract
