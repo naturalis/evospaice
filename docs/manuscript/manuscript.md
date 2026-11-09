@@ -2,16 +2,16 @@
 title: "How far do DNA barcode embeddings go as phylogenetic distances? Taxonomy-guided tree building from millions of insect COI barcodes"
 author:
   - "Kartik Awasthi^1^"
-  - "Guy Bertental^2^"
-  - "Colin Desmond^2^"
-  - "Oded Fischler^2^"
-  - "Victor Heijke^3^"
-  - "Dominika Kresa^3^"
-  - "Logambal Madhuanand^3^"
-  - "Anna Nikahava^1^"
-  - "Frixos Papadopoulos^2^"
+  - "Guy Bertental^1^"
+  - "Colin Desmond^1^"
+  - "Oded Fischler^1^"
+  - "Victor Heijke^2^"
+  - "Dominika Kresa^2^"
+  - "Logambal Madhuanand^2^"
+  - "Frixos Papadopoulos^1^"
+  - "Anna Pershukova^1^"
   - "Ron Shakutai^1^"
-  - "Rutger A. Vos^3,\\*^"
+  - "Rutger A. Vos^2,\\*^"
 date: "2026-11-09"
 bibliography: references.bib
 link-citations: true
@@ -19,17 +19,16 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Confirm every name, spelling (e.g. Bertental/Bartal), ORCID and affiliation with the person concerned.
-- Confirm whether hackathon participants without commits (e.g. Anna Pershukova, Lidia Pomirleanu,
-  Arno Harteveld) qualify for authorship or acknowledgement, and whether "Anna Nikahava" is the correct name.
-- Fill in the CRediT statement, funding and competing interests below.
+- Add ORCIDs, and the Microsoft unit and city for each Microsoft author (split affiliation 1 if they differ).
 - Confirm the primer window used for the Lepidoptera BIN-representative embeddings (Section 2.2).
 - Confirm that pairs_strat.tsv was sampled from the taxonomy-constrained tree (Section 2.5).
+- Several commits (embedding encoders, AML embedding jobs, Folmer/Leray UMAP and LDA analysis) were made
+  from an unattributed "Ubuntu" account; assign them in the CRediT statement.
+- Add an archive DOI for the release (Section 6).
 -->
 
-^1^ [Affiliation to be confirmed]  
-^2^ Microsoft [unit and city to be confirmed]  
-^3^ Naturalis Biodiversity Center, Darwinweg 2, 2333 CR Leiden, The Netherlands  
+^1^ Microsoft  
+^2^ Naturalis Biodiversity Center, Darwinweg 2, 2333 CR Leiden, The Netherlands  
 \* Corresponding author: rutger.vos@naturalis.nl
 
 ## Abstract
@@ -161,15 +160,37 @@ All code, infrastructure definitions, run reports, validation outputs and the sc
 
 ## Author contributions
 
-[CRediT statement to be completed.]
+Contributions are given using the CRediT taxonomy and are based on the project's version history.
+
+**Rutger A. Vos:** Conceptualization, Methodology, Software (BOLD ingest and taxonomy scaffold, BIN representative selection, stratified distance and rank-stratified analyses), Data curation, Formal analysis, Supervision, Project administration, Writing – original draft.
+
+**Kartik Awasthi:** Software (embedding job configuration), Visualization (exploratory comparison of embedding and reference-tree distances), Writing – review & editing.
+
+**Guy Bertental:** Software (tree evaluation framework and test fixtures), Validation, Writing – review & editing.
+
+**Colin Desmond:** Software (cloud pipeline for class filtering, embedding submission and species splitting; Terraform infrastructure; Taxonium-based tree viewer), Investigation (production embedding run), Visualization, Writing – review & editing.
+
+**Oded Fischler:** Methodology, Software (alternative bottom-up representation strategies, centroid baseline, whole-tree metrics and tree explorer), Writing – review & editing.
+
+**Victor Heijke:** Methodology (specification of phylogenetic diversity metrics and of matching rules between trees and samples), Software (Newick cleaning), Writing – review & editing.
+
+**Dominika Kresa:** Software (primer-window cropping with mismatch tolerance, BIN representative tie-breaking, tree alignment and subtree extraction), Validation (*Papilio* subtree comparison), Visualization (validation report), Writing – review & editing.
+
+**Logambal Madhuanand:** Methodology, Software (taxonomy-constrained and unconstrained tree construction), Investigation, Writing – review & editing.
+
+**Frixos Papadopoulos:** Software (Azure Machine Learning validation pipeline), Validation (validation runs), Visualization, Writing – review & editing.
+
+**Anna Pershukova:** Software (data-contract validators), Project administration (workstreams and decision records), Visualization (stakeholder presentation), Writing – review & editing.
+
+**Ron Shakutai:** Visualization (tree-construction workflow diagrams), Writing – review & editing.
 
 ## Competing interests
 
-[To be completed. Authors employed by Microsoft should be declared, as should the provision of Azure compute for the hackathon.]
+Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Anna Pershukova, Frixos Papadopoulos and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
 
 ## Funding
 
-[To be completed.]
+This project is supported by internal funding provided by the Naturalis sector Digital Solutions and Infrastructure.
 
 ## Use of generative AI
 
@@ -177,6 +198,6 @@ The authors used AI coding assistants to write and refactor parts of the softwar
 
 ## Acknowledgements
 
-We thank the BOLD team and the many contributors of public barcode records. [Further acknowledgements to be added.]
+We thank Arno Harteveld (Microsoft) for kindly facilitating the participation of Naturalis in the Dublin hackathon, and Rob Fraser and Ann Corrao (both Microsoft) for interesting discussions about applications in this domain and their generous hospitality at the hackathon. We also thank the BOLD team and the many contributors of public barcode records.
 
 # References
