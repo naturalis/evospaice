@@ -14,6 +14,7 @@ From the repository root:
 
 ```bash
 pandoc docs/manuscript/manuscript.md \
+  --resource-path=docs/manuscript \
   --citeproc \
   --bibliography docs/manuscript/references.bib \
   --pdf-engine=xelatex \
