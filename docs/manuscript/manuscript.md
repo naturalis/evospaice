@@ -20,8 +20,6 @@ link-citations: true
 <!--
 AUTHOR CHECKLIST, remove before submission:
 - Add ORCIDs, and the Microsoft unit and city for each Microsoft author (split affiliation 1 if they differ).
-- Confirm the primer window used for the Lepidoptera BIN-representative embeddings (Section 2.2).
-- Ask Logambal to confirm that the "Ubuntu" commits (embedding encoders, AML jobs, UMAP/LDA) are hers.
 - Add an archive DOI for the release (Section 6).
 -->
 
@@ -51,7 +49,7 @@ Here we test how far off-the-shelf barcode embeddings can stand in for phylogene
 
 ### 2.1 Data and filtering
 
-We used BOLD public data packages in BCDM-TSV format: the 27 March 2026 release for the embedding run and the 30 June 2026 release for the taxonomy scaffold and the Lepidoptera experiments. For the embedding run we kept COI-5P records of class Insecta. Each record was cropped to the Leray window [@leray2013primers], about 313 bp, by searching for the primer, first as an exact IUPAC match and then allowing up to two mismatches. On a sample of 100,000 Arthropoda records, the mismatch-tolerant search reduced the proportion of records without a primer match from 57% to 7%. Records without any match were kept uncropped and flagged. For the tree experiments we used one representative record per BIN of Lepidoptera, choosing representatives within each taxon so that two taxa sharing an identical sequence window were never merged.
+We used BOLD public data packages in BCDM-TSV format: the 27 March 2026 release for the embedding run and the 30 June 2026 release for the taxonomy scaffold and the Lepidoptera experiments. For the embedding run we kept COI-5P records of class Insecta. Each record was cropped to the Leray window [@leray2013primers], about 313 bp, by searching for the primer, first as an exact IUPAC match and then allowing up to two mismatches. On a sample of 100,000 Arthropoda records, the mismatch-tolerant search reduced the proportion of records without a primer match from 57% to 7%. Records without any match were kept uncropped and flagged. For the tree experiments we used one representative record per BIN of Lepidoptera, cropped to the same Leray window, choosing representatives within each taxon so that two taxa sharing an identical sequence window were never merged.
 
 To provide a constraint, a baseline and rank labels, we built a taxonomy scaffold for all Arthropoda BINs in the 30 June release: 17,617,788 of 23,954,047 records, giving 1,138,906 BIN tips under 253,372 named internal nodes. Each BIN was attached to the last common ancestor of the taxa its records were identified as. That placed 4.9% of BINs above the rank of their most specific identification, and 48.8% of BINs attach directly to a family because none of their records were identified further.
 
@@ -78,7 +76,7 @@ To show how much agreement the taxonomic constraint alone provides, we built a t
 **Distances by divergence rank.** We sampled 1,000 tip pairs from the taxonomy-constrained embedding tree (`patristic_vs_seqdist.py --stratify`), stratified by the depth (in edges) of each pair's last common ancestor on that tree, so that deep and shallow pairs were equally represented. The pairs were therefore drawn from the tree under test and classified by taxonomic rank only afterwards. For each pair we recorded:
 
 1. the patristic distance on the embedding tree;
-2. the Kimura two-parameter (K2P) distance [@kimura1980k2p] between the two full-length BOLD sequences, after aligning them to a profile hidden Markov model of COI-5P with HMMER [@eddy2011hmmer] and using match states only;
+2. the Kimura two-parameter (K2P) distance [@kimura1980k2p] between the two full-length BOLD sequences (not the Leray window used for embedding), after aligning them to a profile hidden Markov model of COI-5P with HMMER [@eddy2011hmmer] and using match states only;
 3. an alignment-free *k*-mer distance (exact 12-mer sets, Mash-style transformation of the Jaccard index [@ondov2016mash]);
 4. the patristic distance between the same two tips on the reference tree.
 
@@ -132,7 +130,7 @@ Distances on the embedding tree were positively and significantly associated wit
 
 The likely reason is the training objective. Previous work shows that nearest neighbours in such spaces match BLAST results at the species level [@millanarias2023barcodebert]. Language models trained for token prediction or retrieval need to place similar sequences close together, but nothing in their training requires the *amount* of separation to reflect the amount of evolutionary change, or the distances to be additive along a tree. Methods designed for that purpose train the embedding directly against distances on a tree [@jiang2023depp; @jiang2022hdepp]. Using a general-purpose model to estimate branch lengths therefore calls for either such a training objective or a calibration step. Agreement with BLAST for identification is not, by itself, evidence that an embedding is suitable for this.
 
-Two features of our design probably made the embedding results worse than the embeddings themselves. First, the distances we evaluated are patristic distances on an NJ tree built from centroids of centroids, so they combine embedding geometry with errors from tree building and from averaging vectors. Second, the tree experiments used DNABERT-S on Lepidoptera rather than the Omni-DNA vectors of the production run. Comparing raw cosine distances from several models, including barcode-specific ones [@millanarias2023barcodebert; @gao2024barcodemamba], on the same rank-stratified pairs is the obvious next experiment, and our scripts support it.
+Three features of our design probably made the embedding results worse than the embeddings themselves. First, the distances we evaluated are patristic distances on an NJ tree built from centroids of centroids, so they combine embedding geometry with errors from tree building and from averaging vectors. Second, the embeddings were computed from the Leray window of about 313 bp, whereas the K2P and *k*-mer distances in the same comparison used the full-length barcodes (median 656 aligned sites), so the sequence distances drew on roughly twice as much sequence. Third, the tree experiments used DNABERT-S on Lepidoptera rather than the Omni-DNA vectors of the production run. Comparing raw cosine distances from several models, including barcode-specific ones [@millanarias2023barcodebert; @gao2024barcodemamba], on the same rank-stratified pairs, with sequence distances computed on the same window, is the obvious next experiment, and our scripts support it.
 
 ### 4.2 The taxonomy carries the deep structure
 
