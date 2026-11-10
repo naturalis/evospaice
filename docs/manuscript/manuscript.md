@@ -5,6 +5,7 @@ author:
   - "Guy Bertental^1^"
   - "Colin Desmond^1^"
   - "Oded Fischler^1^"
+  - "Sharon Hart^1^"
   - "Arno Harteveld^1^"
   - "Victor Heijke^2^"
   - "Dominika Kresa^2^"
@@ -22,6 +23,7 @@ link-citations: true
 AUTHOR CHECKLIST, remove before submission:
 - Add ORCIDs still missing (Bertental, Desmond, Fischler, Harteveld, Heijke), and the Microsoft unit and
   city for each Microsoft author (split affiliation 1 if they differ).
+- Confirm Sharon Hart's CRediT roles (no commits in the repository to derive them from).
 - Add an archive DOI for the release (Section 6).
 - Confirm with Logambal whether the evaluated trees were built from the DNABERT-S or the Omni-DNA-20M
   Lepidoptera embeddings (both bundles exist with the same 181,078 records); update Sections 2.2, 2.3, 4.1 and the abstract if needed.
@@ -33,6 +35,7 @@ AUTHOR CHECKLIST, remove before submission:
 
 **ORCID iDs:**
 Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
+Sharon Hart <https://orcid.org/0009-0002-6946-9790>;
 Dominika Kresa <https://orcid.org/0009-0007-6892-8218>;
 Logambal Madhuanand <https://orcid.org/0000-0002-1534-5234>;
 Frixos Papadopoulos <https://orcid.org/0000-0002-4429-1562>;
@@ -193,6 +196,8 @@ Contributions are given using the CRediT taxonomy and are based on the project's
 
 **Oded Fischler:** Methodology, Software (alternative bottom-up representation strategies, centroid baseline, whole-tree metrics and tree explorer), Writing – review & editing.
 
+**Sharon Hart:** [Roles to be confirmed], Writing – review & editing.
+
 **Arno Harteveld:** Conceptualization, Project administration (initiating the collaboration between Naturalis and Microsoft, assembling the team and facilitating Naturalis participation in the hackathon), Writing – review & editing.
 
 **Victor Heijke:** Methodology (specification of phylogenetic diversity metrics and of matching rules between trees and samples), Software (Newick cleaning), Writing – review & editing.
@@ -209,7 +214,7 @@ Contributions are given using the CRediT taxonomy and are based on the project's
 
 ## Competing interests
 
-Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Arno Harteveld, Frixos Papadopoulos, Anna Pershukova and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
+Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Sharon Hart, Arno Harteveld, Frixos Papadopoulos, Anna Pershukova and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
 
 ## Funding
 
