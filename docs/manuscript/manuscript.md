@@ -5,6 +5,7 @@ author:
   - "Guy Bertental^1^"
   - "Colin Desmond^1^"
   - "Oded Fischler^1^"
+  - "Arno Harteveld^1^"
   - "Victor Heijke^2^"
   - "Dominika Kresa^2^"
   - "Logambal Madhuanand^2^"
@@ -182,6 +183,8 @@ Contributions are given using the CRediT taxonomy and are based on the project's
 
 **Oded Fischler:** Methodology, Software (alternative bottom-up representation strategies, centroid baseline, whole-tree metrics and tree explorer), Writing – review & editing.
 
+**Arno Harteveld:** Conceptualization, Project administration (initiating the collaboration between Naturalis and Microsoft, assembling the team and facilitating Naturalis participation in the hackathon), Writing – review & editing.
+
 **Victor Heijke:** Methodology (specification of phylogenetic diversity metrics and of matching rules between trees and samples), Software (Newick cleaning), Writing – review & editing.
 
 **Dominika Kresa:** Software (primer-window cropping with mismatch tolerance, BIN representative tie-breaking, tree alignment and subtree extraction), Validation (*Papilio* subtree comparison), Visualization (validation report), Writing – review & editing.
@@ -196,7 +199,7 @@ Contributions are given using the CRediT taxonomy and are based on the project's
 
 ## Competing interests
 
-Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Anna Pershukova, Frixos Papadopoulos and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
+Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Arno Harteveld, Frixos Papadopoulos, Anna Pershukova and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
 
 ## Funding
 
@@ -208,6 +211,6 @@ The authors used AI coding assistants to write and refactor parts of the softwar
 
 ## Acknowledgements
 
-We thank Arno Harteveld (Microsoft) for kindly facilitating the participation of Naturalis in the Dublin hackathon, and Rob Fraser and Ann Corrao (both Microsoft) for interesting discussions about applications in this domain and their generous hospitality at the hackathon. We also thank the BOLD team and the many contributors of public barcode records.
+We thank Rob Fraser and Ann Corrao (both Microsoft) for interesting discussions about applications in this domain and their generous hospitality at the hackathon. We also thank the BOLD team and the many contributors of public barcode records.
 
 # References
