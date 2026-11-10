@@ -226,6 +226,6 @@ The authors used AI coding assistants to write and refactor parts of the softwar
 
 ## Acknowledgements
 
-We thank Rob Fraser and Ann Corrao (both Microsoft) for interesting discussions about applications in this domain and their generous hospitality at the hackathon. We also thank the BOLD team and the many contributors of public barcode records.
+We thank Ann Corrao (Microsoft) for interesting discussions about applications in this domain and her generous hospitality at the hackathon. We also thank the BOLD team and the many contributors of public barcode records.
 
 # References
