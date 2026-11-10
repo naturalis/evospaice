@@ -14,7 +14,6 @@ author:
   - "Anna Pershukova^1^"
   - "Ron Shakutai^1^"
   - "Rutger A. Vos^2,\\*^"
-date: "2026-11-09"
 bibliography: references.bib
 link-citations: true
 ---
