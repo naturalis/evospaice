@@ -29,7 +29,7 @@ AUTHOR CHECKLIST, remove before submission:
   Lepidoptera embeddings (both bundles exist with the same 181,078 records); update Sections 2.2, 2.3, 4.1 and the abstract if needed.
 -->
 
-^1^ Microsoft  
+^1^ Microsoft Frontier Company  
 ^2^ Naturalis Biodiversity Center, Darwinweg 2, 2333 CR Leiden, The Netherlands  
 \* Corresponding author: rutger.vos@naturalis.nl
 
