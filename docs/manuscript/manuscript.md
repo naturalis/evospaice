@@ -21,7 +21,7 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Desmond, Fischler, Harteveld), and the Microsoft unit and
+- Add ORCIDs still missing (Desmond, Fischler), and the Microsoft unit and
   city for each Microsoft author (split affiliation 1 if they differ).
 - Add an archive DOI for the release (Section 6).
 -->
@@ -34,6 +34,7 @@ AUTHOR CHECKLIST, remove before submission:
 Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
 Guy Bertental <https://orcid.org/0009-0004-6333-3766>;
 Sharon Hart <https://orcid.org/0009-0002-6946-9790>;
+Arno Harteveld <https://orcid.org/0009-0005-9099-7979>;
 Victor Heijke <https://orcid.org/0009-0002-8030-4364>;
 Dominika Kresa <https://orcid.org/0009-0007-6892-8218>;
 Logambal Madhuanand <https://orcid.org/0000-0002-1534-5234>;
