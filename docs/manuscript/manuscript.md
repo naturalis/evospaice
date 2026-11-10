@@ -20,7 +20,7 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Desmond, Fischler).
+- Add ORCID still missing (Desmond).
 - Add an archive DOI for the release (Section 6).
 -->
 
@@ -31,6 +31,7 @@ AUTHOR CHECKLIST, remove before submission:
 **ORCID iDs:**
 Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
 Guy Bertental <https://orcid.org/0009-0004-6333-3766>;
+Oded Fischler <https://orcid.org/0009-0004-4719-8197>;
 Sharon Hart <https://orcid.org/0009-0002-6946-9790>;
 Arno Harteveld <https://orcid.org/0009-0005-9099-7979>;
 Victor Heijke <https://orcid.org/0009-0002-8030-4364>;
