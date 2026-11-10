@@ -20,7 +20,8 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs, and the Microsoft unit and city for each Microsoft author (split affiliation 1 if they differ).
+- Add ORCIDs still missing (Bertental, Desmond, Fischler, Harteveld, Heijke, Pershukova), and the Microsoft unit and
+  city for each Microsoft author (split affiliation 1 if they differ).
 - Add an archive DOI for the release (Section 6).
 - Confirm with Logambal whether the evaluated trees were built from the DNABERT-S or the Omni-DNA-20M
   Lepidoptera embeddings (both bundles exist with the same 181,078 records); update Sections 2.2, 2.3, 4.1 and the abstract if needed.
@@ -29,6 +30,14 @@ AUTHOR CHECKLIST, remove before submission:
 ^1^ Microsoft  
 ^2^ Naturalis Biodiversity Center, Darwinweg 2, 2333 CR Leiden, The Netherlands  
 \* Corresponding author: rutger.vos@naturalis.nl
+
+**ORCID iDs:**
+Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
+Dominika Kresa <https://orcid.org/0009-0007-6892-8218>;
+Logambal Madhuanand <https://orcid.org/0000-0002-1534-5234>;
+Frixos Papadopoulos <https://orcid.org/0000-0002-4429-1562>;
+Ron Shakutai <https://orcid.org/0009-0002-6440-295X>;
+Rutger A. Vos <https://orcid.org/0000-0001-9254-7318>
 
 ## Abstract
 
