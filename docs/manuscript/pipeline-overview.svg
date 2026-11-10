@@ -32,7 +32,7 @@
   <text class="t" x="460" y="115" text-anchor="middle">one vector per record</text>
   <text class="t" x="460" y="140" text-anchor="middle">mean-pooled, L2-normalised</text>
   <text class="t" x="460" y="165" text-anchor="middle">Omni-DNA-20M (Insecta, 6.98 M)</text>
-  <text class="t" x="460" y="190" text-anchor="middle">DNABERT-S (Lepidoptera BINs)</text>
+  <text class="t" x="460" y="190" text-anchor="middle">Omni-DNA-20M (Lepidoptera BINs)</text>
   <text class="t" x="460" y="215" text-anchor="middle">FAISS index + Parquet metadata</text>
   <text class="t" x="460" y="240" text-anchor="middle">sharded per species</text>
   <text class="t" x="460" y="265" text-anchor="middle">no global distance matrix</text>
