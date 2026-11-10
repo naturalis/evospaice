@@ -20,7 +20,7 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Bertental, Desmond, Fischler, Harteveld, Heijke, Pershukova), and the Microsoft unit and
+- Add ORCIDs still missing (Bertental, Desmond, Fischler, Harteveld, Heijke), and the Microsoft unit and
   city for each Microsoft author (split affiliation 1 if they differ).
 - Add an archive DOI for the release (Section 6).
 - Confirm with Logambal whether the evaluated trees were built from the DNABERT-S or the Omni-DNA-20M
@@ -36,6 +36,7 @@ Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
 Dominika Kresa <https://orcid.org/0009-0007-6892-8218>;
 Logambal Madhuanand <https://orcid.org/0000-0002-1534-5234>;
 Frixos Papadopoulos <https://orcid.org/0000-0002-4429-1562>;
+Anna Pershukova <https://orcid.org/0009-0007-8725-8176>;
 Ron Shakutai <https://orcid.org/0009-0002-6440-295X>;
 Rutger A. Vos <https://orcid.org/0000-0001-9254-7318>
 
