@@ -183,33 +183,33 @@ All code, infrastructure definitions, run reports, validation outputs and the sc
 
 ## Author contributions
 
-Contributions are given using the CRediT taxonomy and are based on the project's version history.
+Contributions are given using the CRediT taxonomy.
 
-**Rutger A. Vos:** Conceptualization, Methodology, Software (BOLD ingest and taxonomy scaffold, BIN representative selection, stratified distance and rank-stratified analyses), Data curation, Formal analysis, Supervision, Project administration, Writing – original draft.
+**Kartik Awasthi:** Software, Visualization, Writing – review & editing.
 
-**Kartik Awasthi:** Software (embedding job configuration), Visualization (exploratory comparison of embedding and reference-tree distances), Writing – review & editing.
+**Guy Bertental:** Software, Validation, Writing – review & editing.
 
-**Guy Bertental:** Software (tree evaluation framework and test fixtures), Validation, Writing – review & editing.
+**Colin Desmond:** Investigation, Software, Visualization, Writing – review & editing.
 
-**Colin Desmond:** Software (cloud pipeline for class filtering, embedding submission and species splitting; Terraform infrastructure; Taxonium-based tree viewer), Investigation (production embedding run), Visualization, Writing – review & editing.
-
-**Oded Fischler:** Methodology, Software (alternative bottom-up representation strategies, centroid baseline, whole-tree metrics and tree explorer), Writing – review & editing.
+**Oded Fischler:** Methodology, Software, Writing – review & editing.
 
 **Sharon Hart:** Methodology, Software, Writing – review & editing.
 
-**Arno Harteveld:** Conceptualization, Project administration (initiating the collaboration between Naturalis and Microsoft, assembling the team and facilitating Naturalis participation in the hackathon), Writing – review & editing.
+**Arno Harteveld:** Conceptualization, Project administration, Writing – review & editing.
 
-**Victor Heijke:** Methodology (specification of phylogenetic diversity metrics and of matching rules between trees and samples), Software (Newick cleaning), Writing – review & editing.
+**Victor Heijke:** Methodology, Software, Writing – review & editing.
 
-**Dominika Kresa:** Software (primer-window cropping with mismatch tolerance, BIN representative tie-breaking, tree alignment and subtree extraction), Validation (*Papilio* subtree comparison), Visualization (validation report), Writing – review & editing.
+**Dominika Kresa:** Software, Validation, Visualization, Writing – review & editing.
 
-**Logambal Madhuanand:** Methodology, Software (embedding encoders and Azure Machine Learning embedding jobs for Omni-DNA and DNABERT-S; taxonomy-constrained and unconstrained tree construction), Investigation, Formal analysis (comparison of Folmer and Leray windows across models), Visualization (UMAP and LDA projections of embeddings), Writing – review & editing.
+**Logambal Madhuanand:** Formal analysis, Investigation, Methodology, Software, Visualization, Writing – review & editing.
 
-**Frixos Papadopoulos:** Software (Azure Machine Learning validation pipeline), Validation (validation runs), Visualization, Writing – review & editing.
+**Frixos Papadopoulos:** Software, Validation, Visualization, Writing – review & editing.
 
-**Anna Pershukova:** Software (data-contract validators), Project administration (workstreams and decision records), Visualization (stakeholder presentation), Writing – review & editing.
+**Anna Pershukova:** Project administration, Software, Visualization, Writing – review & editing.
 
-**Ron Shakutai:** Visualization (tree-construction workflow diagrams), Writing – review & editing.
+**Ron Shakutai:** Conceptualization, Methodology, Visualization, Writing – review & editing.
+
+**Rutger A. Vos:** Conceptualization, Data curation, Formal analysis, Methodology, Project administration, Software, Supervision, Writing – original draft.
 
 ## Competing interests
 
