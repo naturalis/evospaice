@@ -20,13 +20,12 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Desmond, Fischler), and the Microsoft unit and
-  city for each Microsoft author (split affiliation 1 if they differ).
+- Add ORCIDs still missing (Desmond, Fischler).
 - Add an archive DOI for the release (Section 6).
 -->
 
-^1^ Microsoft Frontier Company  
-^2^ Naturalis Biodiversity Center, Darwinweg 2, 2333 CR Leiden, The Netherlands  
+^1^ Microsoft Corporation, Redmond, Washington, USA  
+^2^ Naturalis Biodiversity Center, Leiden, the Netherlands  
 \* Corresponding author: rutger.vos@naturalis.nl
 
 **ORCID iDs:**
