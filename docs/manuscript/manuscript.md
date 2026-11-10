@@ -21,7 +21,7 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Bertental, Desmond, Fischler, Harteveld, Heijke), and the Microsoft unit and
+- Add ORCIDs still missing (Bertental, Desmond, Fischler, Harteveld), and the Microsoft unit and
   city for each Microsoft author (split affiliation 1 if they differ).
 - Confirm Sharon Hart's CRediT roles (no commits in the repository to derive them from).
 - Add an archive DOI for the release (Section 6).
@@ -36,6 +36,7 @@ AUTHOR CHECKLIST, remove before submission:
 **ORCID iDs:**
 Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
 Sharon Hart <https://orcid.org/0009-0002-6946-9790>;
+Victor Heijke <https://orcid.org/0009-0002-8030-4364>;
 Dominika Kresa <https://orcid.org/0009-0007-6892-8218>;
 Logambal Madhuanand <https://orcid.org/0000-0002-1534-5234>;
 Frixos Papadopoulos <https://orcid.org/0000-0002-4429-1562>;
