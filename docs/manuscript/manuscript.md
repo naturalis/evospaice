@@ -210,7 +210,7 @@ Contributions are given using the CRediT taxonomy.
 
 **Ron Shakutai:** Conceptualization, Methodology, Visualization, Writing – review & editing.
 
-**Rutger A. Vos:** Conceptualization, Data curation, Formal analysis, Methodology, Project administration, Software, Supervision, Writing – original draft.
+**Rutger A. Vos:** Conceptualization, Data curation, Formal analysis, Methodology, Project administration, Software, Supervision, Writing – original draft, Writing – review & editing.
 
 ## Competing interests
 
