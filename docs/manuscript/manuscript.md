@@ -9,9 +9,11 @@ author:
   - "Arno Harteveld^1^"
   - "Victor Heijke^2^"
   - "Dominika Kresa^2^"
+  - "Juan Lema^1^"
   - "Logambal Madhuanand^2^"
   - "Frixos Papadopoulos^1^"
   - "Anna Pershukova^1^"
+  - "Lidia Pomirleanu^1^"
   - "Ron Shakutai^1^"
   - "Rutger A. Vos^2,\\*^"
 bibliography: references.bib
@@ -20,7 +22,8 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCID still missing (Desmond).
+- Add ORCIDs still missing (Desmond, Lema, Pomirleanu).
+- Add CRediT roles for Juan Lema and Lidia Pomirleanu.
 - Add an archive DOI for the release (Section 6).
 -->
 
@@ -201,11 +204,15 @@ Contributions are given using the CRediT taxonomy.
 
 **Dominika Kresa:** Software, Validation, Visualization, Writing – review & editing.
 
+**Juan Lema:** [Roles to be confirmed].
+
 **Logambal Madhuanand:** Formal analysis, Investigation, Methodology, Software, Visualization, Writing – review & editing.
 
 **Frixos Papadopoulos:** Software, Validation, Visualization, Writing – review & editing.
 
 **Anna Pershukova:** Project administration, Software, Visualization, Writing – review & editing.
+
+**Lidia Pomirleanu:** [Roles to be confirmed].
 
 **Ron Shakutai:** Conceptualization, Methodology, Visualization, Writing – review & editing.
 
@@ -213,7 +220,7 @@ Contributions are given using the CRediT taxonomy.
 
 ## Competing interests
 
-Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Sharon Hart, Arno Harteveld, Frixos Papadopoulos, Anna Pershukova and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
+Kartik Awasthi, Guy Bertental, Colin Desmond, Oded Fischler, Sharon Hart, Arno Harteveld, Juan Lema, Frixos Papadopoulos, Anna Pershukova, Lidia Pomirleanu and Ron Shakutai are employees of Microsoft, which develops the Azure cloud platform used in this study. The Azure compute used in this study was paid for by Naturalis Biodiversity Center. The other authors declare no competing interests.
 
 ## Funding
 
