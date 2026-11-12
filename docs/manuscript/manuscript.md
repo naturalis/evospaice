@@ -22,7 +22,7 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Desmond, Lema, Pomirleanu).
+- Add ORCIDs still missing (Lema, Pomirleanu).
 - Add CRediT roles for Juan Lema and Lidia Pomirleanu.
 - Add an archive DOI for the release (Section 6).
 -->
@@ -34,6 +34,7 @@ AUTHOR CHECKLIST, remove before submission:
 **ORCID iDs:**
 Kartik Awasthi <https://orcid.org/0009-0008-3241-0983>;
 Guy Bertental <https://orcid.org/0009-0004-6333-3766>;
+Colin Desmond <https://orcid.org/0009-0000-9860-6665>;
 Oded Fischler <https://orcid.org/0009-0004-4719-8197>;
 Sharon Hart <https://orcid.org/0009-0002-6946-9790>;
 Arno Harteveld <https://orcid.org/0009-0005-9099-7979>;
