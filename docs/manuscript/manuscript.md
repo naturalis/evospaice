@@ -22,8 +22,6 @@ link-citations: true
 
 <!--
 AUTHOR CHECKLIST, remove before submission:
-- Add ORCIDs still missing (Lema, Pomirleanu).
-- Add CRediT roles for Juan Lema and Lidia Pomirleanu.
 - Add an archive DOI for the release (Section 6).
 -->
 
@@ -40,9 +38,11 @@ Sharon Hart <https://orcid.org/0009-0002-6946-9790>;
 Arno Harteveld <https://orcid.org/0009-0005-9099-7979>;
 Victor Heijke <https://orcid.org/0009-0002-8030-4364>;
 Dominika Kresa <https://orcid.org/0009-0007-6892-8218>;
+Juan Lema <https://orcid.org/0009-0004-1176-5137>;
 Logambal Madhuanand <https://orcid.org/0000-0002-1534-5234>;
 Frixos Papadopoulos <https://orcid.org/0000-0002-4429-1562>;
 Anna Pershukova <https://orcid.org/0009-0007-8725-8176>;
+Lidia Pomirleanu <https://orcid.org/0009-0002-8928-8516>;
 Ron Shakutai <https://orcid.org/0009-0002-6440-295X>;
 Rutger A. Vos <https://orcid.org/0000-0001-9254-7318>
 
@@ -205,7 +205,7 @@ Contributions are given using the CRediT taxonomy.
 
 **Dominika Kresa:** Software, Validation, Visualization, Writing – review & editing.
 
-**Juan Lema:** [Roles to be confirmed].
+**Juan Lema:** Conceptualization, Methodology, Visualization, Writing – review & editing.
 
 **Logambal Madhuanand:** Formal analysis, Investigation, Methodology, Software, Visualization, Writing – review & editing.
 
@@ -213,7 +213,7 @@ Contributions are given using the CRediT taxonomy.
 
 **Anna Pershukova:** Project administration, Software, Visualization, Writing – review & editing.
 
-**Lidia Pomirleanu:** [Roles to be confirmed].
+**Lidia Pomirleanu:** Methodology, Software, Writing – review & editing.
 
 **Ron Shakutai:** Conceptualization, Methodology, Visualization, Writing – review & editing.
 
