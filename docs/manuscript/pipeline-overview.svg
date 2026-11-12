@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2f3b52"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #f7f9fc; stroke: #2f3b52; stroke-width: 2; }
+    .ref { fill: #fff7ed; stroke: #9a3412; stroke-width: 2; }
+    .hd { font-family: Arial, Helvetica, sans-serif; font-size: 19px; font-weight: bold; fill: #1f2937; }
+    .t { font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; fill: #374151; }
+    .lab { font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; fill: #1f2937; }
+    .arrow { stroke: #2f3b52; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+
+  <!-- A: ingest -->
+  <text class="lab" x="30" y="40">A</text>
+  <rect class="box" x="30" y="55" width="260" height="235" rx="12"/>
+  <text class="hd" x="160" y="85" text-anchor="middle">Ingest</text>
+  <text class="t" x="160" y="115" text-anchor="middle">BOLD public BCDM release</text>
+  <text class="t" x="160" y="140" text-anchor="middle">marker filter (COI-5P)</text>
+  <text class="t" x="160" y="165" text-anchor="middle">class filter (Insecta)</text>
+  <text class="t" x="160" y="190" text-anchor="middle">primer-window cropping</text>
+  <text class="t" x="160" y="215" text-anchor="middle">(Leray, IUPAC, ≤2 mismatches)</text>
+  <text class="t" x="160" y="240" text-anchor="middle">BIN representatives</text>
+  <text class="t" x="160" y="265" text-anchor="middle">(Lepidoptera tree experiments)</text>
+
+  <!-- B: embed -->
+  <text class="lab" x="330" y="40">B</text>
+  <rect class="box" x="330" y="55" width="260" height="235" rx="12"/>
+  <text class="hd" x="460" y="85" text-anchor="middle">Embed</text>
+  <text class="t" x="460" y="115" text-anchor="middle">one vector per record</text>
+  <text class="t" x="460" y="140" text-anchor="middle">mean-pooled, L2-normalised</text>
+  <text class="t" x="460" y="165" text-anchor="middle">Omni-DNA-20M (Insecta, 6.98 M)</text>
+  <text class="t" x="460" y="190" text-anchor="middle">Omni-DNA-20M (Lepidoptera BINs)</text>
+  <text class="t" x="460" y="215" text-anchor="middle">FAISS index + Parquet metadata</text>
+  <text class="t" x="460" y="240" text-anchor="middle">sharded per species</text>
+  <text class="t" x="460" y="265" text-anchor="middle">no global distance matrix</text>
+
+  <!-- C: trees -->
+  <text class="lab" x="630" y="40">C</text>
+  <rect class="box" x="630" y="55" width="260" height="235" rx="12"/>
+  <text class="hd" x="760" y="85" text-anchor="middle">Build trees</text>
+  <text class="t" x="760" y="115" text-anchor="middle">cosine distance, NJ</text>
+  <text class="t" x="760" y="145" text-anchor="middle">(i) taxonomy-constrained:</text>
+  <text class="t" x="760" y="167" text-anchor="middle">records → species → genus</text>
+  <text class="t" x="760" y="189" text-anchor="middle">→ family → backbone,</text>
+  <text class="t" x="760" y="211" text-anchor="middle">centroids carried upwards</text>
+  <text class="t" x="760" y="241" text-anchor="middle">(ii) unconstrained: spherical</text>
+  <text class="t" x="760" y="263" text-anchor="middle">k-means (k = 2000) + NJ</text>
+
+  <!-- D: evaluate -->
+  <text class="lab" x="930" y="40">D</text>
+  <rect class="box" x="930" y="55" width="240" height="235" rx="12"/>
+  <text class="hd" x="1050" y="85" text-anchor="middle">Evaluate</text>
+  <text class="t" x="1050" y="115" text-anchor="middle">shared tips with reference</text>
+  <text class="t" x="1050" y="145" text-anchor="middle">normalised RF distance</text>
+  <text class="t" x="1050" y="170" text-anchor="middle">vs taxonomy-only baseline</text>
+  <text class="t" x="1050" y="200" text-anchor="middle">tip-pair distances by</text>
+  <text class="t" x="1050" y="222" text-anchor="middle">divergence rank: K2P,</text>
+  <text class="t" x="1050" y="244" text-anchor="middle">k-mer, embedding tree</text>
+  <text class="t" x="1050" y="266" text-anchor="middle">vs reference patristic</text>
+
+  <path class="arrow" d="M290,172 L326,172"/>
+  <path class="arrow" d="M590,172 L626,172"/>
+  <path class="arrow" d="M890,172 L926,172"/>
+
+  <!-- reference tree -->
+  <rect class="ref" x="630" y="360" width="540" height="150" rx="12"/>
+  <text class="hd" x="900" y="392" text-anchor="middle">Reference: Bactria Lepidoptera tree (91,376 tips)</text>
+  <text class="t" x="900" y="422" text-anchor="middle">maximum-likelihood COI subtrees per family,</text>
+  <text class="t" x="900" y="446" text-anchor="middle">grafted onto an Open Tree of Life constrained backbone</text>
+  <text class="t" x="900" y="476" text-anchor="middle">not independent of COI or of the taxonomy</text>
+  <path class="arrow" d="M1050,360 L1050,294"/>
+
+  <!-- taxonomy scaffold -->
+  <rect class="box" x="30" y="360" width="560" height="150" rx="12"/>
+  <text class="hd" x="310" y="392" text-anchor="middle">Taxonomy scaffold from the same BOLD release</text>
+  <text class="t" x="310" y="422" text-anchor="middle">BINs placed at the last common ancestor of their identifications</text>
+  <text class="t" x="310" y="446" text-anchor="middle">supplies the constraint in C(i), the taxonomy-only baseline</text>
+  <text class="t" x="310" y="470" text-anchor="middle">and the divergence rank of each tip pair in D</text>
+  <path class="arrow" d="M590,410 L760,294"/>
+</svg>
