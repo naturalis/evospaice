@@ -94,14 +94,14 @@ To show how much agreement the taxonomic constraint alone provides, we built a t
 
 **Topology.** Each tree was pruned to the tips it shares with the reference. We then computed the unrooted Robinson–Foulds (RF) distance [@robinson1981rf], normalised by the total number of informative splits in both pruned trees, using DendroPy [@sukumaran2010dendropy]. RF penalises missing resolution as well as conflicting splits, so we report the number of splits in each tree alongside it. We also report the Spearman correlation between tip-to-root distances in the two trees, for comparison with earlier runs, but we give it little weight because it depends on how each tree is rooted.
 
-**Distances by divergence rank.** We sampled 1,000 tip pairs from the taxonomy-constrained embedding tree (`patristic_vs_seqdist.py --stratify`), stratified by the depth (in edges) of each pair's last common ancestor on that tree, so that deep and shallow pairs were equally represented. The pairs were therefore drawn from the tree under test and classified by taxonomic rank only afterwards. For each pair we recorded:
+**Distances by divergence rank.** We sampled 1,000 tip pairs from the taxonomy-constrained embedding tree (`patristic_vs_seqdist.py --stratify`), stratified by the depth (in edges) of each pair's last common ancestor on that tree, to sample across shallow and deep topological levels. The pairs were therefore drawn from the tree under test and classified by taxonomic rank only afterwards. For each pair we recorded:
 
 1. the patristic distance on the embedding tree;
 2. the Kimura two-parameter (K2P) distance [@kimura1980k2p] between the two full-length BOLD sequences (not the Leray window used for embedding), after aligning them to a profile hidden Markov model of COI-5P with HMMER [@eddy2011hmmer] and using match states only;
 3. an alignment-free *k*-mer distance (exact 12-mer sets, Mash-style transformation of the Jaccard index [@ondov2016mash]);
 4. the patristic distance between the same two tips on the reference tree.
 
-Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Because sampling spread the pairs evenly over the embedding tree's depths, the embedding-tree distances are evenly spread by construction while the reference and sequence distances are not. This does not bias correlations computed within a rank class, but it does mean that the pooled correlations over all pairs should be read with care. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
+Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Sampling by LCA edge depth does not guarantee an evenly spread distribution of branch-length distances. The rank-specific correlations describe this selected sample and may still depend on the sampling design. Pooled correlations across all pairs should also be read with care. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
 
 ### 2.6 Implementation
 
