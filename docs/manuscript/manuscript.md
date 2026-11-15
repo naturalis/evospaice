@@ -101,7 +101,7 @@ To show how much agreement the taxonomic constraint alone provides, we built a t
 3. an alignment-free *k*-mer distance (exact 12-mer sets, Mash-style transformation of the Jaccard index [@ondov2016mash]);
 4. the patristic distance between the same two tips on the reference tree.
 
-Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Sampling by LCA edge depth does not guarantee an evenly spread distribution of branch-length distances. The rank-specific correlations describe this selected sample and may still depend on the sampling design. Pooled correlations across all pairs should also be read with care. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
+Using the scaffold, we classified each pair by the rank at which it diverges: same species, same genus, same family, or different family. Within each class, we measured how well each distance tracks the reference distance with Spearman's ρ. Balancing depth in edges does not balance branch-length distances, and because the pairs were selected on the embedding tree, one of the distances being compared, the correlations describe this sample and may depend on the sampling design, both within rank classes and when pooled over all pairs. Of the 1,000 pairs, 417 had both tips in the reference tree and a resolvable divergence rank.
 
 ### 2.6 Implementation
 
