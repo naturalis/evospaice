@@ -215,7 +215,7 @@ Contributions are given using the CRediT taxonomy.
 
 **Lidia Pomirleanu:** Methodology, Software, Writing – review & editing.
 
-**Ron Shakutai:** Conceptualization, Methodology, Visualization, Writing – review & editing.
+**Ron Shakutai:** Conceptualization, Methodology, Project administration, Software, Visualization, Writing – review & editing.
 
 **Rutger A. Vos:** Conceptualization, Data curation, Formal analysis, Methodology, Project administration, Software, Supervision, Writing – original draft, Writing – review & editing.
 
