@@ -1,0 +1,16 @@
+pairs: 1000; with reference distance and divergence class: 417
+
+class                 n                       k2p rho                 kmer_mash rho  embedding_tree_patristic rho
+same species         75                 0.944 (p=6e-37)                 0.922 (p=8e-32)                 0.623 (p=2e-09)
+same genus          281                 0.761 (p=3e-54)                 0.731 (p=3e-48)                 0.404 (p=2e-12)
+same family          36                 0.755 (p=1e-07)                 0.672 (p=7e-06)                 0.459 (p=0.005)
+different family     25                 0.396 (p=0.05)                 0.202 (p=0.3)                 0.288 (p=0.2)
+all                 417                 0.860 (p=4e-123)                 0.832 (p=2e-108)                 0.587 (p=6e-40)
+
+median                   reference_patristic                       k2p                 kmer_mash  embedding_tree_patristic
+same species                           0.056                     0.048                     0.051                     0.095
+same genus                             0.175                     0.102                     0.097                     0.127
+same family                            0.320                     0.130                     0.132                     0.232
+different family                       0.495                     0.161                     0.154                     0.452
+
+Pearson (reference vs embedding-tree patristic, all): 0.571
